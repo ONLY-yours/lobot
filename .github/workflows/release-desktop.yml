@@ -147,7 +147,7 @@ jobs:
       - name: Install dependencies
         shell: bash
         working-directory: ${{ github.workspace }}/source
-        run: pnpm install
+        run: pnpm install --node-linker=hoisted
 
       - name: Set version
         shell: bash
