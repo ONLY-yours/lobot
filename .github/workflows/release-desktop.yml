@@ -147,7 +147,7 @@ jobs:
       - name: Install dependencies
         shell: bash
         working-directory: ${{ github.workspace }}/source
-        run: pnpm install --node-linker=hoisted
+        run: pnpm install
 
       - name: Set version
         shell: bash
@@ -170,13 +170,13 @@ jobs:
             mac)
               # 没有 Apple 证书时显式关闭签名/公证，避免 CI 卡在证书发现。
               npx electron-builder --mac --${{ matrix.arch }} --config electron-builder.mjs \
-                --publish never -c.mac.identity=null -c.mac.notarize=false
+                --publish never -c.mac.identity=null -c.mac.notarize=false -c.npmRebuild=false
               ;;
             win)
-              npx electron-builder --win --${{ matrix.arch }} --config electron-builder.mjs --publish never
+              npx electron-builder --win --${{ matrix.arch }} --config electron-builder.mjs --publish never -c.npmRebuild=false
               ;;
             linux)
-              npx electron-builder --linux --${{ matrix.arch }} --config electron-builder.mjs --publish never
+              npx electron-builder --linux --${{ matrix.arch }} --config electron-builder.mjs --publish never -c.npmRebuild=false
               ;;
           esac
 
