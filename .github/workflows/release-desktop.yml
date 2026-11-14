@@ -250,5 +250,15 @@ jobs:
               $DRAFT_FLAG
           fi
 
-          find dist -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.tar.gz' -o -name 'latest*.yml' \) -print0 \
-            | xargs -0 -r gh release upload "$TAG" --repo "$REPO" --clobber
+          # Uploads can 404 for a few seconds right after the release is created
+          # (read-after-write lag), so retry each asset a few times.
+          while IFS= read -r -d '' file; do
+            for attempt in 1 2 3 4 5; do
+              if gh release upload "$TAG" "$file" --repo "$REPO" --clobber; then
+                break
+              fi
+              echo "上传失败 (第 ${attempt} 次): ${file}"
+              sleep 6
+              [ "$attempt" = 5 ] && { echo "::error::上传失败: ${file}"; exit 1; }
+            done
+          done < <(find dist -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.tar.gz' -o -name 'latest*.yml' \) -print0)
