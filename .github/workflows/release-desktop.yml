@@ -165,8 +165,9 @@ jobs:
         working-directory: ${{ github.workspace }}/source
         env:
           UPDATE_CHANNEL: ${{ needs.prepare.outputs.channel }}
-          # 有值时 electron-builder 改用 generic provider，app-update.yml 指向 S3。
-          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+          # 用 APP_UPDATE_SERVER_URL 而不是 UPDATE_SERVER_URL：前者只让 afterPack 改写
+          # app-update.yml 指向 S3，后者会把 provider 变成 generic 从而不再生成 latest*.yml。
+          APP_UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
           # electron-builder.mjs 以 CSC_LINK 是否存在决定是否签名；
           # 证书缺失时构建仍可完成，只是产物未签名。
           CSC_LINK: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
