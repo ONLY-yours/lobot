@@ -1,0 +1,230 @@
+name: Release Desktop
+
+# ============================================
+# Lobot 桌面端发布
+# ============================================
+# 本仓（lobehub/lobot）只承载 workflow 与 release 产物，不含源码。
+# 构建时从私有源仓（lobehub-biz/lobot）拉取代码，产物发到本仓 Release。
+#
+# 需要的配置：
+#   - Secret SOURCE_TOKEN：对私有源仓有 contents:read 的 token
+#   - 可选仓库变量 SOURCE_REPOSITORY，默认 lobehub-biz/lobot
+# ============================================
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 0.1.0)'
+        required: true
+        type: string
+      channel:
+        description: 'Release channel'
+        required: true
+        type: choice
+        options: [stable, beta, canary]
+        default: stable
+      source_ref:
+        description: '私有源仓 ref（留空用默认分支）'
+        required: false
+        type: string
+        default: ''
+      draft:
+        description: '发布为 draft release'
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-desktop-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '24'
+  npm_config_registry: https://registry.npmjs.org
+
+jobs:
+  # ---------- 1. 解析版本 ----------
+  prepare:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      tag: ${{ steps.resolve.outputs.tag }}
+      channel: ${{ steps.resolve.outputs.channel }}
+    steps:
+      - name: Resolve
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          CHANNEL="${{ inputs.channel }}"
+          if [ -z "$CHANNEL" ]; then CHANNEL="stable"; fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "channel=${CHANNEL}" >> "$GITHUB_OUTPUT"
+          echo "Building Lobot ${VERSION} (${CHANNEL})"
+
+  # ---------- 2. 构建 ----------
+  build:
+    name: Build ${{ matrix.name }}
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    env:
+      SOURCE_REPOSITORY: ${{ vars.SOURCE_REPOSITORY || 'lobehub-biz/lobot' }}
+      SOURCE_DIR: ${{ github.workspace }}/source
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS arm64
+            os: macos-latest
+            platform: mac
+            arch: arm64
+            artifact: mac-arm64
+          - name: macOS x64
+            os: macos-latest
+            platform: mac
+            arch: x64
+            artifact: mac-x64
+          - name: Windows x64
+            os: windows-latest
+            platform: win
+            arch: x64
+            artifact: win-x64
+          - name: Linux x64
+            os: linux-latest
+            platform: linux
+            arch: x64
+            artifact: linux-x64
+
+    steps:
+      # ----- 拉取私有源码 -----
+      - name: Clone private source
+        shell: bash
+        env:
+          SOURCE_TOKEN: ${{ secrets.SOURCE_TOKEN }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SOURCE_TOKEN:-}" ]; then
+            echo "::error::SOURCE_TOKEN 未配置，无法拉取私有源仓 ${SOURCE_REPOSITORY}"
+            exit 1
+          fi
+
+          git clone --depth 1 \
+            "https://x-access-token:${SOURCE_TOKEN}@github.com/${SOURCE_REPOSITORY}.git" \
+            "$SOURCE_DIR"
+
+          if [ -n "$SOURCE_REF" ]; then
+            git -C "$SOURCE_DIR" fetch --depth 1 origin "$SOURCE_REF"
+            git -C "$SOURCE_DIR" checkout --detach FETCH_HEAD
+          fi
+          echo "Source: $(git -C "$SOURCE_DIR" rev-parse HEAD)"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        shell: bash
+        working-directory: ${{ github.workspace }}/source
+        run: pnpm install
+
+      - name: Set version
+        shell: bash
+        working-directory: ${{ github.workspace }}/source
+        run: npm run workflow:set-desktop-version ${{ needs.prepare.outputs.version }} ${{ needs.prepare.outputs.channel }}
+
+      - name: Build app bundle
+        shell: bash
+        working-directory: ${{ github.workspace }}/source
+        run: pnpm build:main
+
+      - name: Package
+        shell: bash
+        working-directory: ${{ github.workspace }}/source
+        env:
+          UPDATE_CHANNEL: ${{ needs.prepare.outputs.channel }}
+        run: |
+          set -euo pipefail
+          case "${{ matrix.platform }}" in
+            mac)
+              # 没有 Apple 证书时显式关闭签名/公证，避免 CI 卡在证书发现。
+              npx electron-builder --mac --${{ matrix.arch }} --config electron-builder.mjs \
+                --publish never -c.mac.identity=null -c.mac.notarize=false
+              ;;
+            win)
+              npx electron-builder --win --${{ matrix.arch }} --config electron-builder.mjs --publish never
+              ;;
+            linux)
+              npx electron-builder --linux --${{ matrix.arch }} --config electron-builder.mjs --publish never
+              ;;
+          esac
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            source/release/*.dmg
+            source/release/*.zip
+            source/release/*.exe
+            source/release/*.AppImage
+            source/release/*.deb
+            source/release/*.tar.gz
+            source/release/latest*.yml
+          if-no-files-found: error
+          retention-days: 7
+
+  # ---------- 3. 发布到本仓（公开）----------
+  release:
+    name: Publish release
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Create / update release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ needs.prepare.outputs.tag }}"
+          DRAFT="${{ inputs.draft }}"
+          DRAFT_FLAG=""
+          if [ "$DRAFT" = "true" ] || [ -z "$DRAFT" ]; then DRAFT_FLAG="--draft"; fi
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG 已存在，追加产物"
+          else
+            gh release create "$TAG" \
+              --title "Lobot ${{ needs.prepare.outputs.version }}" \
+              --notes "Lobot ${{ needs.prepare.outputs.version }} (${{ needs.prepare.outputs.channel }})" \
+              $DRAFT_FLAG
+          fi
+
+          find dist -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.tar.gz' -o -name 'latest*.yml' \) -print0 \
+            | xargs -0 -r gh release upload "$TAG" --clobber
