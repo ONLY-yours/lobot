@@ -207,6 +207,9 @@ jobs:
     needs: [prepare, build]
     runs-on: ubuntu-latest
     steps:
+      # gh release resolves the target repo from the git remote.
+      - uses: actions/checkout@v4
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
