@@ -221,20 +221,28 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          TAG="${{ needs.prepare.outputs.tag }}"
+          # Resolve from job outputs, then the dispatch input, then the tag ref.
+          VERSION="${{ needs.prepare.outputs.version }}"
+          [ -n "$VERSION" ] || VERSION="${{ inputs.version }}"
+          [ -n "$VERSION" ] || VERSION="${GITHUB_REF_NAME#v}"
+          TAG="v${VERSION}"
+          REPO="${{ github.repository }}"
           DRAFT="${{ inputs.draft }}"
           DRAFT_FLAG=""
           if [ "$DRAFT" = "true" ] || [ -z "$DRAFT" ]; then DRAFT_FLAG="--draft"; fi
 
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG 已存在，追加产物"
+          echo "Publishing ${TAG} to ${REPO}"
+
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            echo "Release ${TAG} 已存在，追加产物"
           else
             gh release create "$TAG" \
+              --repo "$REPO" \
               --target "$GITHUB_SHA" \
-              --title "Lobot ${{ needs.prepare.outputs.version }}" \
-              --notes "Lobot ${{ needs.prepare.outputs.version }} (${{ needs.prepare.outputs.channel }})" \
+              --title "Lobot ${VERSION}" \
+              --notes "Lobot ${VERSION} (${{ needs.prepare.outputs.channel }})" \
               $DRAFT_FLAG
           fi
 
           find dist -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.tar.gz' -o -name 'latest*.yml' \) -print0 \
-            | xargs -0 -r gh release upload "$TAG" --clobber
+            | xargs -0 -r gh release upload "$TAG" --repo "$REPO" --clobber
