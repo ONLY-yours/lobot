@@ -94,11 +94,6 @@ jobs:
             platform: mac
             arch: arm64
             artifact: mac-arm64
-          - name: macOS x64
-            os: macos-latest
-            platform: mac
-            arch: x64
-            artifact: mac-x64
           - name: Windows x64
             os: windows-latest
             platform: win
@@ -170,14 +165,28 @@ jobs:
         working-directory: ${{ github.workspace }}/source
         env:
           UPDATE_CHANNEL: ${{ needs.prepare.outputs.channel }}
+          # electron-builder.mjs 以 CSC_LINK 是否存在决定是否签名；
+          # 证书缺失时构建仍可完成，只是产物未签名。
+          CSC_LINK: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
           case "${{ matrix.platform }}" in
             mac)
-              # 没有 Apple 证书时显式关闭签名/公证，避免 CI 卡在证书发现。
-              npx electron-builder --mac --${{ matrix.arch }} --config electron-builder.mjs \
-                --publish never -c.mac.identity=null -c.mac.notarize=false -c.npmRebuild=false
+              if [ -n "${CSC_LINK:-}" ]; then
+                echo "🔐 使用 Developer ID 证书签名并公证"
+                npx electron-builder --mac --${{ matrix.arch }} --config electron-builder.mjs \
+                  --publish never -c.npmRebuild=false
+              else
+                echo "::warning::未配置 APPLE_CERTIFICATE_BASE64，产物未签名、未公证"
+                npx electron-builder --mac --${{ matrix.arch }} --config electron-builder.mjs \
+                  --publish never -c.npmRebuild=false -c.mac.identity=null -c.mac.notarize=false
+              fi
               ;;
+
             win)
               npx electron-builder --win --${{ matrix.arch }} --config electron-builder.mjs --publish never -c.npmRebuild=false
               ;;
