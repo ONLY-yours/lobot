@@ -230,6 +230,7 @@ jobs:
             echo "Release $TAG 已存在，追加产物"
           else
             gh release create "$TAG" \
+              --target "$GITHUB_SHA" \
               --title "Lobot ${{ needs.prepare.outputs.version }}" \
               --notes "Lobot ${{ needs.prepare.outputs.version }} (${{ needs.prepare.outputs.channel }})" \
               $DRAFT_FLAG
