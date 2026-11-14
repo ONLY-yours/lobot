@@ -165,6 +165,8 @@ jobs:
         working-directory: ${{ github.workspace }}/source
         env:
           UPDATE_CHANNEL: ${{ needs.prepare.outputs.channel }}
+          # 有值时 electron-builder 改用 generic provider，app-update.yml 指向 S3。
+          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
           # electron-builder.mjs 以 CSC_LINK 是否存在决定是否签名；
           # 证书缺失时构建仍可完成，只是产物未签名。
           CSC_LINK: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
@@ -271,3 +273,34 @@ jobs:
               [ "$attempt" = 5 ] && { echo "::error::上传失败: ${file}"; exit 1; }
             done
           done < <(find dist -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.tar.gz' -o -name 'latest*.yml' \) -print0)
+
+      # 客户端按 UPDATE_SERVER_URL 从 S3 检查更新；GitHub Release 作为备份。
+      - name: Sync artifacts to S3
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.UPDATE_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.UPDATE_AWS_SECRET_ACCESS_KEY }}
+          S3_BUCKET: ${{ secrets.UPDATE_S3_BUCKET }}
+          S3_ENDPOINT: ${{ secrets.UPDATE_S3_ENDPOINT }}
+          S3_REGION: ${{ secrets.UPDATE_S3_REGION || 'us-east-1' }}
+          CHANNEL: ${{ needs.prepare.outputs.channel }}
+        run: |
+          set -euo pipefail
+          if [ -z "${S3_BUCKET:-}" ]; then
+            echo "::warning::UPDATE_S3_BUCKET 未配置，跳过 S3 同步"
+            exit 0
+          fi
+
+          AWS_ARGS=(--region "$S3_REGION")
+          if [ -n "${S3_ENDPOINT:-}" ]; then AWS_ARGS+=(--endpoint-url "$S3_ENDPOINT"); fi
+
+          count=0
+          while IFS= read -r -d '' file; do
+            name="$(basename "$file")"
+            aws s3 cp "$file" "s3://${S3_BUCKET}/${CHANNEL}/${name}" "${AWS_ARGS[@]}" \
+              --cache-control 'public, max-age=300'
+            echo "⬆️  ${CHANNEL}/${name}"
+            count=$((count + 1))
+          done < <(find dist -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.tar.gz' -o -name 'latest*.yml' \) -print0)
+
+          echo "✅ 已同步 ${count} 个文件到 s3://${S3_BUCKET}/${CHANNEL}/"
