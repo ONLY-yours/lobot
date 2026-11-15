@@ -63,7 +63,7 @@ export class CoreUpdateManager {
   private readonly otaRoot: string;
   private readonly store: CoreStore;
   private readonly builtinManifest: CoreManifest | null;
-  private readonly baseDisabledReasons: string[];
+  readonly disabledReasons: string[];
   private activeChannel: CoreChannel;
   private pointer: CorePointer;
   private staged: Staged | null = null;
@@ -111,19 +111,13 @@ export class CoreUpdateManager {
       coerceStoredUpdateChannel(this.app.storeManager.get('updateChannel') ?? UPDATE_CHANNEL),
     );
     this.pointer = emptyPointer(this.shell?.abi ?? '');
-    this.baseDisabledReasons = [
+    this.disabledReasons = [
       !this.shell && 'missing-shell',
       this.shell && !this.shell.manifest && 'missing-core-manifest',
       this.shell && !this.builtinManifest && 'missing-builtin-manifest',
       this.shell && !this.shell.publicKey && 'missing-public-key',
       !FEED_BASE_URL && 'missing-server-url',
     ].filter((reason): reason is string => typeof reason === 'string');
-  }
-
-  get disabledReasons() {
-    return process.platform === 'darwin' && this.activeChannel === 'stable'
-      ? [...this.baseDisabledReasons, 'macos-stable-full-updates-only']
-      : this.baseDisabledReasons;
   }
 
   get enabled() {
@@ -194,11 +188,10 @@ export class CoreUpdateManager {
   }
 
   startScheduledChecks = () => {
-    if (this.baseDisabledReasons.length || this.scheduledChecksStarted) return;
+    if (!this.enabled || this.scheduledChecksStarted) return;
     this.scheduledChecksStarted = true;
     electronApp.on('browser-window-blur', this.handleWindowBlur);
     electronApp.on('browser-window-focus', this.clearIdleTimer);
-    if (!this.enabled) return;
     if (this.runningVersion && !this.mountedSeen && this.isFirstBootOfRunningCore()) {
       this.armBootCheck({ cold: true });
     }
@@ -210,14 +203,13 @@ export class CoreUpdateManager {
     if (next === this.activeChannel) return;
     logger.info('Core OTA channel changed', { from: this.activeChannel, to: next });
     this.activeChannel = next;
-    if (this.baseDisabledReasons.length) return;
+    if (!this.enabled) return;
     this.checkGeneration += 1;
     this.busy = false;
     this.savePointer({
       channel: next,
       staged: null,
-      ...(!this.enabled ? { current: null, previous: null } : {}),
-      ...(this.enabled && this.staged?.applyMode === 'relaunch'
+      ...(this.staged?.applyMode === 'relaunch'
         ? { current: this.pointer.previous, previous: null }
         : {}),
     });
@@ -228,7 +220,7 @@ export class CoreUpdateManager {
     this.checkTimer = null;
     this.checkInterval = null;
     this.clearIdleTimer();
-    if (this.scheduledChecksStarted && this.enabled) this.scheduleChecks();
+    if (this.scheduledChecksStarted) this.scheduleChecks();
   };
 
   handleBootPing = (stage?: 'loaded' | 'mounted', senderId?: number) => {

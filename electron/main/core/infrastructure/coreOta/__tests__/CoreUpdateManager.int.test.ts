@@ -50,7 +50,7 @@ const { electronMock, loggerMock, spawnMock } = vi.hoisted(() => ({
 
 vi.mock('@/utils/logger', () => ({ createLogger: () => loggerMock }));
 vi.mock('electron', () => electronMock);
-vi.mock('node:child_process', () => ({ spawn: spawnMock }));
+vi.mock('node:child_process', () => ({ default: { spawn: spawnMock }, spawn: spawnMock }));
 vi.mock('@/modules/updater/configs', () => ({
   BUILD_CHANNEL: 'stable',
   UPDATE_CHANNEL: 'stable',
@@ -67,31 +67,12 @@ beforeEach(() => {
 afterEach(teardownOtaFixture);
 
 describe('CoreUpdateManager initialize', () => {
-  it('disables manual and scheduled OTA on macOS Stable', async () => {
+  it('checks for OTA on macOS Stable', async () => {
     Object.defineProperty(process, 'platform', { value: 'darwin' });
     const { manager } = await loadManager();
-    manager.startScheduledChecks();
+    expect(manager.disabledReasons).toEqual([]);
     await manager.checkForUpdates({ manual: true });
-    expect(manager.enabled).toBe(false);
-    expect(fetchImpl).not.toHaveBeenCalled();
-  });
-
-  it('enables Canary OTA after leaving macOS Stable and clears it when switching back', async () => {
-    Object.defineProperty(process, 'platform', { value: 'darwin' });
-    const { manager } = await loadManager();
-    manager.startScheduledChecks();
-    manager.switchChannel('canary');
-    expect(manager.enabled).toBe(true);
-    manager.switchChannel('stable');
-    expect(manager.enabled).toBe(false);
-    expect(readPointer(otaRoot(), ABI)).toMatchObject({
-      current: null,
-      previous: null,
-      staged: null,
-      channel: 'stable',
-    });
-    await manager.checkForUpdates({ manual: true });
-    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(fetchImpl).toHaveBeenCalled();
   });
 
   it('checks for updates in the background immediately after startup and hourly thereafter', async () => {

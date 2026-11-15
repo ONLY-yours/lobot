@@ -38,7 +38,7 @@ bun run package:local
 
 `.github/workflows/auto-release.yml` tags a patch version (`vX.Y.Z`) when CI passes on `main` and user-facing commits landed since the last tag. The tag push runs `.github/workflows/release-desktop.yml`, which compares the shell ABI with the last full release on the channel:
 
-- **Shell unchanged**: it ships only the core as an incremental (OTA) update through `release-desktop-core-ota.yml`. macOS `stable` installs only take full updates, so they wait for the next full release.
+- **Shell unchanged**: it ships only the core as an incremental (OTA) update through `release-desktop-core-ota.yml`.
 - **Shell changed, or no full release yet**: it builds macOS, Windows and Linux packages, publishes them to a GitHub Release and syncs them to the S3 update server.
 
 Release Desktop can also run by hand from the Actions tab with a version and channel (`stable` / `beta` / `canary`); `mode: full` forces a full release.

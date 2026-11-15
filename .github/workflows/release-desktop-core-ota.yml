@@ -12,8 +12,7 @@ name: Release Desktop Core OTA
 # 需要的 secrets：UPDATE_SERVER_URL、RENDERER_OTA_PUBLIC_KEY、RENDERER_OTA_PRIVATE_KEY、
 #   UPDATE_AWS_ACCESS_KEY_ID、UPDATE_AWS_SECRET_ACCESS_KEY、UPDATE_S3_BUCKET（可选 UPDATE_S3_ENDPOINT / UPDATE_S3_REGION）
 #
-# 客户端：macOS stable 只走整包更新（CoreUpdateManager 的 macos-stable-full-updates-only），
-#   其余平台与频道会接收这里发布的增量包。
+# 客户端：所有平台与频道都会接收这里发布的增量包。
 # ============================================
 
 on:

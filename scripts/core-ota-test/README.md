@@ -2,7 +2,7 @@
 
 在本机打一个 arm64 的壳 + 内置 core（v1），再用本地 feed 依次发布 renderer-only（v2，reload）
 和 main 变更（v3，relaunch），最后验证篡改拒绝和 boot 回滚。
-默认使用 Canary 通道（macOS Stable 仅整包升级）；可用 `CORE_OTA_TEST_CHANNEL` 和 `CORE_OTA_TEST_PRODUCT` 隔离不同测试实例；`CORE_OTA_TEST_PORT` / `CORE_OTA_TEST_CDP_PORT` 可避开已有服务。
+默认使用 Canary 通道；可用 `CORE_OTA_TEST_CHANNEL` 和 `CORE_OTA_TEST_PRODUCT` 隔离不同测试实例；`CORE_OTA_TEST_PORT` / `CORE_OTA_TEST_CDP_PORT` 可避开已有服务。
 这里的 v1–v4 是测试版本号，传输协议均为 schemaVersion 4，使用 `<channel>/<appVersion>/core-v4/<platform>` feed 和 HTTP Range；内置业务位于 `core.asar`，CLI 位于 `core.asar.unpacked/cli/dist/index.js`。所有命令在 `apps/desktop/` 下执行。
 
 产物都在 `release/core-ota-e2e/`：`priv.pem`/`pub.pem`、`app/`（打包结果）、`core-v1..v3/`、`feed/`。

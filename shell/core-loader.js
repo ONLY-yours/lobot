@@ -84,14 +84,7 @@ const verifyCandidate = (dir, { abi, builtinHashes, publicKey, storeDir }) => {
   return manifest;
 };
 
-function resolveCore({
-  userData,
-  builtinDir,
-  abi,
-  publicKey,
-  deferBoot = false,
-  platform = process.platform,
-}) {
+function resolveCore({ userData, builtinDir, abi, publicKey, deferBoot = false }) {
   const otaRoot = path.join(userData, 'core-ota');
   const bootFile = path.join(otaRoot, 'boot.json');
   const pointerFile = path.join(otaRoot, 'pointer.json');
@@ -119,13 +112,6 @@ function resolveCore({
   };
 
   const builtinManifest = readJson(path.join(builtinDir, 'manifest.json')) ?? null;
-  const updateChannel =
-    readJson(path.join(userData, 'lobehub-settings.json'))?.updateChannel ??
-    builtinManifest?.channel;
-  if (platform === 'darwin' && updateChannel !== 'canary' && updateChannel !== 'beta') {
-    log.push('macOS Stable uses full updates only; ignoring external core');
-    savePointer({ channel: 'stable', current: null, previous: null, staged: null });
-  }
   const builtinSeq = typeof builtinManifest?.seq === 'number' ? builtinManifest.seq : null;
   const builtinHashes = new Set(
     Array.isArray(builtinManifest?.tree) ? builtinManifest.tree.map((file) => file.sha256) : [],
