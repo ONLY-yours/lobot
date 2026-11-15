@@ -100,15 +100,17 @@ jobs:
             artifact: linux-x64
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup pnpm
         # Version comes from package.json `packageManager`.
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
+          # v5+ caches by `packageManager` on its own; these builds stay uncached.
+          package-manager-cache: false
           node-version: ${{ env.NODE_VERSION }}
 
       # apps/cli builds with bun (ensureWorkspaceLinks + tsdown).
@@ -174,7 +176,7 @@ jobs:
           esac
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: |
@@ -218,7 +220,7 @@ jobs:
 
       - name: Upload r0 core release
         if: steps.core.outputs.platform != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: core-r0-${{ steps.core.outputs.platform }}
           path: release/core-ota
@@ -231,10 +233,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # gh release resolves the target repo from the git remote.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: dist
 

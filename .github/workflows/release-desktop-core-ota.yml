@@ -54,7 +54,7 @@ jobs:
       shell_abi: ${{ steps.gate.outputs.shell_abi }}
       version: ${{ steps.seq.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Each job derives the URL itself: GitHub drops a job output that contains a
       # secret, so passing it through `needs` would leave the other jobs with "".
@@ -157,7 +157,7 @@ jobs:
       matrix:
         platform: [darwin, win32, linux]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Resolve update server base URL
         id: server
@@ -171,11 +171,13 @@ jobs:
           echo "feed_base_url=$BASE" >> "$GITHUB_OUTPUT"
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
+          # v5+ caches by `packageManager` on its own; these builds stay uncached.
+          package-manager-cache: false
           node-version: ${{ env.NODE_VERSION }}
 
       # apps/cli builds with bun.
@@ -268,7 +270,7 @@ jobs:
 
       - name: Upload core release
         if: steps.core.outputs.skipped == 'false'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: core-ota-${{ matrix.platform }}
           path: release/core-ota
@@ -281,10 +283,10 @@ jobs:
     if: needs.gate.outputs.requires_full_release == 'false'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Download core releases
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: release/core-ota
           pattern: core-ota-*
