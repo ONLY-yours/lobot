@@ -25,6 +25,7 @@ import {
 import { notarizeMacApp } from './scripts/notarizeMacApp.mjs';
 import { packBuiltinCore } from './scripts/packBuiltinCore.mjs';
 import { toSparkleBuildVersion } from './scripts/sparkleBuildVersion.mjs';
+import { toSparklePublicKey } from './scripts/sparkleKeys.mjs';
 import { resolveSparklePackaging } from './scripts/sparklePackaging.mjs';
 import { verifyFontListSignature } from './scripts/verifyFontListSigning.mjs';
 
@@ -185,7 +186,8 @@ const getProtocolScheme = () => {
 
 const protocolScheme = getProtocolScheme();
 
-const sparklePublicKey = process.env.SPARKLE_ED_PUBLIC_KEY;
+// Accepts raw base64 or the SPKI PEM of the Core OTA pair (see scripts/sparkleKeys.mjs).
+const sparklePublicKey = toSparklePublicKey(process.env.SPARKLE_ED_PUBLIC_KEY);
 // Release CI passes the host as APP_UPDATE_SERVER_URL only (see afterPack), so the appcast
 // URL falls back to it.
 const sparkleServerUrl = updateServerUrl ?? withUrlScheme(process.env.APP_UPDATE_SERVER_URL);

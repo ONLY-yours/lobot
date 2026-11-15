@@ -15,11 +15,11 @@ inputs:
     description: 'Public update server base URL (UPDATE_SERVER_URL)'
     required: true
   ed-public-key:
-    description: 'Sparkle EdDSA public key; when set, the build embeds Sparkle and needs an appcast'
+    description: 'Sparkle EdDSA public key (raw base64 or SPKI PEM); when set, the build embeds Sparkle and needs an appcast'
     required: false
     default: ''
   ed-private-key:
-    description: 'Sparkle EdDSA private key value'
+    description: 'Sparkle EdDSA private key (raw base64 seed or PKCS8 PEM), the pair of ed-public-key'
     required: false
     default: ''
   delta-bases:
@@ -81,11 +81,11 @@ runs:
           echo "enabled=false" >> "$GITHUB_OUTPUT"
         elif [ -z "$ED_PUBLIC_KEY" ] && [ -z "$ED_PRIVATE_KEY" ]; then
           # The build carries no Sparkle either, so macOS keeps electron-updater (latest-mac.yml).
-          echo "::warning::未配置 SPARKLE_ED_PUBLIC_KEY / SPARKLE_ED_PRIVATE_KEY，macOS 不走 Sparkle"
+          echo "::warning::未配置 Sparkle 密钥（SPARKLE_ED_* 或 RENDERER_OTA_*），macOS 不走 Sparkle"
           echo "enabled=false" >> "$GITHUB_OUTPUT"
         elif [ -z "$ED_PUBLIC_KEY" ] || [ -z "$ED_PRIVATE_KEY" ] || [ -z "$S3_BUCKET" ] || [ -z "$SERVER_URL" ]; then
           # A build with the public key updates only through the appcast; shipping it without one strands it.
-          echo "::error::Sparkle publishing requires SPARKLE_ED_PUBLIC_KEY, SPARKLE_ED_PRIVATE_KEY, UPDATE_S3_BUCKET and UPDATE_SERVER_URL"
+          echo "::error::Sparkle publishing requires a matching key pair (SPARKLE_ED_* or RENDERER_OTA_*), UPDATE_S3_BUCKET and UPDATE_SERVER_URL"
           exit 1
         else
           echo "enabled=true" >> "$GITHUB_OUTPUT"
@@ -131,6 +131,7 @@ runs:
         AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
         AWS_REGION: ${{ inputs.s3-region }}
         SPARKLE_ED_PRIVATE_KEY: ${{ inputs.ed-private-key }}
+        SPARKLE_ED_PUBLIC_KEY: ${{ inputs.ed-public-key }}
         CHANNEL: ${{ inputs.channel }}
         VERSION: ${{ inputs.version }}
         RELEASE_DIR: ${{ inputs.release-dir }}
@@ -156,7 +157,8 @@ runs:
         DEV="$(hdiutil attach -nomount ram://16384 | awk '{print $1}')"
         diskutil erasevolume HFS+ SparkleKeyRAM "$DEV" >/dev/null
         KEY_FILE="/Volumes/SparkleKeyRAM/ed_private_key"
-        printf '%s' "$SPARKLE_ED_PRIVATE_KEY" > "$KEY_FILE"
+        # Converts a PEM key to Sparkle's raw seed and refuses a private key of another pair.
+        node scripts/sparkleKeys.mjs write-private "$KEY_FILE"
 
         cleanup() {
           dd if=/dev/urandom of="$KEY_FILE" bs=1024 count=4 conv=notrunc 2>/dev/null || true

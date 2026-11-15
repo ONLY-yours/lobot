@@ -18,8 +18,9 @@ name: Release Desktop
 #   - RENDERER_OTA_PUBLIC_KEY / RENDERER_OTA_PRIVATE_KEY：增量更新（Core OTA）签名密钥对。
 #     公钥编进外壳；私钥给 r0 core 签名。缺失则本版不能接收增量更新。
 #   - SPARKLE_ED_PUBLIC_KEY / SPARKLE_ED_PRIVATE_KEY：macOS 整包走 Sparkle（含 delta）的 EdDSA
-#     密钥对。公钥编进 Info.plist；私钥签 appcast。都缺失则 macOS 用 electron-updater；
-#     只配一半会让发布失败。公钥不计入 shellAbi，更换后要用 mode=full 发一次整包。
+#     密钥对。公钥编进 Info.plist；私钥签 appcast。未配置时复用 RENDERER_OTA_* 这对 Ed25519
+#     密钥（scripts/sparkleKeys.mjs 转换格式）；两对都缺失则 macOS 用 electron-updater。
+#     公钥不计入 shellAbi，更换后要用 mode=full 发一次整包。
 # ============================================
 
 on:
@@ -209,7 +210,8 @@ jobs:
           # beforePack 把公钥写进 shell/abi.json，并参与计算 shellAbi；增量发布按 shellAbi 判断能否复用本版外壳。
           RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           # macOS 有它时打入 Sparkle.framework，appcast 地址取自 APP_UPDATE_SERVER_URL。
-          SPARKLE_ED_PUBLIC_KEY: ${{ secrets.SPARKLE_ED_PUBLIC_KEY }}
+          # 与 publish-sparkle 的私钥同一来源：配了 SPARKLE_ED_PUBLIC_KEY 用 Sparkle 专用对，否则用 OTA 对。
+          SPARKLE_ED_PUBLIC_KEY: ${{ secrets.SPARKLE_ED_PUBLIC_KEY || secrets.RENDERER_OTA_PUBLIC_KEY }}
           # electron-builder.mjs 以 CSC_LINK 是否存在决定是否签名；
           # 证书缺失时构建仍可完成，只是产物未签名。
           CSC_LINK: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
@@ -492,8 +494,9 @@ jobs:
           version: ${{ needs.prepare.outputs.version }}
           release-dir: release
           server-url: ${{ secrets.UPDATE_SERVER_URL }}
-          ed-public-key: ${{ secrets.SPARKLE_ED_PUBLIC_KEY }}
-          ed-private-key: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+          # 公私钥成对选取，避免 Sparkle 公钥配上 OTA 私钥；action 还会校验两者匹配。
+          ed-public-key: ${{ secrets.SPARKLE_ED_PUBLIC_KEY || secrets.RENDERER_OTA_PUBLIC_KEY }}
+          ed-private-key: ${{ (secrets.SPARKLE_ED_PUBLIC_KEY && secrets.SPARKLE_ED_PRIVATE_KEY) || (!secrets.SPARKLE_ED_PUBLIC_KEY && secrets.RENDERER_OTA_PRIVATE_KEY) || '' }}
           aws-access-key-id: ${{ secrets.UPDATE_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.UPDATE_AWS_SECRET_ACCESS_KEY }}
           s3-bucket: ${{ secrets.UPDATE_S3_BUCKET }}
