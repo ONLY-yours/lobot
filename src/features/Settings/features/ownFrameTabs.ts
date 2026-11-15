@@ -15,5 +15,17 @@ export const OWN_FRAME_TABS = new Set<string>([
 /** In-frame tabs whose container spans the pane, e.g. a card grid that adds columns as it widens. */
 export const FULL_WIDTH_TABS = new Set<string>([SettingsTabs.Devices]);
 
-export const getSettingsContainerMaxWidth = (tab: string | undefined) =>
-  tab && FULL_WIDTH_TABS.has(tab) ? '100%' : 1024;
+/**
+ * Tabs laid out as Telegram-style inset groups: rounded cards on the secondary
+ * background, in a narrower column so label and value stay within one glance.
+ */
+export const INSET_TABS = new Set<string>([SettingsTabs.Profile]);
+
+export const getSettingsContainerMaxWidth = (tab: string | undefined) => {
+  if (tab && FULL_WIDTH_TABS.has(tab)) return '100%';
+  if (tab && INSET_TABS.has(tab)) return 720;
+  return 1024;
+};
+
+export const getSettingsContainerVariant = (tab: string | undefined) =>
+  tab && INSET_TABS.has(tab) ? 'secondary' : 'default';

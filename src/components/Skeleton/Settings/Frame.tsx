@@ -5,7 +5,10 @@ import type { ReactNode } from 'react';
 
 import NavHeader from '@/features/NavHeader';
 import SettingContainer from '@/features/Setting/SettingContainer';
-import { getSettingsContainerMaxWidth } from '@/features/Settings/features/ownFrameTabs';
+import {
+  getSettingsContainerMaxWidth,
+  getSettingsContainerVariant,
+} from '@/features/Settings/features/ownFrameTabs';
 import { SettingsPageActionsRow } from '@/features/Settings/features/SettingsPageActions';
 import { useSettingsTabTitle } from '@/features/Settings/features/tabTitles';
 
@@ -45,6 +48,7 @@ export const SettingsSkeletonFrame = ({
       maxWidth={getSettingsContainerMaxWidth(tab)}
       paddingBlock={'24px 128px'}
       paddingInline={24}
+      variant={getSettingsContainerVariant(tab)}
     >
       {actions && <SettingsPageActionsRow>{actions}</SettingsPageActionsRow>}
       {children}

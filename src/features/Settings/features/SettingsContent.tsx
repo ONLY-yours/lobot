@@ -10,7 +10,11 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { SettingsTabs } from '@/store/global/initialState';
 
 import { componentMap } from './componentMap';
-import { getSettingsContainerMaxWidth, OWN_FRAME_TABS } from './ownFrameTabs';
+import {
+  getSettingsContainerMaxWidth,
+  getSettingsContainerVariant,
+  OWN_FRAME_TABS,
+} from './ownFrameTabs';
 import { SettingsPageActionsContext, SettingsPageActionsRow } from './SettingsPageActions';
 import { useSettingsTabTitle } from './tabTitles';
 
@@ -86,6 +90,7 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
                 maxWidth={getSettingsContainerMaxWidth(tabKey)}
                 paddingBlock={'24px 128px'}
                 paddingInline={24}
+                variant={getSettingsContainerVariant(tabKey)}
               >
                 {/* Page actions sit in the content column so they align with the body. */}
                 <SettingsPageActionsRow ref={setPageActions} />

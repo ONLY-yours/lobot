@@ -3,7 +3,7 @@
 import { cssVar, Icon, Upload } from '@lobehub/ui';
 import { cssVar as sxVar } from '@lobehub/ui/stylex/cssVar.stylex';
 import * as stylex from '@stylexjs/stylex';
-import { Loader2Icon, PencilIcon } from 'lucide-react';
+import { CameraIcon, Loader2Icon } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -15,9 +15,26 @@ import { sx } from '@/styles/sx';
 import { imageToBase64 } from '@/utils/imageToBase64';
 import { createUploadImageHandler } from '@/utils/uploadFIle';
 
-import ProfileRow from './ProfileRow';
+const SIZE = 64;
 
 const styles = stylex.create({
+  badge: {
+    position: 'absolute',
+    zIndex: 2,
+    insetBlockEnd: 0,
+    insetInlineEnd: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '24px',
+    height: '24px',
+    borderWidth: '2px',
+    borderStyle: 'solid',
+    borderColor: sxVar.colorBgContainer,
+    borderRadius: '50%',
+    backgroundColor: sxVar.colorText,
+    backgroundImage: 'none',
+  },
   overlay: {
     cursor: 'pointer',
     position: 'absolute',
@@ -26,7 +43,7 @@ const styles = stylex.create({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: '8px',
+    borderRadius: '50%',
     opacity: { default: 0, [stylex.when.ancestor(':hover')]: 1 },
     backgroundColor: sxVar.colorBgMask,
     backgroundImage: 'none',
@@ -35,12 +52,17 @@ const styles = stylex.create({
   wrapper: {
     cursor: 'pointer',
     position: 'relative',
-    overflow: 'hidden',
-    borderRadius: '8px',
+    flexShrink: 0,
+    width: `${SIZE}px`,
+    height: `${SIZE}px`,
   },
 });
 
-const AvatarRow = () => {
+/**
+ * The hero avatar. The camera badge stays visible so touch users see the photo
+ * is editable without hovering; hover only dims it as a desktop affordance.
+ */
+const AvatarUpload = () => {
   const { t } = useTranslation('auth');
   const isLogin = useUserStore(authSelectors.isLogin);
   const updateAvatar = useUserStore((s) => s.updateAvatar);
@@ -77,27 +99,29 @@ const AvatarRow = () => {
 
   const canUpload = isLogin;
 
-  const avatarContent = canUpload ? (
-    <Upload maxCount={1} onFiles={([file]) => handleUploadAvatar(file)}>
-      <div {...stylex.props(styles.wrapper, stylex.defaultMarker())}>
-        <UserAvatar size={40} />
-        <div {...sx(styles.overlay, uploading && { opacity: 1 })}>
-          <Icon
-            color={cssVar.colorTextLightSolid}
-            icon={uploading ? Loader2Icon : PencilIcon}
-            size={16}
-            spin={uploading}
-          />
-        </div>
-      </div>
-    </Upload>
-  ) : (
-    <UserAvatar size={40} />
-  );
+  if (!canUpload) return <UserAvatar shape={'circle'} size={SIZE} />;
 
   return (
-    <ProfileRow action={avatarContent} anchor={'profile-avatar'} label={t('profile.avatar')} />
+    <Upload maxCount={1} onFiles={([file]) => handleUploadAvatar(file)}>
+      <div
+        aria-label={t('profile.updateAvatar')}
+        role={'button'}
+        {...stylex.props(styles.wrapper, stylex.defaultMarker())}
+      >
+        <UserAvatar shape={'circle'} size={SIZE} />
+        <div {...sx(styles.overlay, uploading && { opacity: 1 })}>
+          {uploading && (
+            <Icon spin color={cssVar.colorTextLightSolid} icon={Loader2Icon} size={20} />
+          )}
+        </div>
+        {!uploading && (
+          <div {...stylex.props(styles.badge)}>
+            <Icon color={cssVar.colorBgContainer} icon={CameraIcon} size={12} />
+          </div>
+        )}
+      </div>
+    </Upload>
   );
 };
 
-export default AvatarRow;
+export default AvatarUpload;

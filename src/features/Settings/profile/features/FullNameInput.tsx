@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox, Input, Spin } from '@lobehub/ui';
+import { Input, Spin } from '@lobehub/ui';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -8,9 +8,8 @@ import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import { saveToast } from '@/store/utils/saveToast';
 
-import ProfileRow from './ProfileRow';
-
-const FullNameRow = () => {
+/** The hero's name field: borderless like Telegram's, saved on blur or Enter. */
+const FullNameInput = () => {
   const { t } = useTranslation('auth');
   const fullName = useUserStore(userProfileSelectors.fullName);
   const updateFullName = useUserStore((s) => s.updateFullName);
@@ -33,22 +32,21 @@ const FullNameRow = () => {
   };
 
   return (
-    <ProfileRow anchor={'profile-full-name'} label={t('profile.fullName')}>
-      <Flexbox horizontal align="center" gap={8}>
-        {saving && <Spin size="small" style={{ opacity: 0.5 }} />}
-        <Input
-          defaultValue={fullName || ''}
-          disabled={saving}
-          key={fullName}
-          placeholder={t('profile.fullName')}
-          ref={inputRef}
-          variant="filled"
-          onBlur={handleSave}
-          onPressEnter={handleSave}
-        />
-      </Flexbox>
-    </ProfileRow>
+    <Input
+      aria-label={t('profile.fullName')}
+      defaultValue={fullName || ''}
+      disabled={saving}
+      key={fullName}
+      placeholder={t('profile.fullName')}
+      ref={inputRef}
+      style={{ fontSize: 16, paddingInline: 0 }}
+      // Always pass a suffix: antd remounts the input when one appears later.
+      suffix={saving ? <Spin size="small" style={{ opacity: 0.5 }} /> : <span />}
+      variant="borderless"
+      onBlur={handleSave}
+      onPressEnter={handleSave}
+    />
   );
 };
 
-export default FullNameRow;
+export default FullNameInput;

@@ -84,7 +84,9 @@ const EmailRow = () => {
           </Text>
         }
       >
-        <Text>{email || '--'}</Text>
+        <Text ellipsis type={'secondary'}>
+          {email || '--'}
+        </Text>
       </ProfileRow>
     );
 
@@ -116,7 +118,7 @@ const EmailRow = () => {
           inputMode="email"
           placeholder={t('profile.emailPlaceholder')}
           size="small"
-          style={{ flex: 1, minWidth: 0, width: '100%' }}
+          style={{ flex: 1, minWidth: 0, textAlign: 'right', width: '100%' }}
           type="email"
           value={editValue}
           variant="filled"
@@ -124,7 +126,9 @@ const EmailRow = () => {
           onPressEnter={handleSave}
         />
       ) : (
-        <Text>{email || '--'}</Text>
+        <Text ellipsis type={'secondary'}>
+          {email || '--'}
+        </Text>
       )}
     </ProfileRow>
   );

@@ -56,9 +56,9 @@ vi.mock('@/store/user/selectors', () => ({
   },
 }));
 
-vi.mock('./ProfileRow', () => ({
-  default: ({ children, label }: { children: ReactNode; label: string }) => (
-    <section aria-label={label}>{children}</section>
+vi.mock('./InsetGroup', () => ({
+  default: ({ children, title }: { children: ReactNode; title: string }) => (
+    <section aria-label={title}>{children}</section>
   ),
 }));
 

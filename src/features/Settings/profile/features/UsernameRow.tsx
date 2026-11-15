@@ -89,17 +89,19 @@ const UsernameRow = () => {
 
   return (
     <ProfileRow anchor={'profile-username'} label={t('profile.username')}>
-      <Flexbox align="flex-start" gap={4}>
-        <Flexbox horizontal align="center" gap={8}>
+      <Flexbox align="flex-end" flex={1} gap={4} style={{ minWidth: 0 }}>
+        <Flexbox horizontal align="center" gap={8} justify="flex-end" width={'100%'}>
           <Input
             aria-invalid={!!error}
+            aria-label={t('profile.username')}
             data-invalid={error ? '' : undefined}
             defaultValue={username || ''}
             disabled={saving}
             key={username}
             placeholder={t('profile.usernamePlaceholder')}
             ref={inputRef}
-            variant="filled"
+            style={{ flex: 1, minWidth: 0, paddingInline: 0, textAlign: 'right' }}
+            variant="borderless"
             onBlur={handleSave}
             onChange={handleChange}
             onPressEnter={handleSave}

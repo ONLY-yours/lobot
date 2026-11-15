@@ -12,7 +12,7 @@ import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import { saveToast } from '@/store/utils/saveToast';
 
-import ProfileRow from './ProfileRow';
+import InsetGroup from './InsetGroup';
 
 const InterestsRow = () => {
   const { t } = useTranslation('auth');
@@ -78,8 +78,12 @@ const InterestsRow = () => {
   }, [customInput, normalizedInterests, saveInterests]);
 
   return (
-    <ProfileRow anchor={'profile-interests'} label={t('profile.interests')}>
-      <Flexbox gap={12}>
+    <InsetGroup
+      anchor={'profile-interests'}
+      footer={t('profile.interestsHint')}
+      title={t('profile.interests')}
+    >
+      <Flexbox gap={12} padding={16}>
         <Flexbox horizontal align="center" gap={8} wrap="wrap">
           {areas.map((item) => {
             const isSelected = normalizedInterests.includes(item.key);
@@ -157,7 +161,7 @@ const InterestsRow = () => {
           />
         )}
       </Flexbox>
-    </ProfileRow>
+    </InsetGroup>
   );
 };
 

@@ -1,7 +1,6 @@
 'use client';
 
-import { Divider, Flexbox } from '@lobehub/ui';
-import { Form } from '@lobehub/ui/form';
+import { Flexbox } from '@lobehub/ui';
 import { useTranslation } from 'react-i18next';
 
 import ProfileSkeleton from '@/components/Skeleton/Settings/tabs/Profile';
@@ -9,10 +8,10 @@ import SettingHeader from '@/features/Settings/features/SettingHeader';
 import { useUserStore } from '@/store/user';
 import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
 
-import AvatarRow from './features/AvatarRow';
 import EmailRow from './features/EmailRow';
-import FullNameRow from './features/FullNameRow';
+import InsetGroup from './features/InsetGroup';
 import InterestsRow from './features/InterestsRow';
+import ProfileHero from './features/ProfileHero';
 import SignOutRow from './features/SignOutRow';
 import UsernameRow from './features/UsernameRow';
 
@@ -30,7 +29,7 @@ const ProfileSetting = ({ showSettingHeader = true }: ProfileSettingProps) => {
 
   const { t } = useTranslation('auth');
 
-  // Same account group the route and chunk fallbacks draw, so the tab never
+  // Same inset groups the route and chunk fallbacks draw, so the tab never
   // swaps between two differently shaped skeletons.
   if (isLoading)
     return (
@@ -43,35 +42,20 @@ const ProfileSetting = ({ showSettingHeader = true }: ProfileSettingProps) => {
   return (
     <>
       {showSettingHeader && <SettingHeader title={t('profile.title')} />}
-      <Form.Group collapsible={false} title={t('profile.account')} variant={'filled'}>
-        <Flexbox>
-          <AvatarRow />
-
-          <Divider style={{ margin: 0 }} />
-
-          <FullNameRow />
-
-          <Divider style={{ margin: 0 }} />
-
+      {/* Telegram-style inset groups: who you are, what you care about, the account, then sign out. */}
+      <Flexbox gap={24}>
+        <ProfileHero />
+        <InterestsRow />
+        <InsetGroup>
           <UsernameRow />
-
-          <Divider style={{ margin: 0 }} />
-
-          <InterestsRow />
-
-          {isLogin && userProfile?.email && (
-            <>
-              <Divider style={{ margin: 0 }} />
-              <EmailRow />
-            </>
-          )}
-        </Flexbox>
-      </Form.Group>
-      {isLogin && (
-        <Form.Group collapsible={false} variant={'filled'}>
-          <SignOutRow />
-        </Form.Group>
-      )}
+          {isLogin && userProfile?.email && <EmailRow />}
+        </InsetGroup>
+        {isLogin && (
+          <InsetGroup>
+            <SignOutRow />
+          </InsetGroup>
+        )}
+      </Flexbox>
     </>
   );
 };

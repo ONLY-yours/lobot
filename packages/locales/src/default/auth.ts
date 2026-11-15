@@ -391,6 +391,8 @@ export default {
   'profile.emailPlaceholder': 'new-email@example.com',
   'profile.fullName': 'Fullname',
   'profile.interests': 'Interests',
+  'profile.interestsHint': 'Pick the areas you care about so your Agents know you better.',
+  'profile.nameHint': 'Enter your name and add a profile photo.',
   'profile.password': 'Password',
   'profile.resetPasswordError': 'Failed to send password reset link',
   'profile.resetPasswordSent': 'Reset link sent to {{email}}',

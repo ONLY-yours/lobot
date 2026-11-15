@@ -1,7 +1,6 @@
 'use client';
 
 import { Text } from '@lobehub/ui';
-import { media } from '@lobehub/ui/stylex/media.stylex';
 import * as stylex from '@stylexjs/stylex';
 import { type ReactNode } from 'react';
 
@@ -13,36 +12,32 @@ interface ProfileRowProps {
   anchor?: string;
   children?: ReactNode;
   label?: string;
-  labelSlot?: ReactNode;
 }
 
 const styles = stylex.create({
-  action: {
-    flexShrink: 0,
-    // Keep action trailing even for action-only rows (AvatarRow / PasswordRow) where body has no children and space-between degenerates to flex-start.
-    marginInlineStart: 'auto',
-  },
+  action: { flexShrink: 0 },
   body: {
     display: 'flex',
     flex: '1',
-    gap: '12px',
+    gap: '8px',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     minWidth: '0',
   },
-  label: { flexGrow: 0, flexShrink: 0, flexBasis: { default: '160px', [media.md]: 'auto' } },
+  label: { flexShrink: 0 },
   row: {
     display: 'flex',
-    gap: { default: '24px', [media.md]: '12px' },
-    alignItems: { default: 'center', [media.md]: 'stretch' },
+    gap: '16px',
+    alignItems: 'center',
     minHeight: '48px',
-    paddingBlock: '16px',
-    flexDirection: { default: null, [media.md]: 'column' },
+    paddingBlock: '8px',
+    paddingInline: '16px',
   },
 });
 
-const ProfileRow = ({ anchor, label, labelSlot, children, action }: ProfileRowProps) => {
-  const labelNode = labelSlot ?? (label && <Text strong>{label}</Text>);
+/** One row of an inset group: label on the left, value and action on the right. */
+const ProfileRow = ({ anchor, label, children, action }: ProfileRowProps) => {
+  const labelNode = label && <Text>{label}</Text>;
 
   return (
     <div
