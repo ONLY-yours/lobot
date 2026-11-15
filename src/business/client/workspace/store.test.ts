@@ -55,6 +55,27 @@ describe('workspace store', () => {
     expect(useWorkspaceStore.getState().isWorkspaceAvailable).toBe(true);
   });
 
+  // A force quit can lose the localStorage copy, so the server-side preference decides.
+  it('restores from the lastWorkspaceId preference over the local copy', async () => {
+    mocks.list.mockResolvedValue([ws('ws-a'), ws('ws-b')]);
+    writeLastWorkspaceId('user-1', 'ws-a');
+
+    renderHook(() => useFetchWorkspaces(true, 'user-1', 'ws-b'), { wrapper });
+
+    await waitFor(() => expect(useWorkspaceStore.getState().workspaces).toHaveLength(2));
+    expect(useWorkspaceStore.getState().activeWorkspaceId).toBe('ws-b');
+  });
+
+  it('treats a null preference as an explicit pick of the personal space', async () => {
+    mocks.list.mockResolvedValue([ws('ws-a')]);
+    writeLastWorkspaceId('user-1', 'ws-a');
+
+    renderHook(() => useFetchWorkspaces(true, 'user-1', null), { wrapper });
+
+    await waitFor(() => expect(useWorkspaceStore.getState().workspaces).toHaveLength(1));
+    expect(useWorkspaceStore.getState().activeWorkspaceId).toBeNull();
+  });
+
   it('falls back to the personal space when the last workspace is gone or locked out', async () => {
     mocks.list.mockResolvedValue([ws('ws-a'), ws('ws-locked', { lockedOut: true })]);
     writeLastWorkspaceId('user-1', 'ws-locked');

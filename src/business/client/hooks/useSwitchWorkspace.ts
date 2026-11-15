@@ -8,8 +8,19 @@ export interface SwitchWorkspaceActions {
   switchWorkspace: (id: string) => Promise<void>;
 }
 
-const rememberScope = (id: string | null) =>
-  writeLastWorkspaceId(userProfileSelectors.userId(getUserStoreState()), id);
+/**
+ * Remember the pick in the user preference the cloud web app reads too, so it
+ * survives a force quit: the localStorage copy can still be in Chromium's
+ * write buffer when the process dies. The local copy restores while offline.
+ */
+const rememberScope = (id: string | null) => {
+  const state = getUserStoreState();
+  writeLastWorkspaceId(userProfileSelectors.userId(state), id);
+  if (state.preference?.lastWorkspaceId === id) return;
+  void state.updatePreference({ lastWorkspaceId: id }).catch((error) => {
+    console.error('Failed to remember the last workspace', error);
+  });
+};
 
 /**
  * Workspace switch invoked from imperative call sites that represent an

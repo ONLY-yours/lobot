@@ -86,11 +86,13 @@ const enterable = (workspaces: WorkspaceListItem[]) => workspaces.filter((ws) =>
 
 /**
  * Loads the user's workspaces once signed in and restores the last scope they
- * picked. `enabled` is `undefined` while sign-in is still resolving.
+ * picked: the `lastWorkspaceId` user preference, else the local copy.
+ * `enabled` is `undefined` while sign-in is still resolving.
  */
 export const useFetchWorkspaces = (
   enabled: boolean | undefined,
   userId: string | null | undefined,
+  lastWorkspaceId?: string | null,
 ): SWRResponse<WorkspaceListItem[]> => {
   const swr = useSWR<WorkspaceListItem[]>(
     enabled && userId ? [FETCH_WORKSPACES_KEY, userId] : null,
@@ -99,7 +101,14 @@ export const useFetchWorkspaces = (
       onSuccess: (data) => {
         const workspaces = enterable(data ?? []);
         const { activeWorkspaceId } = useWorkspaceStore.getState();
-        const candidate = activeWorkspaceId ?? (userId ? readLastWorkspaceId(userId) : null);
+        // `null` in the preference is an explicit pick of the personal space.
+        const remembered =
+          lastWorkspaceId !== undefined
+            ? lastWorkspaceId
+            : userId
+              ? readLastWorkspaceId(userId)
+              : null;
+        const candidate = activeWorkspaceId ?? remembered;
         // A workspace the user lost access to falls back to the personal space.
         const active = candidate && workspaces.some((ws) => ws.id === candidate) ? candidate : null;
         useWorkspaceStore.setState({
