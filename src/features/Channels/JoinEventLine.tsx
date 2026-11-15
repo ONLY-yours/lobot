@@ -1,13 +1,13 @@
 import * as stylex from '@stylexjs/stylex';
 import { Trans, useTranslation } from 'react-i18next';
 
-import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
 import type { ChannelJoinEvent } from './joinEvents';
 import { MemberAvatar } from './MemberAvatar';
 import { isCurrentUserMember, memberName } from './memberName';
+import { MemberProfilePopup } from './MemberProfilePopup';
 import { styles } from './styles';
 
 /** “You invited A, B and C to the channel”, as a system line in the timeline. */
@@ -35,33 +35,14 @@ export function JoinEventLine({ event: { inviter, members } }: { event: ChannelJ
               {names.map((part) => {
                 if (part.type === 'literal') return part.value;
                 const member = members[memberIndex++];
-                const content = (
-                  <span
-                    key={member.id}
-                    {...stylex.props(
-                      styles.eventMember,
-                      !!member.agentId && styles.eventMemberAgent,
-                    )}
-                  >
-                    <MemberAvatar member={member} size={18} />
-                    <span {...stylex.props(styles.eventMemberName)}>{part.value}</span>
-                  </span>
-                );
-                if (!member.agentId) return content;
                 return (
-                  // Same profile card an Agent shows on hover on its messages.
-                  <AgentProfilePopup
-                    agentId={member.agentId}
-                    key={member.id}
-                    trigger={'hover'}
-                    agent={{
-                      avatar: member.avatar,
-                      description: member.description,
-                      title: part.value,
-                    }}
-                  >
-                    {content}
-                  </AgentProfilePopup>
+                  // Same profile card a member shows on hover on their messages.
+                  <MemberProfilePopup key={member.id} member={member}>
+                    <span {...stylex.props(styles.eventMember, styles.eventMemberHoverable)}>
+                      <MemberAvatar member={member} size={18} />
+                      <span {...stylex.props(styles.eventMemberName)}>{part.value}</span>
+                    </span>
+                  </MemberProfilePopup>
                 );
               })}
             </span>

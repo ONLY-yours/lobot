@@ -181,8 +181,14 @@ export const styles = stylex.create({
     marginInline: 2,
     verticalAlign: 'baseline',
   },
-  eventMemberAgent: {
+  /** Opens a profile card on hover: a pointer and a light tint say so. */
+  eventMemberHoverable: {
     cursor: 'pointer',
+    marginInline: 0,
+    paddingInline: 2,
+    borderRadius: 4,
+    backgroundColor: { 'default': null, ':hover': cssVar.colorFillSecondary },
+    transition: 'background-color 0.15s',
   },
   eventMemberName: {
     // Let the name supply the inline flex baseline instead of the avatar.
@@ -198,6 +204,23 @@ export const styles = stylex.create({
     fontWeight: 500,
     color: cssVar.colorInfo,
     backgroundColor: cssVar.colorInfoBg,
+  },
+  /** A mention of a known member opens their profile card on hover. */
+  mentionHoverable: {
+    cursor: 'pointer',
+    backgroundColor: { 'default': cssVar.colorInfoBg, ':hover': cssVar.colorInfoBgHover },
+    transition: 'background-color 0.15s',
+  },
+  messageAvatarInline: {
+    display: 'inline-flex',
+  },
+  /** An author avatar that opens a profile card on hover gets a soft ring. */
+  messageAvatarHoverable: {
+    cursor: 'pointer',
+    display: 'inline-flex',
+    borderRadius: '50%',
+    boxShadow: { 'default': null, ':hover': `0 0 0 3px ${cssVar.colorFillSecondary}` },
+    transition: 'box-shadow 0.15s',
   },
   /** A mention inside the composer: highlighted text, no tag; tinted like selected text while selected. */
   composerMention: {

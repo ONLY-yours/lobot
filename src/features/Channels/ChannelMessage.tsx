@@ -1,4 +1,4 @@
-import type { ChannelDetail, ChannelPublicMessage } from '@lobechat/types';
+import type { ChannelDetail, ChannelPublicMember, ChannelPublicMessage } from '@lobechat/types';
 import {
   ActionIcon,
   Button,
@@ -35,6 +35,7 @@ import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
 import { authorAvatar, isCurrentUserAuthor, memberName } from './memberName';
+import { MemberProfilePopup } from './MemberProfilePopup';
 import { CHANNEL_MENTION_TAG, remarkChannelMentions } from './mentionMarkdown';
 import { MessageAttachments } from './MessageAttachments';
 import { channelMessageTime, channelTimeFormatters, foldsByDefault } from './messagePresentation';
@@ -48,29 +49,39 @@ import type { ChannelThreadDraft } from './threadDraft';
 import { ThreadPreviewCard } from './ThreadPreviewCard';
 import type { ChannelReplyTarget } from './useReplyTarget';
 
-const MentionChip = ({ children }: { children?: ReactNode }) => (
-  <span {...stylex.props(styles.mention)}>{children}</span>
-);
-// GitHub and LobeHub links render as the same chips the conversation shows.
-const messageComponents = {
-  [CHANNEL_MENTION_TAG]: MentionChip,
-  [EntityLinkElement.tag]: EntityLinkElement.Component,
-};
 const rehypePlugins = [EntityLinkElement.rehypePlugin];
 const HISTORIC_FOLD_OVERFLOW = 240;
 
-/** Message text with the members it mentioned shown as chips. */
-const MessageText = ({ content, names }: { content: string; names: string[] }) => {
+/** Message text with the members it mentioned shown as chips that show who they are on hover. */
+const MessageText = ({ content, members }: { content: string; members: ChannelPublicMember[] }) => {
+  const names = members.map((member) => memberName(member, '')).filter(Boolean);
   const key = names.join('\n');
-  // Polling re-renders every message while replies run; a new plugin array would make the
-  // memoized Markdown parse each message again on every refresh.
+  // Polling re-renders every message while replies run; a new plugin array or component map
+  // would make the memoized Markdown parse each message again on every refresh.
   const remarkPlugins = useMemo(() => [remarkChannelMentions(key ? key.split('\n') : [])], [key]);
+  const memberKey = members.map((member) => member.id).join('\n');
+  const components = useMemo(
+    () => ({
+      [CHANNEL_MENTION_TAG]: ({ children, name }: { children?: ReactNode; name?: string }) => {
+        const member = members.find((entry) => memberName(entry, '') === name);
+        return (
+          <MemberProfilePopup member={member}>
+            {/* A DOM element, so the popover can attach its hover handlers and anchor ref. */}
+            <span {...stylex.props(styles.mention, !!member && styles.mentionHoverable)}>
+              {children}
+            </span>
+          </MemberProfilePopup>
+        );
+      },
+      // GitHub and LobeHub links render as the same chips the conversation shows.
+      [EntityLinkElement.tag]: EntityLinkElement.Component,
+    }),
+    // Keyed by member ids and names: the members array is rebuilt on every poll.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [memberKey, key],
+  );
   return (
-    <Markdown
-      components={messageComponents}
-      rehypePlugins={rehypePlugins}
-      remarkPlugins={remarkPlugins}
-    >
+    <Markdown components={components} rehypePlugins={rehypePlugins} remarkPlugins={remarkPlugins}>
       {content}
     </Markdown>
   );
@@ -145,6 +156,12 @@ export const ChannelMessage = ({
     });
   const isRequest = message.author.type === 'user' && !isRoot;
   const agentAuthorId = message.author.type === 'agent' ? message.author.id : null;
+  const userMember =
+    message.author.type === 'user' && message.author.id
+      ? detail.members.find(
+          (member) => member.actorType === 'user' && member.userId === message.author.id,
+        )
+      : undefined;
   const agentMember = agentAuthorId
     ? detail.members.find((member) => member.agentId === agentAuthorId)
     : undefined;
@@ -199,10 +216,7 @@ export const ChannelMessage = ({
       : []),
   ];
   const hasToolbar = !!onReply || canBranch || moreItems.length > 0;
-  const mentionNames = detail.members
-    .filter((member) => message.mentions.includes(member.id))
-    .map((member) => memberName(member, ''))
-    .filter(Boolean);
+  const mentionedMembers = detail.members.filter((member) => message.mentions.includes(member.id));
   return (
     <div
       aria-busy={pending || undefined}
@@ -240,9 +254,19 @@ export const ChannelMessage = ({
         }
         customAvatarRender={(_, avatar) => (
           <Flexbox {...stylex.props(styles.messageAvatar)}>
-            {isOwnMessage ? (
-              <UserAvatar shape={'circle'} size={36} />
-            ) : agentAuthorId ? (
+            {!agentAuthorId ? (
+              // A person shows who they are on hover, the way an Agent shows its profile.
+              <MemberProfilePopup member={userMember}>
+                <span
+                  {...stylex.props(
+                    styles.messageAvatarInline,
+                    !!userMember && styles.messageAvatarHoverable,
+                  )}
+                >
+                  {isOwnMessage ? <UserAvatar shape={'circle'} size={36} /> : avatar}
+                </span>
+              </MemberProfilePopup>
+            ) : (
               // Same profile card an Agent shows on hover in goals and tasks.
               <AgentProfilePopup
                 agentId={agentAuthorId}
@@ -253,7 +277,7 @@ export const ChannelMessage = ({
                   title: message.author.name,
                 }}
               >
-                <span style={{ cursor: 'pointer', display: 'inline-flex' }}>
+                <span {...stylex.props(styles.messageAvatarHoverable)}>
                   <AgentAvatar
                     agentId={agentAuthorId}
                     avatar={message.author.avatar}
@@ -263,8 +287,6 @@ export const ChannelMessage = ({
                   />
                 </span>
               </AgentProfilePopup>
-            ) : (
-              avatar
             )}
           </Flexbox>
         )}
@@ -308,10 +330,10 @@ export const ChannelMessage = ({
                   onCollapsedChange={setCollapsed}
                   onOverflowChange={setOverflowing}
                 >
-                  <MessageText content={message.content} names={mentionNames} />
+                  <MessageText content={message.content} members={mentionedMembers} />
                 </CollapsibleContent>
               ) : (
-                <MessageText content={message.content} names={mentionNames} />
+                <MessageText content={message.content} members={mentionedMembers} />
               ))}
             {!!message.works?.length && <ReplyWorks works={message.works} />}
             {thread && (

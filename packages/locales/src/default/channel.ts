@@ -97,6 +97,7 @@ export default {
   'membersTitle': 'Members',
   'members.show': 'Show member list',
   'members.hide': 'Hide member list',
+  'memberProfile.joinedAt': 'Joined the channel on {{date}}',
   'membersCount': 'Members · {{count}}',
   'openAgent': 'Open Agent',
   'openAgentNamed': 'Open {{name}}',

@@ -19,36 +19,16 @@ vi.mock('@/store/user/selectors', () => ({
   userProfileSelectors: { userId: () => 'user-1' },
 }));
 vi.mock('./MemberAvatar', () => ({ MemberAvatar: () => null }));
-vi.mock('@/features/AgentProfileCard/AgentProfilePopup', () => ({
-  default: ({
-    agent,
-    agentId,
-    children,
-    trigger,
-  }: {
-    agent?: { description?: string; title?: string };
-    agentId: string;
-    children: ReactNode;
-    trigger?: string;
-  }) =>
-    createElement(
-      'div',
-      {
-        'data-agent-id': agentId,
-        'data-description': agent?.description,
-        'data-testid': 'agent-profile-popup',
-        'data-title': agent?.title,
-        'data-trigger': trigger,
-      },
-      children,
-    ),
+vi.mock('./MemberProfilePopup', () => ({
+  MemberProfilePopup: ({ children, member }: { children: ReactNode; member: { id: string } }) =>
+    createElement('div', { 'data-member-id': member.id, 'data-testid': 'member-popup' }, children),
 }));
 
 const member = (overrides: Partial<ChannelPublicMember>) =>
   ({ joinedAt: new Date(0), role: 'member', ...overrides }) as ChannelPublicMember;
 
 describe('JoinEventLine', () => {
-  it('shows the hover profile card only for Agent members', () => {
+  it('shows the hover profile card for Agents and people alike', () => {
     render(
       <JoinEventLine
         event={{
@@ -68,15 +48,10 @@ describe('JoinEventLine', () => {
       />,
     );
 
-    const popups = screen.getAllByTestId('agent-profile-popup');
-    expect(popups).toHaveLength(1);
-    expect(popups[0].dataset).toMatchObject({
-      agentId: 'agent-1',
-      description: 'Writes code',
-      title: 'Coco',
-      trigger: 'hover',
-    });
-    expect(popups[0].textContent).toBe('Coco');
-    expect(screen.getByText('Ming').closest('[data-testid="agent-profile-popup"]')).toBeNull();
+    const popups = screen.getAllByTestId('member-popup');
+    expect(popups.map((popup) => [popup.dataset.memberId, popup.textContent])).toEqual([
+      ['a', 'Coco'],
+      ['b', 'Ming'],
+    ]);
   });
 });

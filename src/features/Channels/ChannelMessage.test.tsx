@@ -91,6 +91,10 @@ vi.mock('@/store/user', () => ({
 vi.mock('@/store/user/selectors', () => ({
   userProfileSelectors: { userId: () => 'user-self' },
 }));
+vi.mock('./MemberProfilePopup', () => ({
+  MemberProfilePopup: ({ children, member }: { children: ReactNode; member?: { id: string } }) =>
+    createElement('div', { 'data-member-id': member?.id, 'data-testid': 'member-popup' }, children),
+}));
 vi.mock('./MessageAttachments', () => ({ MessageAttachments: () => null }));
 vi.mock('./MessageReceipts', () => ({
   MessageFailureMark: () => null,
@@ -101,7 +105,10 @@ const detail = {
   attachments: [],
   channel: { agentId: null, id: 'chn_1' },
   jobs: [],
-  members: [{ agentId: 'agt_1', description: 'Architect', id: 'mem_1' }],
+  members: [
+    { agentId: 'agt_1', description: 'Architect', id: 'mem_1' },
+    { actorType: 'user', agentId: null, id: 'mem_ann', userId: 'user-other', userName: 'Ann' },
+  ],
   threads: [],
 } as unknown as ChannelDetail;
 
@@ -134,7 +141,7 @@ describe('ChannelMessage avatar', () => {
     expect(screen.queryByAltText('avatar')).toBeNull();
   });
 
-  it('keeps a plain avatar for a human author', () => {
+  it('shows the person’s profile card when hovering a human author', () => {
     render(
       <ChannelMessage
         detail={detail}
@@ -143,7 +150,29 @@ describe('ChannelMessage avatar', () => {
     );
 
     expect(screen.queryByTestId('agent-profile-popup')).toBeNull();
-    expect(screen.getByAltText('avatar')).toBeTruthy();
+    const popup = screen.getByTestId('member-popup');
+    expect(popup.dataset.memberId).toBe('mem_ann');
+    expect(popup.querySelector('img[alt="avatar"]')).toBeTruthy();
+  });
+
+  it('shows the person’s profile card when hovering a mention of them', () => {
+    render(
+      <ChannelMessage
+        detail={detail}
+        message={{
+          ...message({ avatar: null, id: 'user-self', name: 'Me', type: 'user' }),
+          content: '@Ann can you check?',
+          mentions: ['mem_ann'],
+        }}
+      />,
+    );
+
+    const Mention = markdownProps.current.components[CHANNEL_MENTION_TAG];
+    render(<Mention name={'Ann'}>@Ann</Mention>);
+    const chip = screen.getByText('@Ann');
+    expect(chip.closest<HTMLElement>('[data-testid="member-popup"]')?.dataset.memberId).toBe(
+      'mem_ann',
+    );
   });
 });
 

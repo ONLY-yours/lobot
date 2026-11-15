@@ -118,6 +118,7 @@
   "invite.title": "Invite members",
   "latestMessages": "Latest messages",
   "main": "Channel conversation",
+  "memberProfile.joinedAt": "Joined the channel on {{date}}",
   "members.hide": "Hide member list",
   "members.show": "Show member list",
   "membersCount": "Members · {{count}}",
