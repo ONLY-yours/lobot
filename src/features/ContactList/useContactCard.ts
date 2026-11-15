@@ -1,4 +1,4 @@
-import { AGENT_CHAT_URL, AGENT_PROFILE_URL, GROUP_CHAT_URL } from '@lobechat/const';
+import { AGENT_CHAT_URL, AGENT_PROFILE_URL, GROUP_CHAT_URL, OFFICIAL_URL } from '@lobechat/const';
 import {
   agentDisplayName,
   agentSecondaryDisplayName,
@@ -7,7 +7,9 @@ import {
 import isEqual from 'fast-deep-equal';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
+import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { usePermission } from '@/hooks/usePermission';
 import { useHomeStore } from '@/store/home';
@@ -18,6 +20,8 @@ interface ContactCardData {
   canEdit: boolean;
   chatUrl: string;
   item: SidebarAgentItem;
+  /** The contact's page on LobeHub Cloud, where it is managed; opened in the browser. */
+  manageUrl: string;
   profileUrl: string;
   /** The agent's role beside its personal name; absent for groups and unnamed agents. */
   role?: string;
@@ -43,6 +47,7 @@ export const useContactCard = (id: string): ContactCardState => {
   const isInit = useHomeStore(homeAgentListSelectors.isAgentListInit);
   const item = useHomeStore(homeAgentListSelectors.getAgentById(id), isEqual);
   const isGroup = item?.type === 'group';
+  const workspaceSlug = useActiveWorkspaceSlug();
 
   const { allowed: canEditContent } = usePermission('edit_own_content');
   const { canEditResource } = useResourceAccess(
@@ -55,10 +60,13 @@ export const useContactCard = (id: string): ContactCardState => {
     return error ? { error, retry: () => void mutate(), status: 'error' } : { status: 'loading' };
   }
 
+  const chatUrl = isGroup ? GROUP_CHAT_URL(id) : AGENT_CHAT_URL(id);
+
   return {
     canEdit: !!canEditContent && canEditResource,
-    chatUrl: isGroup ? GROUP_CHAT_URL(id) : AGENT_CHAT_URL(id),
+    chatUrl,
     item,
+    manageUrl: `${OFFICIAL_URL}${buildWorkspaceAwarePath(chatUrl, workspaceSlug)}`,
     profileUrl: isGroup ? `/group/${id}/profile` : AGENT_PROFILE_URL(id),
     role: isGroup ? undefined : agentSecondaryDisplayName(item),
     slug: isGroup ? undefined : item.slug || undefined,

@@ -125,7 +125,7 @@ const MenuTile = ({
 );
 
 const ContactCard = memo<Extract<ContactCardState, { status: 'ready' }>>(
-  ({ canEdit, chatUrl, item, profileUrl, role, slug, title }) => {
+  ({ canEdit, chatUrl, item, manageUrl, profileUrl, role, slug, title }) => {
     const { t } = useTranslation('common');
     const navigate = useWorkspaceAwareNavigate();
     const badge = resolveAgentBadge(item);
@@ -199,9 +199,14 @@ const ContactCard = memo<Extract<ContactCardState, { status: 'ready' }>>(
               <TileContent icon={MessageCircleIcon} label={t('contacts.sendMessage')} />
             </WorkspaceLink>
             {agentId && channelsEnabled && (
-              <WorkspaceLink to={chatUrl} {...stylex.props(styles.tile)}>
+              <a
+                href={manageUrl}
+                rel="noopener noreferrer"
+                target="_blank"
+                {...stylex.props(styles.tile)}
+              >
                 <TileContent icon={Settings2Icon} label={t('contacts.manage')} />
-              </WorkspaceLink>
+              </a>
             )}
             <DropdownMenu items={moreItems}>
               <MenuTile label={t('more')} />

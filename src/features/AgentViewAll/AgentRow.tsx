@@ -1,6 +1,6 @@
 'use client';
 
-import { AGENT_CHAT_URL, DEFAULT_USER_AVATAR_URL, GROUP_CHAT_URL } from '@lobechat/const';
+import { DEFAULT_USER_AVATAR_URL } from '@lobechat/const';
 import type { SidebarAgentItem } from '@lobechat/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@lobechat/types';
 import {
@@ -20,6 +20,7 @@ import { EyeIcon, EyeOffIcon } from 'lucide-react';
 import { memo, type MouseEvent, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { CONTACT_URL } from '@/features/ContactList/const';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 
 import ItemActions from './ItemActions';
@@ -150,7 +151,7 @@ interface AgentRowProps {
 const AgentRow = memo<AgentRowProps>(
   ({ author, item, onToggleSidebar, showAuthor, sidebarHidden }) => {
     const { t } = useTranslation('common');
-    const { description, id, type, updatedAt } = item;
+    const { description, id, updatedAt } = item;
     // Groups have no personal name, so this resolves to their title.
     const displayTitle = agentDisplayName(item, t('agentViewAll.untitled'));
     const role = agentSecondaryDisplayName(item);
@@ -185,11 +186,7 @@ const AgentRow = memo<AgentRowProps>(
           ref={setAnchor}
           onPointerEnter={activateMenu}
         >
-          <WorkspaceLink
-            aria-label={displayTitle}
-            className={styles.identity}
-            to={type === 'group' ? GROUP_CHAT_URL(id) : AGENT_CHAT_URL(id, false)}
-          >
+          <WorkspaceLink aria-label={displayTitle} className={styles.identity} to={CONTACT_URL(id)}>
             <SidebarItemAvatar item={item} size={28} />
             {/* Three single-line columns: who the agent is, the role it plays,
               and what it is responsible for. */}

@@ -41,6 +41,7 @@ describe('useContactCard', () => {
     expect(result.current).toMatchObject({
       canEdit: true,
       chatUrl: '/agent/agt_1',
+      manageUrl: 'https://app.lobehub.com/agent/agt_1',
       profileUrl: '/agent/agt_1/profile',
       role: 'Product Helper',
       slug: 'ada',

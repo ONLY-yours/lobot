@@ -1,6 +1,6 @@
 'use client';
 
-import { AGENT_CHAT_URL, DEFAULT_USER_AVATAR_URL, GROUP_CHAT_URL } from '@lobechat/const';
+import { DEFAULT_USER_AVATAR_URL } from '@lobechat/const';
 import type { SidebarAgentItem } from '@lobechat/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@lobechat/types';
 import {
@@ -15,6 +15,7 @@ import {
 import { type CSSProperties, memo, type ReactNode, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { CONTACT_URL } from '@/features/ContactList/const';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 
 import AgentPendant from './AgentPendant';
@@ -344,7 +345,7 @@ const AgentCard = memo<AgentCardProps>(({ item, onToggleSidebar, owner, sidebarH
           aria-label={displayTitle}
           className={cardStyles.link}
           ref={setAnchor}
-          to={type === 'group' ? GROUP_CHAT_URL(id) : AGENT_CHAT_URL(id, false)}
+          to={CONTACT_URL(id)}
           onPointerEnter={activateMenu}
         >
           <Block clickable className={cardStyles.card} height={'100%'} variant={'outlined'}>
