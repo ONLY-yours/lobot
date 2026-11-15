@@ -9,6 +9,8 @@ name: Release Desktop
 #   - APPLE_*：macOS 签名与公证，缺失则产物未签名
 #   - UPDATE_SERVER_URL：客户端检查更新的地址
 #   - UPDATE_AWS_* / UPDATE_S3_*：S3 更新源，缺失则跳过同步
+#   - RENDERER_OTA_PUBLIC_KEY / RENDERER_OTA_PRIVATE_KEY：增量更新（Core OTA）签名密钥对。
+#     公钥编进外壳；私钥给 r0 core 签名。缺失则本版不能接收增量更新。
 # ============================================
 
 on:
@@ -129,6 +131,7 @@ jobs:
           # vite.main.config.ts 把这两个值编译进主进程；缺失时客户端不知道去哪检查更新。
           UPDATE_CHANNEL: ${{ needs.prepare.outputs.channel }}
           UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
         run: pnpm build:main
 
       - name: Package
@@ -138,6 +141,8 @@ jobs:
           # 用 APP_UPDATE_SERVER_URL 而不是 UPDATE_SERVER_URL：前者只让 afterPack 改写
           # app-update.yml 指向 S3，后者会把 provider 变成 generic 从而不再生成 latest*.yml。
           APP_UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+          # beforePack 把公钥写进 shell/abi.json，并参与计算 shellAbi；增量发布按 shellAbi 判断能否复用本版外壳。
+          RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
           # electron-builder.mjs 以 CSC_LINK 是否存在决定是否签名；
           # 证书缺失时构建仍可完成，只是产物未签名。
           CSC_LINK: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
@@ -181,6 +186,42 @@ jobs:
             release/*.tar.gz
             release/latest*.yml
           if-no-files-found: error
+          retention-days: 7
+
+      # r0 core：本版内置 core 的签名快照，是之后增量包的基线（release-desktop-core-ota.yml）。
+      - name: Build r0 core release
+        id: core
+        shell: bash
+        env:
+          RENDERER_OTA_PRIVATE_KEY: ${{ secrets.RENDERER_OTA_PRIVATE_KEY }}
+          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RENDERER_OTA_PRIVATE_KEY:-}" ] || [ -z "${UPDATE_SERVER_URL:-}" ]; then
+            echo "::warning::未配置 RENDERER_OTA_PRIVATE_KEY / UPDATE_SERVER_URL，跳过 r0 core，本版不能接收增量更新"
+            exit 0
+          fi
+          BASE="${UPDATE_SERVER_URL%/}"
+          case "$BASE" in */stable|*/nightly|*/canary|*/beta) BASE="${BASE%/*}" ;; esac
+          case "$BASE" in http://*|https://*) ;; *) BASE="https://$BASE" ;; esac
+          read -r PLATFORM CHANNEL VERSION SEQ SHELL_ABI < <(node -p "const m=require('./core-dist/manifest.json');[m.platform,m.channel,m.version,m.seq,m.shellAbi].join(' ')")
+          node scripts/buildCore.mjs --protocol=4 \
+            --core=core-dist \
+            --platform="$PLATFORM" \
+            --channel="$CHANNEL" \
+            --version="$VERSION" \
+            --seq="$SEQ" \
+            --shell-abi="$SHELL_ABI" \
+            --objects-base-url="$BASE/cas" \
+            --out=release/core-ota
+          echo "platform=$PLATFORM" >> "$GITHUB_OUTPUT"
+
+      - name: Upload r0 core release
+        if: steps.core.outputs.platform != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-r0-${{ steps.core.outputs.platform }}
+          path: release/core-ota
           retention-days: 7
 
   # ---------- 3. 发布到本仓（公开）----------
@@ -290,3 +331,47 @@ jobs:
           done < <(find dist -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.tar.gz' -o -name 'latest*.yml' \) -print0)
 
           echo "✅ 已同步 ${count} 个文件到 s3://${S3_BUCKET}/${FEED_CHANNEL}/"
+
+      # shell.json 记录本版外壳的 shellAbi，增量发布据此判断能否只发 core。
+      - name: Compose shell.json and r0 core
+        id: shell
+        shell: bash
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p release/core-ota
+          SHELL_ABI=""
+          for latest in dist/core-r0-*/core-v4/*/latest.json; do
+            [ -f "$latest" ] || continue
+            platform=$(basename "$(dirname "$latest")")
+            [ "$(jq -r '.version' "$latest")" = "$VERSION" ] || { echo "::error::core version in $latest is not $VERSION"; exit 1; }
+            abi=$(jq -er '.shellAbi' "$latest")
+            [ -z "$SHELL_ABI" ] && SHELL_ABI="$abi"
+            [ "$abi" = "$SHELL_ABI" ] || { echo "::error::shellAbi differs across platforms ($latest)"; exit 1; }
+            mkdir -p release/core-ota/core-v4
+            cp -R "$(dirname "$latest")" release/core-ota/core-v4/
+          done
+          if [ -z "$SHELL_ABI" ]; then
+            echo "::warning::没有 r0 core 产物，跳过 shell.json"
+            exit 0
+          fi
+          jq -n --arg shellAbi "$SHELL_ABI" --arg shellVersion "$VERSION" --arg publishedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{shellAbi: $shellAbi, shellVersion: $shellVersion, publishedAt: $publishedAt}' > release/shell.json
+          cat release/shell.json
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Publish shell.json and r0 core
+        if: steps.shell.outputs.ready == 'true'
+        uses: ./.github/actions/desktop-publish-core-ota
+        with:
+          core-dir: core-v4
+          app-version: ${{ needs.prepare.outputs.version }}
+          channel: ${{ needs.prepare.outputs.channel }}
+          release-dir: release/core-ota
+          shell-json: release/shell.json
+          aws-access-key-id: ${{ secrets.UPDATE_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.UPDATE_AWS_SECRET_ACCESS_KEY }}
+          s3-bucket: ${{ secrets.UPDATE_S3_BUCKET }}
+          s3-region: ${{ secrets.UPDATE_S3_REGION || 'us-east-1' }}
+          s3-endpoint: ${{ secrets.UPDATE_S3_ENDPOINT }}

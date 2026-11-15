@@ -1,0 +1,317 @@
+name: Release Desktop Core OTA
+
+# ============================================
+# Lobot 增量发布（外壳不变，只发 main / preload / renderer / cli）
+# ============================================
+# 门禁：HEAD 的 shellAbi 必须等于 <channel>/shell.json 记录的 shellAbi，
+#       否则外壳已变，必须走 release-desktop.yml 发整包。
+# 产物：<channel>/<appVersion>/core-v4/<platform>/packs/<sha>.pack        Zstd 块
+#       <channel>/<appVersion>/core-v4/<platform>/versions/<version>.json  签名快照
+#       <channel>/<appVersion>/core-v4/<platform>/latest.json              签名 manifest
+#
+# 需要的 secrets：UPDATE_SERVER_URL、RENDERER_OTA_PUBLIC_KEY、RENDERER_OTA_PRIVATE_KEY、
+#   UPDATE_AWS_ACCESS_KEY_ID、UPDATE_AWS_SECRET_ACCESS_KEY、UPDATE_S3_BUCKET（可选 UPDATE_S3_ENDPOINT / UPDATE_S3_REGION）
+#
+# 客户端：macOS stable 只走整包更新（CoreUpdateManager 的 macos-stable-full-updates-only），
+#   其余平台与频道会接收这里发布的增量包。
+# ============================================
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: 'Update channel（与整包发布时的 channel 一致）'
+        required: true
+        type: choice
+        options: [stable, beta, canary]
+        default: stable
+      rollout:
+        description: 'Rollout ratio 0-1'
+        required: false
+        type: string
+        default: '1'
+
+concurrency:
+  group: desktop-core-ota-${{ inputs.channel }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24'
+  npm_config_registry: https://registry.npmjs.org
+
+jobs:
+  # ---------- 1. 门禁：外壳没变才允许只发 core ----------
+  gate:
+    name: Shell ABI gate (${{ inputs.channel }})
+    runs-on: ubuntu-latest
+    outputs:
+      app_version: ${{ steps.base.outputs.app_version }}
+      feed_base_url: ${{ steps.server.outputs.feed_base_url }}
+      requires_full_release: ${{ steps.gate.outputs.requires_full_release }}
+      seq: ${{ steps.seq.outputs.seq }}
+      shell_abi: ${{ steps.gate.outputs.shell_abi }}
+      version: ${{ steps.seq.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve update server base URL
+        id: server
+        env:
+          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+        run: |
+          set -euo pipefail
+          : "${UPDATE_SERVER_URL:?UPDATE_SERVER_URL secret is not set}"
+          BASE="${UPDATE_SERVER_URL%/}"
+          case "$BASE" in */stable|*/nightly|*/canary|*/beta) BASE="${BASE%/*}" ;; esac
+          case "$BASE" in http://*|https://*) ;; *) BASE="https://$BASE" ;; esac
+          echo "feed_base_url=$BASE" >> "$GITHUB_OUTPUT"
+
+      - name: Load shipped shell
+        id: base
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          FEED_BASE_URL: ${{ steps.server.outputs.feed_base_url }}
+        run: |
+          set -euo pipefail
+          HTTP_STATUS=$(curl -sS --connect-timeout 10 --max-time 30 \
+            -o "$RUNNER_TEMP/shell.json" -w '%{http_code}' "$FEED_BASE_URL/$CHANNEL/shell.json")
+          echo "shell.json HTTP status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" = "404" ]; then
+            echo "::warning::$CHANNEL 还没有 shell.json，先用 release-desktop.yml 发一次整包"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "::error::shell.json fetch failed: HTTP $HTTP_STATUS"
+            exit 1
+          fi
+          SHELL_ABI=$(jq -er '.shellAbi | select(type == "string" and test("^[0-9a-f]{64}$"))' "$RUNNER_TEMP/shell.json")
+          APP_VERSION=$(jq -er '.shellVersion | select(type == "string" and test("^[0-9A-Za-z.+-]+$"))' "$RUNNER_TEMP/shell.json")
+          {
+            echo "found=true"
+            echo "shell_abi=$SHELL_ABI"
+            echo "app_version=$APP_VERSION"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Gate on shellAbi
+        id: gate
+        env:
+          BASE_SHELL_ABI: ${{ steps.base.outputs.shell_abi }}
+          FOUND: ${{ steps.base.outputs.found }}
+          RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          SHELL_ABI=$(node scripts/shellAbi.mjs)
+          echo "shell_abi=$SHELL_ABI" >> "$GITHUB_OUTPUT"
+          echo "HEAD shellAbi:    $SHELL_ABI"
+          echo "Shipped shellAbi: ${BASE_SHELL_ABI:-<none>}"
+          if [ "$FOUND" != "true" ] || [ "$SHELL_ABI" != "$BASE_SHELL_ABI" ]; then
+            echo "::warning::外壳自上次整包后有变化，不能只发 core，请用 release-desktop.yml 发整包"
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+            echo "requires_full_release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+            echo "requires_full_release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # seq = 同一 appVersion 下所有平台已发布的最大 seq + 1，保证新 core 总比已发布的新。
+      - name: Resolve next core seq
+        id: seq
+        if: steps.gate.outputs.allowed == 'true'
+        env:
+          APP_VERSION: ${{ steps.base.outputs.app_version }}
+          CHANNEL: ${{ inputs.channel }}
+          FEED_BASE_URL: ${{ steps.server.outputs.feed_base_url }}
+        run: |
+          set -euo pipefail
+          MAX_SEQ=-1
+          for p in darwin win32 linux; do
+            HTTP_STATUS=$(curl -sS --connect-timeout 10 --max-time 30 \
+              -o "$RUNNER_TEMP/latest-$p.json" -w '%{http_code}' "$FEED_BASE_URL/$CHANNEL/$APP_VERSION/core-v4/$p/latest.json")
+            case "$HTTP_STATUS" in
+              200) SEQ=$(jq -er '.seq | select(type == "number")' "$RUNNER_TEMP/latest-$p.json") ;;
+              404) SEQ=-1 ;;
+              *) echo "::error::$p latest.json fetch failed: HTTP $HTTP_STATUS"; exit 1 ;;
+            esac
+            echo "$APP_VERSION/core-v4/$p latest seq: $SEQ"
+            if [ "$SEQ" -gt "$MAX_SEQ" ]; then MAX_SEQ=$SEQ; fi
+          done
+          NEXT=$((MAX_SEQ + 1))
+          echo "seq=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "version=$APP_VERSION-core.$NEXT" >> "$GITHUB_OUTPUT"
+          echo "Next core: $APP_VERSION-core.$NEXT (seq $NEXT)"
+
+  # ---------- 2. 按平台构建 core ----------
+  build-core:
+    name: Build core (${{ matrix.platform }})
+    needs: [gate]
+    if: needs.gate.outputs.requires_full_release == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [darwin, win32, linux]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # apps/cli builds with bun.
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Set version
+        run: npm run workflow:set-desktop-version ${{ needs.gate.outputs.app_version }} ${{ inputs.channel }}
+
+      # 与整包 electron-builder beforePack 里组装 core-dist 的步骤一致：
+      # vite 三件套 → CLI → assembleCore。npm_config_platform 让 *.mac.ts 等平台文件按目标平台解析。
+      - name: Build core
+        env:
+          npm_config_platform: ${{ matrix.platform }}
+          UPDATE_CHANNEL: ${{ inputs.channel }}
+          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+          RENDERER_OTA_PUBLIC_KEY: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          pnpm build:main
+          npm run build:cli
+          node scripts/assembleCore.mjs
+
+      - name: Load previous core manifest
+        id: previous
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          APP_VERSION: ${{ needs.gate.outputs.app_version }}
+          FEED_BASE_URL: ${{ needs.gate.outputs.feed_base_url }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+          HTTP_STATUS=$(curl -sS --connect-timeout 10 --max-time 30 \
+            -o "$RUNNER_TEMP/previous-core.json" -w '%{http_code}' "$FEED_BASE_URL/$CHANNEL/$APP_VERSION/core-v4/$PLATFORM/latest.json")
+          case "$HTTP_STATUS" in
+            200)
+              echo "Previous core: $(jq -er '.version' "$RUNNER_TEMP/previous-core.json")"
+              echo "args=--previous-manifest=$RUNNER_TEMP/previous-core.json" >> "$GITHUB_OUTPUT"
+              ;;
+            404)
+              echo "::warning::$PLATFORM 没有上一版 core manifest，本次不生成差分补丁"
+              echo "args=" >> "$GITHUB_OUTPUT"
+              ;;
+            *) echo "::error::previous latest.json fetch failed: HTTP $HTTP_STATUS"; exit 1 ;;
+          esac
+
+      - name: Build core release
+        id: core
+        env:
+          RENDERER_OTA_PRIVATE_KEY: ${{ secrets.RENDERER_OTA_PRIVATE_KEY }}
+          CHANNEL: ${{ inputs.channel }}
+          APP_VERSION: ${{ needs.gate.outputs.app_version }}
+          FEED_BASE_URL: ${{ needs.gate.outputs.feed_base_url }}
+          PLATFORM: ${{ matrix.platform }}
+          PREVIOUS_ARGS: ${{ steps.previous.outputs.args }}
+          ROLLOUT: ${{ inputs.rollout }}
+          SEQ: ${{ needs.gate.outputs.seq }}
+          SHELL_ABI: ${{ needs.gate.outputs.shell_abi }}
+          VERSION: ${{ needs.gate.outputs.version }}
+        run: |
+          set -euo pipefail
+          : "${RENDERER_OTA_PRIVATE_KEY:?RENDERER_OTA_PRIVATE_KEY secret is not set}"
+          set +e
+          # shellcheck disable=SC2086
+          node scripts/buildCore.mjs --protocol=4 \
+            --core=core-dist \
+            --platform="$PLATFORM" \
+            --channel="$CHANNEL" \
+            --version="$VERSION" \
+            --seq="$SEQ" \
+            --rollout="$ROLLOUT" \
+            --shell-abi="$SHELL_ABI" \
+            --previous-base-url="$FEED_BASE_URL/$CHANNEL/$APP_VERSION/core-v4/$PLATFORM" \
+            --out=release/core-ota \
+            $PREVIOUS_ARGS
+          STATUS=$?
+          set -e
+          if [ "$STATUS" = "3" ]; then
+            echo "::notice::$PLATFORM 的 core 没有变化，不需要发布"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          [ "$STATUS" = "0" ] || exit "$STATUS"
+          echo "skipped=false" >> "$GITHUB_OUTPUT"
+
+      - name: Upload core release
+        if: steps.core.outputs.skipped == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-ota-${{ matrix.platform }}
+          path: release/core-ota
+          retention-days: 3
+
+  # ---------- 3. 上传到 S3 ----------
+  publish:
+    name: Publish core (${{ inputs.channel }})
+    needs: [gate, build-core]
+    if: needs.gate.outputs.requires_full_release == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download core releases
+        uses: actions/download-artifact@v4
+        with:
+          path: release/core-ota
+          pattern: core-ota-*
+          merge-multiple: true
+
+      - name: Collect platforms
+        id: collect
+        run: |
+          set -euo pipefail
+          if [ -d release/core-ota/core-v4 ] && [ -n "$(ls -A release/core-ota/core-v4)" ]; then
+            echo "Platforms: $(ls release/core-ota/core-v4 | tr '\n' ' ')"
+            echo "skipped=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::所有平台的 core 都没有变化，不需要发布"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload to S3
+        if: steps.collect.outputs.skipped == 'false'
+        uses: ./.github/actions/desktop-publish-core-ota
+        with:
+          core-dir: core-v4
+          app-version: ${{ needs.gate.outputs.app_version }}
+          channel: ${{ inputs.channel }}
+          release-dir: release/core-ota
+          aws-access-key-id: ${{ secrets.UPDATE_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.UPDATE_AWS_SECRET_ACCESS_KEY }}
+          s3-bucket: ${{ secrets.UPDATE_S3_BUCKET }}
+          s3-region: ${{ secrets.UPDATE_S3_REGION || 'us-east-1' }}
+          s3-endpoint: ${{ secrets.UPDATE_S3_ENDPOINT }}
+
+      - name: Summary
+        if: always()
+        env:
+          REQUIRES_FULL: ${{ needs.gate.outputs.requires_full_release }}
+          VERSION: ${{ needs.gate.outputs.version }}
+        run: |
+          {
+            echo "### Core OTA (${{ inputs.channel }})"
+            echo "- version: \`${VERSION:-n/a}\`"
+            echo "- requires full release: \`${REQUIRES_FULL}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
