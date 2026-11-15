@@ -143,6 +143,9 @@ export const buildPlatformAgencyConfig = (
   heterogeneousProvider: { type },
 });
 
+/** The agent config connecting a third-party agent produces. */
+export type ConnectAgentRuntimeConfig = ReturnType<typeof buildConnectAgentConfig>;
+
 export const buildConnectAgentConfig = ({
   overrides,
   profile,

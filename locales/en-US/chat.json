@@ -241,6 +241,7 @@
   "connectAgent.create.customizeName": "Customize Name…",
   "connectAgent.create.descriptionPlaceholder": "Description (optional)",
   "connectAgent.create.detectedCount": "{{total}} detected — select the ones to connect",
+  "connectAgent.create.detectedCountPickOne": "{{total}} detected — pick the one that drives this agent",
   "connectAgent.create.detectedInScan": "detected in scan",
   "connectAgent.create.done": "Done",
   "connectAgent.create.doneHint": "All set — open one to give it its first task.",

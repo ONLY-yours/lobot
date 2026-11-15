@@ -16,9 +16,9 @@ import {
 } from 'react';
 
 import type { OpenCreateAgentIdentityModalOptions } from '@/features/AgentIdentityModal';
+import { useLandOnCreatedAgent } from '@/features/AgentIdentityModal/useLandOnCreatedAgent';
 import EditingPopover from '@/features/EditingPopover';
 import type { OpenCreateAgentModalOptions } from '@/features/HomeSidebar/hooks/useCreateModal';
-import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { openLabelFormModal } from '@/features/WorkspaceSetting/Labels/LabelFormModal';
 import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors';
@@ -160,17 +160,17 @@ interface CreateAgentIdentityRendererProps {
 
 /**
  * New agents start from the identity form (avatar, name, role, description,
- * slug) and land on their profile page, where the rest is configured.
+ * slug) and open in their direct Channel, ready for the first message.
  */
 const CreateAgentIdentityRenderer = memo<CreateAgentIdentityRendererProps>(
   ({ groupId, onClose, visibility }) => {
-    const navigate = useWorkspaceAwareNavigate();
+    const landOnCreatedAgent = useLandOnCreatedAgent();
 
     const openArgsRef = useRef<OpenCreateAgentIdentityModalOptions>(undefined);
     openArgsRef.current = {
       groupId,
       onClosed: onClose,
-      onCreated: (agentId) => navigate(`/agent/${agentId}/profile`),
+      onCreated: (agentId) => void landOnCreatedAgent(agentId),
       visibility,
     };
 

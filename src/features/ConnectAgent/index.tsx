@@ -53,7 +53,11 @@ import { useElectronStore } from '@/store/electron';
 import { useHomeStore } from '@/store/home';
 
 import { getDeviceListState, isListableDevice } from './deviceListState';
-import type { ConnectableProvider, ConnectAgentProfile } from './providers';
+import type {
+  ConnectableProvider,
+  ConnectAgentProfile,
+  ConnectAgentRuntimeConfig,
+} from './providers';
 import { buildConnectAgentConfig, CONNECTABLE_PROVIDERS } from './providers';
 import type { ScanTarget } from './useAgentScan';
 import { useAgentScan } from './useAgentScan';
@@ -383,16 +387,37 @@ const AgentScanRow = memo<{
   return row;
 });
 
-interface ConnectAgentContentProps {
+export interface ConnectAgentContentProps {
   groupId?: string;
   initialDevice?: DeviceListItem;
-  onTitleChange: (title: string) => void;
+  /** Shows a back button on the device step, for a host with a step before this one. */
+  onBack?: () => void;
+  /**
+   * Picker mode: one agent is chosen and its config handed to the host, which creates the
+   * agent itself (with the identity it collected). Without it, the agents are created here.
+   */
+  onPick?: (config: ConnectAgentRuntimeConfig) => Promise<unknown>;
+  /** Picker mode: the avatar the chosen agent brings (`undefined` with none chosen). */
+  onPickedAvatarChange?: (avatar: string | undefined) => void;
+  onTitleChange?: (title: string) => void;
+  /** Label of the picker-mode confirm button. */
+  pickLabel?: string;
   showOpenChat?: boolean;
   visibility?: 'private' | 'public';
 }
 
-const ConnectAgentContent = memo<ConnectAgentContentProps>(
-  ({ groupId, initialDevice, onTitleChange, showOpenChat = true, visibility }) => {
+export const ConnectAgentContent = memo<ConnectAgentContentProps>(
+  ({
+    groupId,
+    initialDevice,
+    onBack,
+    onPick,
+    onPickedAvatarChange,
+    onTitleChange,
+    pickLabel,
+    showOpenChat = true,
+    visibility,
+  }) => {
     const { t } = useTranslation('chat');
     const { close, setCanDismissByClickOutside } = useModalContext();
     const navigate = useWorkspaceAwareNavigate();
@@ -491,7 +516,10 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
         setSelectedTypes((prev) =>
           prev.includes(provider.type)
             ? prev.filter((type) => type !== provider.type)
-            : [...prev, provider.type],
+            : // One agent drives the agent being created in picker mode.
+              onPick
+              ? [provider.type]
+              : [...prev, provider.type],
         );
         // Prefetch the platform's profile so create/customize can prefill
         // title / description / avatar without an extra wait.
@@ -509,7 +537,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
             .catch(() => {});
         }
       },
-      [currentDeviceId, profiles, target],
+      [currentDeviceId, onPick, profiles, target],
     );
 
     const goConfirm = useCallback(() => {
@@ -542,6 +570,12 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
       },
       [groupId, profiles, target, visibility],
     );
+
+    // A platform agent's avatar arrives with its prefetched profile, so this follows it too.
+    const pickedAvatar = onPick && single ? buildCreateParams(single).config.avatar : undefined;
+    useEffect(() => {
+      onPickedAvatarChange?.(pickedAvatar);
+    }, [onPickedAvatarChange, pickedAvatar]);
 
     const handleCreate = useCallback(
       async (overrides?: { description?: string; name?: string }) => {
@@ -576,7 +610,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
           );
           await refreshAgentList();
           setDone(created);
-          onTitleChange(
+          onTitleChange?.(
             created.length === 1
               ? t('connectAgent.create.doneTitle', { name: created[0].title })
               : t('connectAgent.create.doneTitleMany', { total: created.length }),
@@ -602,6 +636,16 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
         visibility,
       ],
     );
+
+    const handlePick = useCallback(async () => {
+      if (!onPick || !single) return;
+      setCreating(true);
+      try {
+        await onPick(buildCreateParams(single).config);
+      } finally {
+        setCreating(false);
+      }
+    }, [buildCreateParams, onPick, single]);
 
     const openChat = useCallback(
       (agentId: string) => {
@@ -796,6 +840,13 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
               )}
             </Flexbox>
           )}
+          {onBack && (
+            <Flexbox horizontal>
+              <Button icon={<Icon icon={ArrowLeft} size={14} />} type={'text'} onClick={onBack}>
+                {t('connectAgent.create.back')}
+              </Button>
+            </Flexbox>
+          )}
         </Flexbox>
       );
     }
@@ -869,7 +920,12 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
           {scanState.status === 'success' && detectedCount > 0 && (
             <Flexbox gap={6}>
               <SectionLabel>
-                {t('connectAgent.create.detectedCount', { total: detectedCount })}
+                {t(
+                  onPick
+                    ? 'connectAgent.create.detectedCountPickOne'
+                    : 'connectAgent.create.detectedCount',
+                  { total: detectedCount },
+                )}
               </SectionLabel>
               <ScrollableAgentList>
                 {inventory.map(({ provider, status }) => (
@@ -904,29 +960,40 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
             >
               {t('connectAgent.create.back')}
             </Button>
-            <Flexbox horizontal align={'center'} gap={8}>
-              {single && (
-                <Button type={'text'} onClick={goConfirm}>
-                  {t('connectAgent.create.customizeName')}
-                </Button>
-              )}
-              <Tooltip
-                title={selectedProviders.length > 0 ? '' : t('connectAgent.create.selectFirst')}
+            {onPick ? (
+              <Button
+                disabled={!single}
+                loading={creating}
+                type={'primary'}
+                onClick={() => void handlePick()}
               >
-                <Button
-                  disabled={selectedProviders.length === 0}
-                  loading={creating}
-                  type={'primary'}
-                  onClick={() => void handleCreate()}
+                {pickLabel}
+              </Button>
+            ) : (
+              <Flexbox horizontal align={'center'} gap={8}>
+                {single && (
+                  <Button type={'text'} onClick={goConfirm}>
+                    {t('connectAgent.create.customizeName')}
+                  </Button>
+                )}
+                <Tooltip
+                  title={selectedProviders.length > 0 ? '' : t('connectAgent.create.selectFirst')}
                 >
-                  {selectedProviders.length === 0
-                    ? t('connectAgent.create.connect')
-                    : selectedProviders.length === 1
-                      ? t('connectAgent.create.connectOne', { name: selectedProviders[0].title })
-                      : t('connectAgent.create.connectMany', { total: selectedProviders.length })}
-                </Button>
-              </Tooltip>
-            </Flexbox>
+                  <Button
+                    disabled={selectedProviders.length === 0}
+                    loading={creating}
+                    type={'primary'}
+                    onClick={() => void handleCreate()}
+                  >
+                    {selectedProviders.length === 0
+                      ? t('connectAgent.create.connect')
+                      : selectedProviders.length === 1
+                        ? t('connectAgent.create.connectOne', { name: selectedProviders[0].title })
+                        : t('connectAgent.create.connectMany', { total: selectedProviders.length })}
+                  </Button>
+                </Tooltip>
+              </Flexbox>
+            )}
           </Flexbox>
         </Flexbox>
       );

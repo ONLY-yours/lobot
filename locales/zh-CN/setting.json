@@ -1526,6 +1526,8 @@
   "settingAgent.identity.createFailed": "创建助理失败，请重试",
   "settingAgent.identity.done": "完成",
   "settingAgent.identity.edit": "编辑身份信息",
+  "settingAgent.identity.externalRuntime": "使用 Claude Code、Codex 等第三方 Agent 驱动",
+  "settingAgent.identity.externalRuntimeDesc": "运行在你的设备上，选择设备和要使用的 Agent",
   "settingAgent.identity.saveFailed": "身份信息保存失败，请重试",
   "settingAgent.identity.untitled": "未命名助理",
   "settingAgent.modelPolicy.fixedTip": "模型已在助理档案中固定，聊天时不可切换。",

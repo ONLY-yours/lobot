@@ -2,6 +2,7 @@ import { randomAgentName } from '@lobechat/const';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ConnectAgentRuntimeConfig } from '@/features/ConnectAgent/providers';
 import { cacheScope } from '@/libs/replica';
 import { agentService } from '@/services/agent';
 import { useAgentStore } from '@/store/agent';
@@ -13,6 +14,9 @@ import { homeAgentListSelectors } from '@/store/home/selectors';
 
 /** Uploaded avatars go through a server action, which caps the body at 1MB. */
 export const MAX_AVATAR_SIZE = 1024 * 1024;
+
+/** What connecting a third-party agent adds to the new agent's config. */
+export type ExternalRuntimeConfig = ConnectAgentRuntimeConfig;
 
 export interface UseCreateAgentIdentityFormOptions {
   groupId?: string;
@@ -76,22 +80,34 @@ export const useCreateAgentIdentityForm = ({
     }
   };
 
-  const submit = async () => {
-    if (saving || uploading) return;
+  /**
+   * Creates the agent, or updates the one a rejected slug left behind. `runtime` is the config
+   * of a third-party agent driving it (Claude Code, Codex…); the identity filled in here wins
+   * over the runtime's own, except an empty avatar, role or description, which falls back to it.
+   * Resolves `true` once the agent is created with its slug.
+   */
+  const submit = async (runtime?: ExternalRuntimeConfig): Promise<boolean> => {
+    if (saving || uploading) return false;
     setSaving(true);
     try {
       const meta = {
-        avatar: avatar ?? null,
-        description: description.trim(),
+        // Without an avatar of their own, a third-party-driven agent wears its runtime's mark,
+        // which is how it reads as "Claude Code" at a glance.
+        avatar: avatar ?? runtime?.avatar ?? null,
+        description: description.trim() || runtime?.description || '',
         name: name.trim(),
-        title: title.trim(),
+        title: title.trim() || runtime?.title || '',
       };
 
       let agentId = createdAgentId;
       if (agentId) {
         await updateAgentMeta(agentId, meta);
       } else {
-        ({ agentId } = await createAgent({ config: meta, groupId, visibility }));
+        ({ agentId } = await createAgent({
+          config: runtime ? { ...runtime, ...meta } : meta,
+          groupId,
+          visibility,
+        }));
         setCreatedAgentId(agentId);
       }
 
@@ -103,7 +119,7 @@ export const useCreateAgentIdentityForm = ({
           setError(t(`settingAgent.slug.error.${result.reason ?? 'invalid'}`));
           // The agent exists already; keep the sidebar honest while the user fixes the slug.
           void refreshAgentList();
-          return;
+          return false;
         }
         confirmAgentSlug(agentId, nextSlug, { scope });
         await refreshAgentConfig(agentId);
@@ -111,8 +127,10 @@ export const useCreateAgentIdentityForm = ({
 
       await refreshAgentList();
       onCreated(agentId);
+      return true;
     } catch {
       setError(t('settingAgent.identity.createFailed'));
+      return false;
     } finally {
       setSaving(false);
     }

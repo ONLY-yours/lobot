@@ -7,6 +7,8 @@ import AgentIdentityContent from './Content';
 import CreateAgentIdentityContent, { type CreateAgentIdentityContentProps } from './CreateContent';
 
 const MODAL_WIDTH = 'min(90%, 460px)';
+// Wide enough for the device and agent lists of the third-party runtime step.
+const CREATE_MODAL_WIDTH = 'min(90%, 520px)';
 
 /** Open the identity form (name / role / description / slug) for a specific agent. */
 export const createAgentIdentityModal = (agentId: string) =>
@@ -38,5 +40,5 @@ export const openCreateAgentIdentityModal = ({
     },
     styles: { content: { padding: 0 } },
     title: t('newAgent', { ns: 'chat' }),
-    width: MODAL_WIDTH,
+    width: CREATE_MODAL_WIDTH,
   });

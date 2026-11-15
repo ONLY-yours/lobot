@@ -2,12 +2,13 @@
 
 import { CHANNEL_URL } from '@lobechat/const';
 import { ActionIcon, DropdownMenu, Flexbox, Icon, SearchBar, Text } from '@lobehub/ui';
-import { HashIcon, PlusIcon } from 'lucide-react';
+import { GroupBotSquareIcon } from '@lobehub/ui/icons';
+import { PlusIcon } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DESKTOP_HEADER_ICON_SIZE } from '@/const/layoutTokens';
-import { openCreateChannel } from '@/features/Channels/CreateChannel';
+import { openCreateGroupChannel } from '@/features/Channels/CreateChannel';
 import { useChannelsEnabled } from '@/features/Channels/useChannelsEnabled';
 import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -41,28 +42,27 @@ export const ListHeader = memo<ListHeaderProps>(({ title, actions }) => (
 ListHeader.displayName = 'ListHeader';
 
 const Header = memo(() => {
-  const { t } = useTranslation(['common', 'channel']);
+  const { t } = useTranslation(['common', 'chat']);
   const { query, setQuery } = useMessageSearch();
-  const { createTopLevelMenuItems, isLoading } = useCreateMenuItems();
+  const { createAgentMenuItem, createGroupChatMenuItem, isLoading } = useCreateMenuItems();
   const channelsEnabled = useChannelsEnabled();
   const navigate = useWorkspaceAwareNavigate();
-  // Group Channels are rows of this list too, so they are created from the same entry.
-  const createItems = useMemo(() => {
-    const items = createTopLevelMenuItems();
-    if (!channelsEnabled) return items;
-    const [agent, group, ...rest] = items;
-    return [
-      agent,
-      group,
-      {
-        icon: <Icon icon={HashIcon} />,
-        key: 'newChannel',
-        label: t('create', { ns: 'channel' }),
-        onClick: () => openCreateChannel((id) => navigate(CHANNEL_URL(id))),
-      },
-      ...rest,
-    ];
-  }, [channelsEnabled, createTopLevelMenuItems, navigate, t]);
+  // Only the two things a conversation is started with: an Agent (whose modal also connects
+  // external ones) and a group. With Channels on, a group is a multi-Agent Channel.
+  const createItems = useMemo(
+    () => [
+      createAgentMenuItem(),
+      channelsEnabled
+        ? {
+            icon: <Icon icon={GroupBotSquareIcon} />,
+            key: 'newGroupChat',
+            label: t('newGroupChat', { ns: 'chat' }),
+            onClick: () => openCreateGroupChannel((id) => navigate(CHANNEL_URL(id))),
+          }
+        : createGroupChatMenuItem(),
+    ],
+    [channelsEnabled, createAgentMenuItem, createGroupChatMenuItem, navigate, t],
+  );
 
   // WeChat-style header: a search box that filters the list, and one "+" entry.
   return (

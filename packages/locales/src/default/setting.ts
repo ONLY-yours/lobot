@@ -1289,6 +1289,10 @@ export default {
   'settingAgent.identity.createFailed': 'Could not create the agent, please try again',
   'settingAgent.identity.done': 'Done',
   'settingAgent.identity.edit': 'Edit identity',
+  'settingAgent.identity.externalRuntime':
+    'Powered by Claude Code, Codex or another third-party agent',
+  'settingAgent.identity.externalRuntimeDesc':
+    'Runs on one of your devices. Choose the device and the agent.',
   'settingAgent.identity.saveFailed': 'Could not save the identity, please try again',
   'settingAgent.identity.untitled': 'Unnamed agent',
   'settingAgent.role.label': 'Role',

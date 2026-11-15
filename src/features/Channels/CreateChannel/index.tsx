@@ -50,6 +50,15 @@ const openMemberDialog = (props: CreateChannelProps) =>
 export const openCreateChannel = (onCreated?: (id: string) => void, projectId?: string) =>
   openMemberDialog({ onCreated, projectId });
 
+/** The same flow named for what a multi-Agent Channel is to the user: a group. */
+export const openCreateGroupChannel = (onCreated?: (id: string) => void) =>
+  createModal({
+    content: <CreateChannel onCreated={onCreated} />,
+    footer: null,
+    title: t('newGroupChat', { ns: 'chat' }),
+    width: 'min(90vw, 800px)',
+  });
+
 /** The single entry for adding people and Agents to an existing Channel. */
 export const openInviteMembers = (existing: ExistingChannel, onCreated?: (id: string) => void) =>
   openMemberDialog({ existing, onCreated });

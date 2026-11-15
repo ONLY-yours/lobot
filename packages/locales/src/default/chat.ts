@@ -1555,6 +1555,8 @@ export default {
   'connectAgent.create.noneDetectedHint':
     'Install a supported agent on that machine, then rescan. For example:',
   'connectAgent.create.detectedCount': '{{total}} detected — select the ones to connect',
+  'connectAgent.create.detectedCountPickOne':
+    '{{total}} detected — pick the one that drives this agent',
   'connectAgent.create.notInstalled': 'Not installed',
   'connectAgent.create.selectFirst': 'Select at least one detected agent',
   'connectAgent.create.customizeName': 'Customize Name…',

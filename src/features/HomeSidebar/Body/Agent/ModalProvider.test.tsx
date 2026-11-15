@@ -19,8 +19,13 @@ const mocks = vi.hoisted(() => ({
         visibility?: 'private' | 'public';
       }
     | undefined,
+  landOnCreatedAgent: vi.fn(),
   navigate: vi.fn(),
   sendAsGroup: vi.fn(),
+}));
+
+vi.mock('@/features/AgentIdentityModal/useLandOnCreatedAgent', () => ({
+  useLandOnCreatedAgent: () => mocks.landOnCreatedAgent,
 }));
 
 vi.mock('react-router', () => ({
@@ -133,7 +138,7 @@ describe('AgentModalProvider', () => {
     cleanup();
   });
 
-  it('creates an agent from the identity form and opens its profile', async () => {
+  it('creates an agent from the identity form and opens it where it lands', async () => {
     renderProvider();
 
     fireEvent.click(screen.getByText('Open create agent modal'));
@@ -144,7 +149,7 @@ describe('AgentModalProvider', () => {
     expect(mocks.createAgentModalProps).toBeUndefined();
 
     mocks.identityModalProps!.onCreated('agent-new');
-    expect(mocks.navigate).toHaveBeenCalledWith('/agent/agent-new/profile');
+    expect(mocks.landOnCreatedAgent).toHaveBeenCalledWith('agent-new');
   });
 
   it('keeps the prompt modal for groups', async () => {

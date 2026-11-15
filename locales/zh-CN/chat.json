@@ -241,6 +241,7 @@
   "connectAgent.create.customizeName": "自定义名称…",
   "connectAgent.create.descriptionPlaceholder": "描述(可选)",
   "connectAgent.create.detectedCount": "检测到 {{total}} 个 — 勾选要接入的助理",
+  "connectAgent.create.detectedCountPickOne": "检测到 {{total}} 个 — 选择一个来驱动这个助理",
   "connectAgent.create.detectedInScan": "已通过扫描检测",
   "connectAgent.create.done": "完成",
   "connectAgent.create.doneHint": "一切就绪 — 打开对话,交给它第一个任务吧。",

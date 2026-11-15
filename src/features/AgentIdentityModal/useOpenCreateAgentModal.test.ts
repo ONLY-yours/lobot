@@ -5,7 +5,7 @@ import { useOpenCreateAgentModal } from './useOpenCreateAgentModal';
 
 const mocks = vi.hoisted(() => ({
   canCreate: true,
-  navigate: vi.fn(),
+  landOnCreatedAgent: vi.fn(),
   openCreateAgentIdentityModal: vi.fn(),
 }));
 
@@ -13,8 +13,8 @@ vi.mock('./index', () => ({
   openCreateAgentIdentityModal: mocks.openCreateAgentIdentityModal,
 }));
 
-vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
-  useWorkspaceAwareNavigate: () => mocks.navigate,
+vi.mock('./useLandOnCreatedAgent', () => ({
+  useLandOnCreatedAgent: () => mocks.landOnCreatedAgent,
 }));
 
 vi.mock('@/hooks/usePermission', () => ({
@@ -27,7 +27,7 @@ beforeEach(() => {
 });
 
 describe('useOpenCreateAgentModal', () => {
-  it('opens the identity form and lands the new agent on its profile', () => {
+  it('opens the identity form and opens the new agent where it lands', () => {
     const { result } = renderHook(() => useOpenCreateAgentModal());
 
     result.current({ groupId: 'grp', visibility: 'private' });
@@ -37,7 +37,7 @@ describe('useOpenCreateAgentModal', () => {
     );
     const { onCreated } = mocks.openCreateAgentIdentityModal.mock.calls[0][0];
     onCreated('agent-new');
-    expect(mocks.navigate).toHaveBeenCalledWith('/agent/agent-new/profile');
+    expect(mocks.landOnCreatedAgent).toHaveBeenCalledWith('agent-new');
   });
 
   it('does nothing without create permission', () => {

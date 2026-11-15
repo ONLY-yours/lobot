@@ -105,6 +105,57 @@ describe('useCreateAgentIdentityForm', () => {
     expect(onCreated).toHaveBeenCalledExactlyOnceWith('agent-new');
   });
 
+  it('adds a third-party runtime under the identity, which only falls back to its role and bio', async () => {
+    const { result, onCreated } = setup();
+    const runtime = {
+      agencyConfig: {
+        executionTarget: 'local' as const,
+        heterogeneousProvider: { type: 'claude-code' },
+      },
+      avatar: 'claude-logo',
+      description: 'Anthropic coding agent',
+      name: undefined,
+      provider: 'claude-code',
+      systemRole: '',
+      title: 'Claude Code',
+    };
+
+    act(() => result.current.setTitle('Reviewer'));
+    let created = false;
+    await act(async () => {
+      created = await result.current.submit(runtime as never);
+    });
+
+    expect(created).toBe(true);
+    expect(mocks.createAgent).toHaveBeenCalledExactlyOnceWith({
+      config: {
+        ...runtime,
+        // The user's identity wins…
+        name: '小朵',
+        title: 'Reviewer',
+        // …and what they left empty falls back to the runtime's: its mark and its bio.
+        avatar: 'claude-logo',
+        description: 'Anthropic coding agent',
+      },
+      groupId: undefined,
+      visibility: undefined,
+    });
+    expect(onCreated).toHaveBeenCalledWith('agent-new');
+  });
+
+  it("keeps an avatar the user chose over the runtime's mark", async () => {
+    const { result } = setup();
+
+    act(() => result.current.setAvatar('🦊'));
+    await act(async () => {
+      await result.current.submit({ avatar: 'claude-logo', provider: 'claude-code' } as never);
+    });
+
+    expect(mocks.createAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ config: expect.objectContaining({ avatar: '🦊' }) }),
+    );
+  });
+
   it('applies a custom slug to the created agent, normalized to lowercase', async () => {
     const { result, onCreated } = setup();
 

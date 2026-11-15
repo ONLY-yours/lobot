@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
 
-import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 
 import { openCreateAgentIdentityModal, type OpenCreateAgentIdentityModalOptions } from './index';
+import { useLandOnCreatedAgent } from './useLandOnCreatedAgent';
 
 export type OpenCreateAgentModalParams = Pick<
   OpenCreateAgentIdentityModalOptions,
@@ -14,10 +14,10 @@ export type OpenCreateAgentModalParams = Pick<
  * Opens the create-agent form from anywhere — the command menu, the desktop
  * File menu, or a surface outside `AgentModalProvider`. The modal renders in the
  * global ModalHost, so the caller may unmount (the command menu closes) while
- * it stays open; the new agent lands on its profile page.
+ * it stays open; the new agent opens in its direct Channel.
  */
 export const useOpenCreateAgentModal = () => {
-  const navigate = useWorkspaceAwareNavigate();
+  const landOnCreatedAgent = useLandOnCreatedAgent();
   const { allowed: canCreate } = usePermission('create_content');
 
   return useCallback(
@@ -26,9 +26,9 @@ export const useOpenCreateAgentModal = () => {
 
       return openCreateAgentIdentityModal({
         ...params,
-        onCreated: (agentId) => navigate(`/agent/${agentId}/profile`),
+        onCreated: (agentId) => void landOnCreatedAgent(agentId),
       });
     },
-    [canCreate, navigate],
+    [canCreate, landOnCreatedAgent],
   );
 };
