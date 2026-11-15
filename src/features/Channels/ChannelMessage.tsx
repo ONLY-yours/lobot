@@ -39,6 +39,7 @@ import { CHANNEL_MENTION_TAG, remarkChannelMentions } from './mentionMarkdown';
 import { MessageAttachments } from './MessageAttachments';
 import { channelMessageTime, channelTimeFormatters, foldsByDefault } from './messagePresentation';
 import { MessageFailureMark, MessageRoutingStatus } from './MessageReceipts';
+import { RelayLabel } from './RelayLabel';
 import { showsReplyQuote } from './replyQuote';
 import type { ReplyTopic } from './ReplyTopicPanel';
 import { ReplyWorks } from './ReplyWorks';
@@ -111,9 +112,11 @@ export const ChannelMessage = ({
   const timeFormats = useMemo(() => channelTimeFormatters(i18n.language), [i18n.language]);
   const date = new Date(message.createdAt);
   // Failed/unassigned requests keep their identity row and recovery affordance.
+  // A relayed message keeps its header, so the relay label beside the time stays visible.
   const compact =
     continuation &&
     !isRoot &&
+    !message.via &&
     message.routingStatus !== 'unassigned' &&
     !detail.jobs.some((job) => job.messageId === message.id && job.status === 'failed');
   // A continuation sits under its header, so its hover stamp only needs the clock.
@@ -322,6 +325,7 @@ export const ChannelMessage = ({
         titleAddon={
           <>
             {timestamp}
+            <RelayLabel message={message} />
             {isRequest && !delivery && <MessageFailureMark detail={detail} message={message} />}
           </>
         }

@@ -15,18 +15,21 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ i18n: { language: 'en-US' }, t: (key: string) => key }),
 }));
 vi.mock('@/features/Conversation/ChatItem', () => ({
-  // Renders only the avatar and message slots, the way ChatItem hands them over.
+  // Renders the avatar, title addon and message slots, the way ChatItem hands them over.
   ChatItem: ({
     customAvatarRender,
     message,
+    titleAddon,
   }: {
     customAvatarRender: (a: unknown, n: ReactNode) => ReactNode;
     message: ReactNode;
+    titleAddon?: ReactNode;
   }) =>
     createElement(
       'div',
       {},
       customAvatarRender({}, createElement('img', { alt: 'avatar' })),
+      createElement('header', {}, titleAddon),
       message,
     ),
 }));
@@ -77,6 +80,9 @@ vi.mock('@/features/Conversation/Markdown', () => ({
     markdownProps.current = props;
     return null;
   },
+}));
+vi.mock('@/components/AgentAvatar', () => ({
+  default: ({ name }: { name?: string }) => createElement('i', { 'data-agent-avatar': name }),
 }));
 vi.mock('@/features/User/UserAvatar', () => ({ default: () => createElement('i', {}, 'me') }));
 vi.mock('@/store/user', () => ({
@@ -352,5 +358,58 @@ describe('ChannelMessage thread card', () => {
       screen.getByRole('button', { name: /openThread/ }).querySelector('.lucide-corner-down-right'),
     ).not.toBeNull();
     expect(screen.queryByText('threadCard.messages')).toBeNull();
+  });
+});
+
+describe('ChannelMessage relay', () => {
+  const relayed = (extra: Partial<ChannelPublicMessage>) =>
+    ({
+      ...message({ avatar: null, id: 'user-self', name: 'Arvin', type: 'user' }),
+      via: { agentId: 'agt_relay', avatar: null, name: 'Yunuo' },
+      ...extra,
+    }) as ChannelPublicMessage;
+
+  it('names the relaying Agent in the header, after the time', () => {
+    const { container } = render(<ChannelMessage detail={detail} message={relayed({})} />);
+
+    const header = container.querySelector('header')!;
+    expect(header.textContent).toContain('message.relayedBy');
+    // The time comes first, then the relay label.
+    expect(header.firstElementChild?.tagName).toBe('TIME');
+    expect(header.querySelector('[data-agent-avatar="Yunuo"]')).toBeTruthy();
+  });
+
+  it('says whose reply a receipt brings back', () => {
+    render(
+      <ChannelMessage
+        detail={detail}
+        message={relayed({
+          receipt: { channelId: 'chn_2', channelTitle: 'Ops', messageId: 'msg_9' },
+        })}
+      />,
+    );
+
+    expect(screen.getByText('message.relayReplyFrom')).toBeTruthy();
+    expect(screen.queryByText('message.relayedBy')).toBeNull();
+  });
+
+  it('shows nothing for a message nobody relayed', () => {
+    render(
+      <ChannelMessage
+        detail={detail}
+        message={message({ avatar: null, id: 'user-other', name: 'Ann', type: 'user' })}
+      />,
+    );
+
+    expect(screen.queryByText('message.relayedBy')).toBeNull();
+  });
+
+  it('keeps the header on a relayed continuation so the label stays visible', () => {
+    const { container } = render(
+      <ChannelMessage continuation detail={detail} message={relayed({})} />,
+    );
+
+    expect(container.querySelector('[data-continuation]')).toBeNull();
+    expect(screen.getByText('message.relayedBy')).toBeTruthy();
   });
 });

@@ -157,6 +157,23 @@ export type ChannelThreadMetadata = Record<string, unknown>;
 /** Free-form public message state that does not need its own column. */
 export type ChannelMessageMetadata = Record<string, unknown>;
 
+/**
+ * The Agent that wrote a request on its requester's behalf, from another Channel. The person
+ * stays the sender; this only says who relayed it.
+ */
+export interface ChannelMessageVia {
+  agentId: string;
+  name: string;
+}
+
+/** A request that brings another Channel's reply back to the Agent that relayed the original. */
+export interface ChannelMessageReceipt {
+  channelId: string;
+  channelTitle: string;
+  /** The published reply in that Channel. */
+  messageId: string;
+}
+
 /** Effective Agent settings and Channel environment, frozen once when a job is claimed. */
 export interface ChannelExecutionConfig extends LobeAgentConfig, ChannelMemberConfig {
   provider: string;
@@ -373,6 +390,8 @@ export interface ChannelPublicMessage {
   fileIds: string[];
   id: string;
   mentions: string[];
+  /** Another Channel's reply this request brings back to the relaying Agent; null otherwise. */
+  receipt?: ChannelMessageReceipt | null;
   recipientMemberIds: string[];
   /** Bounded public quote, including when its original is outside the loaded page. */
   replyTo?: Pick<
@@ -387,6 +406,8 @@ export interface ChannelPublicMessage {
   sourceTopicTitle?: string | null;
   threadId: string | null;
   userId: string | null;
+  /** The Agent that relayed this request (or answered it, on a receipt); null otherwise. */
+  via?: (ChannelMessageVia & { avatar: string | null }) | null;
   /**
    * External Works a reply's run touched: the conversation's work summaries, for every member,
    * without the ids that link them to the requester's Work, topic and run. Empty on requests.

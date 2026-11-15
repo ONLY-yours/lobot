@@ -1,4 +1,6 @@
 export default {
+  'message.relayReplyFrom': '{{name}} replied in #{{channel}}',
+  'message.relayedBy': 'Relayed by {{name}}',
   'recipients.automatic': 'The decision model will choose which Agents reply',
 
   'people.empty': 'All available workspace members have joined',
