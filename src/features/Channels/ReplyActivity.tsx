@@ -53,9 +53,16 @@ export function ReplyActivity({
 
   return (
     <Popover
-      content={<ReplyList channelId={detail.channel.id} entries={entries} />}
       placement="topLeft"
       trigger="click"
+      content={
+        <ReplyList
+          channelId={detail.channel.id}
+          entries={entries}
+          // Who may change where an Agent runs, as in the member list and header menu.
+          manageable={detail.channel.canDelete && detail.channel.status !== 'archived'}
+        />
+      }
     >
       <Button
         size="small"

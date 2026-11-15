@@ -178,6 +178,12 @@ export default {
   'blocked.member_busy': 'Waiting for the previous reply',
   'blocked.unavailable': 'Agent unavailable',
   'blocked.workspace_changed': 'Workspace changed',
+  'blockedDevice.change': 'Change device',
+  'blockedDevice.hint':
+    "The reply starts on its own once the Agent's device connects to the device gateway.",
+  'blockedDevice.missing': 'Not among the devices you can see',
+  'blockedDevice.offline': 'Offline · last connected {{time}}',
+  'blockedDevice.online': 'Connected · starting shortly',
   'activity.many': '{{count}} members are replying…',
   'activity.one': '{{name}} · {{status}}',
   'activity.two': '{{names}} are replying…',

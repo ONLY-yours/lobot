@@ -1,4 +1,9 @@
-import type { ChannelDetail, ChannelPublicJob, ChannelPublicMessage } from '@lobechat/types';
+import type {
+  ChannelDetail,
+  ChannelPublicJob,
+  ChannelPublicMember,
+  ChannelPublicMessage,
+} from '@lobechat/types';
 import { Button, Flexbox, Popover, Text, usePopoverContext } from '@lobehub/ui';
 import * as stylex from '@stylexjs/stylex';
 import { Square } from 'lucide-react';
@@ -9,6 +14,7 @@ import AgentAvatar from '@/components/AgentAvatar';
 import AsyncError from '@/components/AsyncError';
 import { channelActions } from '@/store/channel';
 
+import { BlockedDevice } from './BlockedDevice';
 import { ChannelStatus } from './ChannelStatus';
 import { channelJobStatus, channelJobTone, isChannelJobActive } from './jobStatus';
 import { memberAvatar, memberName } from './memberName';
@@ -19,6 +25,7 @@ export interface ReplyEntry {
   agentId?: string | null;
   avatar?: string;
   job: ChannelPublicJob;
+  member?: ChannelPublicMember;
   name: string;
 }
 
@@ -34,17 +41,23 @@ export const replyEntries = (
       agentId: member?.agentId,
       avatar: memberAvatar(member),
       job,
+      member,
       name: memberName(member, fallbackName),
     };
   });
 
-/** One reply: its state, why it failed, and how to stop it or open its Agent. */
+/**
+ * One reply: its state, why it failed or what device it waits for, and how to stop it or open
+ * its Agent. `manageable` viewers (Channel admins) also see that device and can change it.
+ */
 export function ReplyDetail({
   channelId,
-  entry: { agentId, avatar, job, name },
+  entry: { agentId, avatar, job, member, name },
+  manageable,
 }: {
   channelId: string;
   entry: ReplyEntry;
+  manageable?: boolean;
 }) {
   const { t } = useTranslation('channel');
   const { close } = usePopoverContext();
@@ -114,6 +127,9 @@ export function ReplyDetail({
           </Button>
         )}
       </Flexbox>
+      {job.status === 'queued' && job.blockedCode === 'device_offline' && (
+        <BlockedDevice channelId={channelId} manageable={manageable} member={member} />
+      )}
       {job.worktreeBranch && (
         <Text ellipsis fontSize={12} title={job.worktreeBranch} type="secondary">
           {t('receipt.worktree', { branch: job.worktreeBranch })}
@@ -133,11 +149,24 @@ export function ReplyDetail({
 }
 
 /** Replies listed one after another, as popover content. */
-export function ReplyList({ channelId, entries }: { channelId: string; entries: ReplyEntry[] }) {
+export function ReplyList({
+  channelId,
+  entries,
+  manageable,
+}: {
+  channelId: string;
+  entries: ReplyEntry[];
+  manageable?: boolean;
+}) {
   return (
     <Flexbox gap={16} {...stylex.props(statusStyles.popover, statusStyles.replyList)}>
       {entries.map((entry) => (
-        <ReplyDetail channelId={channelId} entry={entry} key={entry.job.id} />
+        <ReplyDetail
+          channelId={channelId}
+          entry={entry}
+          key={entry.job.id}
+          manageable={manageable}
+        />
       ))}
     </Flexbox>
   );
