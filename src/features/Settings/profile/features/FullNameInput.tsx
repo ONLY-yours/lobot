@@ -39,7 +39,7 @@ const FullNameInput = () => {
       key={fullName}
       placeholder={t('profile.fullName')}
       ref={inputRef}
-      style={{ fontSize: 16, paddingInline: 0 }}
+      style={{ fontSize: 15, paddingInline: 0 }}
       // Always pass a suffix: antd remounts the input when one appears later.
       suffix={saving ? <Spin size="small" style={{ opacity: 0.5 }} /> : <span />}
       variant="borderless"

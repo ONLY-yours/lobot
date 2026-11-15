@@ -1,5 +1,6 @@
 import { type ComponentType, createElement } from 'react';
 
+import InterestsPage from '@/features/Settings/profile/interests';
 import UsernamePage from '@/features/Settings/profile/username';
 import { SettingsTabs } from '@/store/global/initialState';
 
@@ -8,7 +9,7 @@ import { SettingsTabs } from '@/store/global/initialState';
  * these at `/settings/<tab>/<sub>`, with a back button to the tab.
  */
 const SETTINGS_SUB_PAGES: Partial<Record<string, Record<string, ComponentType>>> = {
-  [SettingsTabs.Profile]: { username: UsernamePage },
+  [SettingsTabs.Profile]: { interests: InterestsPage, username: UsernamePage },
 };
 
 export const hasSettingsSubPage = (tab: string | undefined, sub: string) =>

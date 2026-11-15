@@ -13,9 +13,10 @@ const styles = stylex.create({
   name: { flex: '1', minWidth: '0' },
   row: {
     display: 'flex',
-    gap: '16px',
+    gap: '12px',
     alignItems: 'center',
-    padding: '16px',
+    paddingBlock: '8px',
+    paddingInline: '16px',
   },
 });
 

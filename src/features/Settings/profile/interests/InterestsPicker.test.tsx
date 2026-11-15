@@ -1,9 +1,8 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import InterestsRow from './InterestsRow';
+import InterestsPicker from './InterestsPicker';
 
 const mocks = vi.hoisted(() => ({
   interests: [] as string[],
@@ -56,12 +55,6 @@ vi.mock('@/store/user/selectors', () => ({
   },
 }));
 
-vi.mock('./InsetGroup', () => ({
-  default: ({ children, title }: { children: ReactNode; title: string }) => (
-    <section aria-label={title}>{children}</section>
-  ),
-}));
-
 beforeEach(() => {
   mocks.interests = [];
   mocks.saveToast.mockReset();
@@ -73,11 +66,11 @@ afterEach(() => {
   cleanup();
 });
 
-describe('InterestsRow', () => {
+describe('InterestsPicker', () => {
   it('stores predefined interests as canonical keys', async () => {
     const user = userEvent.setup();
 
-    render(<InterestsRow />);
+    render(<InterestsPicker />);
 
     await user.click(screen.getByText('编程与开发'));
 
@@ -90,7 +83,7 @@ describe('InterestsRow', () => {
     const user = userEvent.setup();
     mocks.interests = ['coding', '自定义'];
 
-    render(<InterestsRow />);
+    render(<InterestsPicker />);
 
     await user.click(screen.getByText('编程与开发'));
 
@@ -104,7 +97,7 @@ describe('InterestsRow', () => {
     const failure = new Error('network detail');
     mocks.updateInterests.mockRejectedValueOnce(failure);
 
-    render(<InterestsRow />);
+    render(<InterestsPicker />);
 
     await user.click(screen.getByText('编程与开发'));
 
@@ -121,7 +114,7 @@ describe('InterestsRow', () => {
     const user = userEvent.setup();
     mocks.updateInterests.mockRejectedValueOnce(new Error('network detail'));
 
-    render(<InterestsRow />);
+    render(<InterestsPicker />);
 
     await user.click(screen.getByText('编程与开发'));
 

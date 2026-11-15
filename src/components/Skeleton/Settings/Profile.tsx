@@ -1,13 +1,10 @@
 'use client';
 
-import { Block, Flexbox, Icon, Text } from '@lobehub/ui';
+import { Flexbox, Text } from '@lobehub/ui';
 import { cssVar } from '@lobehub/ui/stylex/cssVar.stylex';
 import * as stylex from '@stylexjs/stylex';
-import { BriefcaseIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
 
-import { INTEREST_AREAS } from '@/features/Onboarding/config';
 import InsetGroup from '@/features/Settings/profile/features/InsetGroup';
 import { useUserStore } from '@/store/user';
 import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
@@ -18,9 +15,10 @@ import { useSkeletonText } from './useSkeletonText';
 const styles = stylex.create({
   hero: {
     display: 'flex',
-    gap: '16px',
+    gap: '12px',
     alignItems: 'center',
-    padding: '16px',
+    paddingBlock: '8px',
+    paddingInline: '16px',
   },
   row: {
     display: 'flex',
@@ -58,36 +56,6 @@ export const SettingsProfileRowSkeleton = ({
 );
 
 /**
- * The interest chips are static copy (the onboarding interest areas plus
- * "Other"), so they render as the same outlined chips the row shows; only the
- * user's selection is unknown and stays unhighlighted.
- */
-const InterestsSkeleton = () => {
-  const { t, ready } = useTranslation('onboarding');
-  const chips = [
-    ...INTEREST_AREAS.map(({ icon, key }) => ({ icon, key, label: t(`interests.area.${key}`) })),
-    { icon: BriefcaseIcon, key: 'other', label: t('interests.area.other') },
-  ];
-
-  return (
-    <Flexbox horizontal align={'center'} gap={8} style={{ width: '100%' }} wrap={'wrap'}>
-      {chips.map(({ icon, key, label }) => (
-        <Block horizontal gap={8} key={key} padding={8} variant={'outlined'}>
-          <Icon color={cssVar.colorTextSecondary} icon={icon} size={14} />
-          {ready ? (
-            <Text fontSize={13} weight={500}>
-              {label}
-            </Text>
-          ) : (
-            <SkeletonBar height={13} width={56} />
-          )}
-        </Block>
-      ))}
-    </Flexbox>
-  );
-};
-
-/**
  * The profile tab's inset groups: same captions and row labels as the settled
  * page, with placeholders only for the user's values. Rows the settled page
  * shows conditionally (email, sign out) follow the same conditions.
@@ -101,17 +69,12 @@ const SettingsProfileSkeleton = () => {
     <Flexbox aria-busy data-testid={'settings-profile-skeleton'} gap={24}>
       <InsetGroup footer={text('profile.nameHint', 240, 12)}>
         <div {...stylex.props(styles.hero)}>
-          <SkeletonBar height={64} radius={'50%'} width={64} />
+          <SkeletonBar height={40} radius={'50%'} width={40} />
           <SkeletonBar height={22} width={160} />
         </div>
       </InsetGroup>
-      <InsetGroup
-        footer={text('profile.interestsHint', 320, 12)}
-        title={text('profile.interests', 64, 12)}
-      >
-        <Flexbox padding={16}>
-          <InterestsSkeleton />
-        </Flexbox>
+      <InsetGroup footer={text('profile.interestsHint', 320, 12)}>
+        <SettingsProfileRowSkeleton label={text('profile.interests', 64, 22)} valueWidth={72} />
       </InsetGroup>
       <InsetGroup>
         <SettingsProfileRowSkeleton label={text('profile.username', 64, 22)} valueWidth={120} />

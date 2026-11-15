@@ -15,19 +15,19 @@ import { sx } from '@/styles/sx';
 import { imageToBase64 } from '@/utils/imageToBase64';
 import { createUploadImageHandler } from '@/utils/uploadFIle';
 
-const SIZE = 64;
+const SIZE = 40;
 
 const styles = stylex.create({
   badge: {
     position: 'absolute',
     zIndex: 2,
-    insetBlockEnd: 0,
-    insetInlineEnd: 0,
+    insetBlockEnd: '-2px',
+    insetInlineEnd: '-2px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '24px',
-    height: '24px',
+    width: '16px',
+    height: '16px',
     borderWidth: '2px',
     borderStyle: 'solid',
     borderColor: sxVar.colorBgContainer,
@@ -111,12 +111,12 @@ const AvatarUpload = () => {
         <UserAvatar shape={'circle'} size={SIZE} />
         <div {...sx(styles.overlay, uploading && { opacity: 1 })}>
           {uploading && (
-            <Icon spin color={cssVar.colorTextLightSolid} icon={Loader2Icon} size={20} />
+            <Icon spin color={cssVar.colorTextLightSolid} icon={Loader2Icon} size={16} />
           )}
         </div>
         {!uploading && (
           <div {...stylex.props(styles.badge)}>
-            <Icon color={cssVar.colorBgContainer} icon={CameraIcon} size={12} />
+            <Icon color={cssVar.colorBgContainer} icon={CameraIcon} size={10} />
           </div>
         )}
       </div>

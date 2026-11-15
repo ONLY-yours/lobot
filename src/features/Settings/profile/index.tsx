@@ -42,10 +42,13 @@ const ProfileSetting = ({ showSettingHeader = true }: ProfileSettingProps) => {
   return (
     <>
       {showSettingHeader && <SettingHeader title={t('profile.title')} />}
-      {/* Telegram-style inset groups: who you are, what you care about, the account, then sign out. */}
+      {/* Telegram-style inset groups: who you are, what you care about, the account, then sign out.
+          Interests and username open their own pages. */}
       <Flexbox gap={24}>
         <ProfileHero />
-        <InterestsRow />
+        <InsetGroup footer={t('profile.interestsHint')}>
+          <InterestsRow />
+        </InsetGroup>
         <InsetGroup>
           <UsernameRow />
           {isLogin && userProfile?.email && <EmailRow />}
