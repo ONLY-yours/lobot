@@ -10,6 +10,8 @@ import ToggleLeftPanelButton from '@/features/NavPanel/ToggleLeftPanelButton';
 import { WRAP_INSET } from '@/features/NavRail/const';
 import { useImLayout } from '@/features/NavRail/useImLayout';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { RAIL_WIDTH } from '@/features/WorkspaceRail/railHint';
+import { useRailColumnShown } from '@/features/WorkspaceRail/useRailColumnShown';
 import { electronSystemService } from '@/services/electron/system';
 import { useElectronStore } from '@/store/electron';
 import { useGlobalStore } from '@/store/global';
@@ -42,10 +44,12 @@ const navPanelSelector = (s: GlobalState) => {
 
 const useNavPanelWidth = () => {
   const width = useGlobalStore(navPanelSelector);
-  // Under `im_layout` the list column starts inside the inset wrap, so the
-  // titlebar spans the inset too.
+  // Under `im_layout` the list column starts after the workspace rail and inside
+  // the inset wrap, so the titlebar spans both too.
   const imLayout = useImLayout();
-  return imLayout && width > 0 ? width + WRAP_INSET : width;
+  const railShown = useRailColumnShown();
+  if (!imLayout || width === 0) return width;
+  return width + WRAP_INSET + (railShown ? RAIL_WIDTH : 0);
 };
 
 const styles = createStaticStyles(({ css, cssVar }) => ({

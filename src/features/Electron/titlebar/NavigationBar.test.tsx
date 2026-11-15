@@ -12,9 +12,13 @@ const mocks = vi.hoisted(() => ({
   navPanelResizing: false,
   navigate: vi.fn(),
   openAllAgentsDrawer: vi.fn(),
+  railShown: false,
 }));
 
 vi.mock('@/features/NavRail/useImLayout', () => ({ useImLayout: () => mocks.imLayout }));
+vi.mock('@/features/WorkspaceRail/useRailColumnShown', () => ({
+  useRailColumnShown: () => mocks.railShown,
+}));
 
 vi.mock('@lobechat/electron-client-ipc', () => ({
   useWatchBroadcast: (event: string, handler: () => void) => mocks.handlers.set(event, handler),
@@ -72,6 +76,7 @@ describe('NavigationBar tray broadcasts', () => {
     mocks.leftPanelVisible = false;
     mocks.leftPanelWidth = 0;
     mocks.navPanelResizing = false;
+    mocks.railShown = false;
     vi.clearAllMocks();
   });
 
@@ -114,6 +119,17 @@ describe('NavigationBar tray broadcasts', () => {
 
     // Wrap inset (8) plus the list column, minus the 12px gutter.
     expect(container.querySelector('.root')).toHaveStyle({ width: '276px' });
+  });
+
+  it('spans the workspace rail too, so the history button lines up with the list column', () => {
+    mocks.imLayout = true;
+    mocks.railShown = true;
+    mocks.leftPanelVisible = true;
+    mocks.leftPanelWidth = 280;
+    const { container } = render(<NavigationBar />);
+
+    // Rail (48) plus the wrap inset (8) plus the list column, minus the 12px gutter.
+    expect(container.querySelector('.root')).toHaveStyle({ width: '324px' });
   });
 
   it('follows the sidebar width without a transition while it is being resized', () => {
