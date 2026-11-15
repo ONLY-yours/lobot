@@ -50,12 +50,14 @@ describe('NavTabBar', () => {
     mocks.inbox = { enabled: true, unreadCount: 0 };
   });
 
-  it('lays out Contacts, Messages, Inbox and the user avatar in one bar', () => {
+  // The notification bell is not shown in the tab bar, even with unread notifications.
+  it('lays out Contacts, Messages and the user avatar in one bar, without the inbox', () => {
+    mocks.inbox = { enabled: true, unreadCount: 5 };
     render(<NavTabBar />);
 
     const labels = screen.getAllByRole('link').map((el) => el.getAttribute('aria-label'));
     expect(labels).toEqual(['tab.contacts', 'tab.messages']);
-    expect(screen.getByRole('button', { name: 'inbox.title' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'inbox.title' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'tab.more' })).not.toBeInTheDocument();
     expect(screen.getByTestId('user-avatar')).toBeInTheDocument();
   });
@@ -71,12 +73,5 @@ describe('NavTabBar', () => {
     );
     expect(screen.getByRole('link', { name: 'tab.messages' })).not.toHaveAttribute('aria-current');
     expect(screen.getByText('99+')).toBeInTheDocument();
-  });
-
-  it('hides the inbox tab when the inbox is disabled', () => {
-    mocks.inbox = { enabled: false, unreadCount: 0 };
-    render(<NavTabBar />);
-
-    expect(screen.queryByRole('button', { name: 'inbox.title' })).not.toBeInTheDocument();
   });
 });

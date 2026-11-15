@@ -33,6 +33,7 @@ describe('workspace store', () => {
     localStorage.clear();
     useWorkspaceStore.setState({
       activeWorkspaceId: null,
+      isWorkspaceAvailable: false,
       isWorkspaceLoading: true,
       workspaces: [],
     });
@@ -51,6 +52,7 @@ describe('workspace store', () => {
     await waitFor(() => expect(useWorkspaceStore.getState().workspaces).toHaveLength(2));
     expect(useWorkspaceStore.getState().activeWorkspaceId).toBe('ws-b');
     expect(useWorkspaceStore.getState().isWorkspaceLoading).toBe(false);
+    expect(useWorkspaceStore.getState().isWorkspaceAvailable).toBe(true);
   });
 
   it('falls back to the personal space when the last workspace is gone or locked out', async () => {
@@ -71,6 +73,7 @@ describe('workspace store', () => {
     await waitFor(() => expect(useWorkspaceStore.getState().isWorkspaceLoading).toBe(false));
     expect(useWorkspaceStore.getState().workspaces).toEqual([]);
     expect(useWorkspaceStore.getState().activeWorkspaceId).toBeNull();
+    expect(useWorkspaceStore.getState().isWorkspaceAvailable).toBe(false);
   });
 
   it('clears the context when signed out', () => {

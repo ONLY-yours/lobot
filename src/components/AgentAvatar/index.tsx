@@ -40,7 +40,8 @@ const AgentAvatar = memo<AgentAvatarProps>(
     name,
     onClick,
     ref,
-    shape = 'square',
+    // Round like every conversation in an IM list; pass `shape` for a tile.
+    shape = 'circle',
     size = 24,
     state,
     style,

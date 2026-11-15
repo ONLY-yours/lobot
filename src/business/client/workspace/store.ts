@@ -5,7 +5,10 @@ import useSWR, { type SWRResponse } from 'swr';
 import { shallow } from 'zustand/shallow';
 import { createWithEqualityFn } from 'zustand/traditional';
 
+import { mutate } from '@/libs/swr/mutate';
+
 import type { WorkspaceListItem } from '../hooks/useActiveWorkspace';
+import { workspaceService } from './service';
 
 /**
  * The workspace context Lobot sends to the server. LobeHub Cloud keeps it in the
@@ -16,6 +19,8 @@ import type { WorkspaceListItem } from '../hooks/useActiveWorkspace';
  */
 export interface WorkspaceState {
   activeWorkspaceId: string | null;
+  /** The server answered the list, so workspaces can be listed and created (not self-hosted). */
+  isWorkspaceAvailable: boolean;
   isWorkspaceLoading: boolean;
   workspaces: WorkspaceListItem[];
 }
@@ -53,6 +58,7 @@ export const writeLastWorkspaceId = (userId: string | null | undefined, id: stri
 export const useWorkspaceStore = createWithEqualityFn<WorkspaceStore>()(
   (set, get) => ({
     activeWorkspaceId: null,
+    isWorkspaceAvailable: false,
     // Loading until the first list settles, so nothing paints a scope it may leave.
     isWorkspaceLoading: true,
     switchToPersonal: () => {
@@ -67,6 +73,10 @@ export const useWorkspaceStore = createWithEqualityFn<WorkspaceStore>()(
 );
 
 export const getWorkspaceStoreState = () => useWorkspaceStore.getState();
+
+/** Refetch the list, e.g. after creating a workspace, so the rail shows it. */
+export const refreshWorkspaces = () =>
+  mutate((key) => Array.isArray(key) && key[0] === FETCH_WORKSPACES_KEY);
 
 /**
  * A locked-out membership (lapsed subscription) cannot be entered, so it is
@@ -84,11 +94,7 @@ export const useFetchWorkspaces = (
 ): SWRResponse<WorkspaceListItem[]> => {
   const swr = useSWR<WorkspaceListItem[]>(
     enabled && userId ? [FETCH_WORKSPACES_KEY, userId] : null,
-    async () => {
-      // Lazy: hooks that read this store sit under the tRPC client's own imports.
-      const { lambdaClient } = await import('@/libs/trpc/client');
-      return (await lambdaClient.workspace.list.query()) as WorkspaceListItem[];
-    },
+    () => workspaceService.list(),
     {
       onSuccess: (data) => {
         const workspaces = enterable(data ?? []);
@@ -96,7 +102,11 @@ export const useFetchWorkspaces = (
         const candidate = activeWorkspaceId ?? (userId ? readLastWorkspaceId(userId) : null);
         // A workspace the user lost access to falls back to the personal space.
         const active = candidate && workspaces.some((ws) => ws.id === candidate) ? candidate : null;
-        useWorkspaceStore.setState({ activeWorkspaceId: active, workspaces });
+        useWorkspaceStore.setState({
+          activeWorkspaceId: active,
+          isWorkspaceAvailable: true,
+          workspaces,
+        });
       },
     },
   );
@@ -107,6 +117,7 @@ export const useFetchWorkspaces = (
     if (!enabled) {
       useWorkspaceStore.setState({
         activeWorkspaceId: null,
+        isWorkspaceAvailable: false,
         isWorkspaceLoading: false,
         workspaces: [],
       });

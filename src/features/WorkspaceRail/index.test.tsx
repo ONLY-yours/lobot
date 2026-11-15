@@ -5,6 +5,8 @@ import WorkspaceRail from './index';
 
 const mocks = vi.hoisted(() => ({
   activeId: null as string | null,
+  available: true,
+  openCreate: vi.fn(),
   navigate: vi.fn(),
   switchToPersonal: vi.fn(async () => {}),
   switchWorkspace: vi.fn(async (_id: string) => {}),
@@ -13,8 +15,14 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('./style', () => ({
-  RAIL_AVATAR_SIZE: 40,
-  styles: { divider: {}, item: {}, pill: {}, pillActive: {}, rail: {} },
+  RAIL_AVATAR_SIZE: 32,
+  RAIL_TILE_RADIUS: 10,
+  styles: { add: {}, divider: {}, item: {}, pill: {}, pillActive: {}, rail: {} },
+}));
+vi.mock('./CreateWorkspace', () => ({ useOpenCreateWorkspace: () => mocks.openCreate }));
+vi.mock('@/business/client/workspace/store', () => ({
+  useWorkspaceStore: (selector: (s: { isWorkspaceAvailable: boolean }) => unknown) =>
+    selector({ isWorkspaceAvailable: mocks.available }),
 }));
 vi.mock('@/business/client/hooks/useWorkspaces', () => ({ useWorkspaces: () => mocks.workspaces }));
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
@@ -36,6 +44,7 @@ vi.mock('@/store/user', () => ({ useUserStore: () => '' }));
 describe('WorkspaceRail', () => {
   beforeEach(() => {
     mocks.activeId = null;
+    mocks.available = true;
     mocks.workspaces = [
       { avatar: null, id: 'ws-1', name: 'LobeHub', slug: 'lobehub' },
       { avatar: null, id: 'ws-2', name: 'Acme', slug: 'acme' },
@@ -47,10 +56,19 @@ describe('WorkspaceRail', () => {
     vi.clearAllMocks();
   });
 
-  it('renders nothing when the user has no workspace', () => {
-    mocks.workspaces = [];
+  it('renders nothing where the server has no workspaces (self-hosted)', () => {
+    mocks.available = false;
     const { container } = render(<WorkspaceRail />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  // With no workspace yet the rail still shows, so one can be created from it.
+  it('offers creating a workspace even before the user has one', () => {
+    mocks.workspaces = [];
+    render(<WorkspaceRail />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'workspaceRail.create' }));
+    expect(mocks.openCreate).toHaveBeenCalled();
   });
 
   it('lists the personal space first, then each workspace, marking the active one', () => {
@@ -62,6 +80,7 @@ describe('WorkspaceRail', () => {
       'workspaceRail.personal',
       'LobeHub',
       'Acme',
+      'workspaceRail.create',
     ]);
     expect(screen.getByRole('button', { name: 'Acme' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: 'LobeHub' })).not.toHaveAttribute('aria-current');

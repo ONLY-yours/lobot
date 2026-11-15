@@ -1,14 +1,33 @@
 import { cssVar } from '@lobehub/ui/stylex/cssVar.stylex';
 import * as stylex from '@stylexjs/stylex';
 
-export const RAIL_AVATAR_SIZE = 40;
+export const RAIL_AVATAR_SIZE = 32;
+/** Discord's rounded tile: a fixed radius reads tighter than the avatar's default size / 6. */
+export const RAIL_TILE_RADIUS = 10;
 
 // Discord-style server rail: a column of scope avatars left of the wrap, on the
 // window background, with a pill on the left edge marking the active scope.
 export const styles = stylex.create({
+  add: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: `${RAIL_AVATAR_SIZE}px`,
+    height: `${RAIL_AVATAR_SIZE}px`,
+    borderRadius: `${RAIL_TILE_RADIUS}px`,
+    color: {
+      default: cssVar.colorTextTertiary,
+      [stylex.when.ancestor(':hover')]: cssVar.colorText,
+    },
+    backgroundColor: {
+      default: cssVar.colorFillTertiary,
+      [stylex.when.ancestor(':hover')]: cssVar.colorFillSecondary,
+    },
+    transition: 'color 0.15s, background-color 0.15s',
+  },
   divider: {
     flex: 'none',
-    width: '24px',
+    width: '20px',
     height: '2px',
     marginBlock: '2px',
     borderRadius: '1px',
@@ -30,11 +49,11 @@ export const styles = stylex.create({
     position: 'absolute',
     insetInlineStart: 0,
     width: '4px',
-    height: '32px',
+    height: '24px',
     borderStartEndRadius: '4px',
     borderEndEndRadius: '4px',
     backgroundColor: cssVar.colorText,
-    transform: { default: 'scaleY(0)', [stylex.when.ancestor(':hover')]: 'scaleY(0.5)' },
+    transform: { default: 'scaleY(0)', [stylex.when.ancestor(':hover')]: 'scaleY(0.4)' },
     transition: 'transform 0.15s',
   },
   pillActive: {
@@ -46,7 +65,7 @@ export const styles = stylex.create({
     overflowY: 'auto',
     flex: 'none',
     alignItems: 'center',
-    width: '56px',
+    width: '48px',
     // The Electron title bar sits above, so only the bottom matches the wrap's 8px inset.
     paddingBlockEnd: '8px',
     scrollbarWidth: 'none',

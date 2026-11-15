@@ -1,23 +1,26 @@
 'use client';
 
-import { Flexbox, Tooltip } from '@lobehub/ui';
+import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import * as stylex from '@stylexjs/stylex';
+import { PlusIcon } from 'lucide-react';
 import { memo, type ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useSwitchWorkspace } from '@/business/client/hooks/useSwitchWorkspace';
 import { useWorkspaces } from '@/business/client/hooks/useWorkspaces';
+import { useWorkspaceStore } from '@/business/client/workspace/store';
 import Avatar from '@/components/Avatar';
 import WorkspaceAvatar from '@/components/WorkspaceAvatar';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
-import { RAIL_AVATAR_SIZE, styles } from './style';
+import { useOpenCreateWorkspace } from './CreateWorkspace';
+import { RAIL_AVATAR_SIZE, RAIL_TILE_RADIUS, styles } from './style';
 
 interface RailItemProps {
-  active: boolean;
+  active?: boolean;
   children: ReactNode;
   onClick: () => void;
   title: string;
@@ -32,7 +35,7 @@ const RailItem = memo<RailItemProps>(({ active, children, onClick, title }) => (
       {...stylex.props(styles.item, stylex.defaultMarker())}
       onClick={onClick}
     >
-      <span {...stylex.props(styles.pill, active && styles.pillActive)} />
+      {active !== undefined && <span {...stylex.props(styles.pill, active && styles.pillActive)} />}
       {children}
     </div>
   </Tooltip>
@@ -42,11 +45,13 @@ RailItem.displayName = 'WorkspaceRailItem';
 
 /**
  * Discord-style scope switcher: the personal space on top, then one avatar per
- * workspace. Picking one scopes every request to it and lands on the Messages home. Renders nothing when the
- * user belongs to no workspace, since there is nothing to switch between.
+ * workspace, and a button to create one. Picking a scope sends every request to
+ * it and lands on the Messages home. Hidden where the server has no workspaces
+ * (self-hosted).
  */
 const WorkspaceRail = memo(() => {
   const { t } = useTranslation('common');
+  const available = useWorkspaceStore((s) => s.isWorkspaceAvailable);
   const workspaces = useWorkspaces();
   const activeId = useActiveWorkspaceId();
   const { switchToPersonal, switchWorkspace } = useSwitchWorkspace();
@@ -56,22 +61,25 @@ const WorkspaceRail = memo(() => {
 
   // Lobot has no workspace routes: switching changes the request scope, then lands on the
   // Messages home, since the open conversation belongs to the scope just left.
+  const openHome = useCallback(() => navigate('/', { escape: true }), [navigate]);
+  const openCreate = useOpenCreateWorkspace(openHome);
+
   const openPersonal = useCallback(async () => {
     if (activeId === null) return;
     await switchToPersonal();
-    navigate('/', { escape: true });
-  }, [activeId, navigate, switchToPersonal]);
+    openHome();
+  }, [activeId, openHome, switchToPersonal]);
 
   const openWorkspace = useCallback(
     async (id: string) => {
       if (activeId === id) return;
       await switchWorkspace(id);
-      navigate('/', { escape: true });
+      openHome();
     },
-    [activeId, navigate, switchWorkspace],
+    [activeId, openHome, switchWorkspace],
   );
 
-  if (workspaces.length === 0) return null;
+  if (!available) return null;
 
   return (
     <Flexbox
@@ -99,9 +107,15 @@ const WorkspaceRail = memo(() => {
             avatar={workspace.avatar}
             name={workspace.name}
             size={RAIL_AVATAR_SIZE}
+            style={{ borderRadius: RAIL_TILE_RADIUS }}
           />
         </RailItem>
       ))}
+      <RailItem title={t('workspaceRail.create')} onClick={openCreate}>
+        <span {...stylex.props(styles.add)}>
+          <Icon icon={PlusIcon} size={18} />
+        </span>
+      </RailItem>
     </Flexbox>
   );
 });
