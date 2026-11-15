@@ -3,12 +3,12 @@ name: Release Desktop
 # ============================================
 # Lobot 桌面端发布
 # ============================================
-# 本仓（lobehub/lobot）只承载 workflow 与 release 产物，不含源码。
-# 构建时从私有源仓（lobehub-biz/lobot）拉取代码，产物发到本仓 Release。
+# 用本仓源码构建三端安装包，发到本仓 Release，并同步到 S3 更新源。
 #
-# 需要的配置：
-#   - Secret SOURCE_TOKEN：对私有源仓有 contents:read 的 token
-#   - 可选仓库变量 SOURCE_REPOSITORY，默认 lobehub-biz/lobot
+# 可选配置（缺失时对应步骤降级而不失败）：
+#   - APPLE_*：macOS 签名与公证，缺失则产物未签名
+#   - UPDATE_SERVER_URL：客户端检查更新的地址
+#   - UPDATE_AWS_* / UPDATE_S3_*：S3 更新源，缺失则跳过同步
 # ============================================
 
 on:
@@ -27,11 +27,6 @@ on:
         type: choice
         options: [stable, beta, canary]
         default: stable
-      source_ref:
-        description: '私有源仓 ref（留空用默认分支）'
-        required: false
-        type: string
-        default: ''
       draft:
         description: '发布为 draft release（gh 对 draft 的 tag 绑定不稳定，默认直接发布）'
         required: false
@@ -82,9 +77,6 @@ jobs:
     needs: prepare
     runs-on: ${{ matrix.os }}
     timeout-minutes: 75
-    env:
-      SOURCE_REPOSITORY: ${{ vars.SOURCE_REPOSITORY || 'lobehub-biz/lobot' }}
-      SOURCE_DIR: ${{ github.workspace }}/source
     strategy:
       fail-fast: false
       matrix:
@@ -106,28 +98,7 @@ jobs:
             artifact: linux-x64
 
     steps:
-      # ----- 拉取私有源码 -----
-      - name: Clone private source
-        shell: bash
-        env:
-          SOURCE_TOKEN: ${{ secrets.SOURCE_TOKEN }}
-          SOURCE_REF: ${{ inputs.source_ref }}
-        run: |
-          set -euo pipefail
-          if [ -z "${SOURCE_TOKEN:-}" ]; then
-            echo "::error::SOURCE_TOKEN 未配置，无法拉取私有源仓 ${SOURCE_REPOSITORY}"
-            exit 1
-          fi
-
-          git clone --depth 1 \
-            "https://x-access-token:${SOURCE_TOKEN}@github.com/${SOURCE_REPOSITORY}.git" \
-            "$SOURCE_DIR"
-
-          if [ -n "$SOURCE_REF" ]; then
-            git -C "$SOURCE_DIR" fetch --depth 1 origin "$SOURCE_REF"
-            git -C "$SOURCE_DIR" checkout --detach FETCH_HEAD
-          fi
-          echo "Source: $(git -C "$SOURCE_DIR" rev-parse HEAD)"
+      - uses: actions/checkout@v4
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -147,22 +118,18 @@ jobs:
 
       - name: Install dependencies
         shell: bash
-        working-directory: ${{ github.workspace }}/source
         run: pnpm install
 
       - name: Set version
         shell: bash
-        working-directory: ${{ github.workspace }}/source
         run: npm run workflow:set-desktop-version ${{ needs.prepare.outputs.version }} ${{ needs.prepare.outputs.channel }}
 
       - name: Build app bundle
         shell: bash
-        working-directory: ${{ github.workspace }}/source
         run: pnpm build:main
 
       - name: Package
         shell: bash
-        working-directory: ${{ github.workspace }}/source
         env:
           UPDATE_CHANNEL: ${{ needs.prepare.outputs.channel }}
           # 用 APP_UPDATE_SERVER_URL 而不是 UPDATE_SERVER_URL：前者只让 afterPack 改写
@@ -203,13 +170,13 @@ jobs:
         with:
           name: ${{ matrix.artifact }}
           path: |
-            source/release/*.dmg
-            source/release/*.zip
-            source/release/*.exe
-            source/release/*.AppImage
-            source/release/*.deb
-            source/release/*.tar.gz
-            source/release/latest*.yml
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.AppImage
+            release/*.deb
+            release/*.tar.gz
+            release/latest*.yml
           if-no-files-found: error
           retention-days: 7
 

@@ -6,11 +6,7 @@ name: CodeQL
 # fifth of them for very little signal on a codebase this size. Advanced setup
 # keeps the same analysis and the same `security-events` reporting, but runs it
 # on a schedule instead.
-#
-# The switch is completed outside this file: once this workflow is on `canary`,
-# turn default setup off, otherwise both would run.
-#   gh api -X PATCH repos/lobehub/lobehub/code-scanning/default-setup \
-#     -f state=not-configured
+
 
 on:
   schedule:
