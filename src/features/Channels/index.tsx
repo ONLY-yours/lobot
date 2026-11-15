@@ -19,6 +19,7 @@ import { isChannelGone, visibleChannelDetail } from './channelAccess';
 import { ChannelConversation } from './ChannelConversation';
 import { ChannelEmpty } from './ChannelEmpty';
 import { ChannelSyncing } from './ChannelSyncing';
+import { DirectAgentRole } from './DirectAgentRole';
 import { MEMBER_FLOAT_BREAKPOINT, MemberPanel } from './MemberPanel';
 import { MemberStatus } from './MemberStatus';
 import { openTopic } from './openTopic';
@@ -47,7 +48,8 @@ function EnabledChannelPage() {
   const listItem = useChannelStore((s) =>
     channelSelectors.list(s)?.find((item) => item.id === channelId),
   );
-  const isDirect = !!(detail?.channel ?? listItem)?.agentId;
+  const directAgentId = (detail?.channel ?? listItem)?.agentId ?? undefined;
+  const isDirect = !!directAgentId;
   const directAgent = detail?.channel.agentId
     ? detail.members.find((member) => member.agentId === detail.channel.agentId)
     : undefined;
@@ -89,6 +91,7 @@ function EnabledChannelPage() {
               <Text ellipsis weight={500}>
                 {detail?.channel.title || listItem?.title}
               </Text>
+              {directAgentId && <DirectAgentRole agentId={directAgentId} />}
               {detail?.channel.status === 'archived' && <Tag size="small">{t('archived')}</Tag>}
               <ChannelSyncing failed={!!sync.error} params={view} />
             </Flexbox>

@@ -23,6 +23,15 @@ vi.mock('@/store/channel', () => ({
   },
   useChannelStore: (selector: (s: object) => unknown) => selector({}),
 }));
+vi.mock('@/store/agent', () => ({
+  useAgentStore: (selector: (s: object) => unknown) => selector({ useHydrateAgentConfig: vi.fn() }),
+}));
+vi.mock('@/store/agent/selectors', () => ({
+  agentSelectors: {
+    getAgentMetaById: (agentId: string) => () =>
+      agentId === 'agt_neko' ? { name: 'Side Neko', title: 'Magic cat companion' } : undefined,
+  },
+}));
 vi.mock('@/store/chat', () => ({
   useChatStore: (selector: (s: object) => unknown) =>
     selector({ clearPortalStack: vi.fn(), openBrowser: vi.fn() }),
@@ -87,5 +96,21 @@ describe('ChannelPage', () => {
     expect(screen.queryByTestId('channel-empty')).not.toBeInTheDocument();
     expect(screen.getByRole('banner')).toHaveTextContent('General');
     expect(screen.getByRole('banner')).not.toHaveTextContent('title');
+  });
+
+  it("puts a direct conversation's Agent role after its name", () => {
+    mocks.list = [{ agentId: 'agt_neko', id: 'chn_gone', title: 'Side Neko' }];
+
+    render(createElement(ChannelPage));
+
+    expect(screen.getByRole('banner')).toHaveTextContent('Side NekoMagic cat companion');
+  });
+
+  it('shows no role in a group conversation', () => {
+    mocks.list = [{ agentId: null, id: 'chn_gone', title: 'General' }];
+
+    render(createElement(ChannelPage));
+
+    expect(screen.getByRole('banner')).toHaveTextContent(/^General$/);
   });
 });
