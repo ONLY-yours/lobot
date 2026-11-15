@@ -4,11 +4,11 @@ import { activityLabel } from './activityLabel';
 
 describe('activityLabel', () => {
   it.each([
-    ['3 位成员正在回复…', '3 位成员正在回复'],
-    ['Alice and Bob are replying…', 'Alice and Bob are replying'],
-    ['Alice · Replying...', 'Alice · Replying'],
+    ['3 位成员正在工作中…', '3 位成员正在工作中'],
+    ['Alice and Bob are working…', 'Alice and Bob are working'],
+    ['Alice · Working...', 'Alice · Working'],
     ['Agents receiving your message…', 'Agents receiving your message'],
-    ['Alice · Preparing… ', 'Alice · Preparing'],
+    ['Alice · Typing… ', 'Alice · Typing'],
     ['Alice · Waiting for device approval', 'Alice · Waiting for device approval'],
     ['Agent... Smith · Replied', 'Agent... Smith · Replied'],
   ])('avoids duplicate typing dots in %s', (label, expected) => {
