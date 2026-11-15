@@ -319,6 +319,8 @@ export const statusStyles = stylex.create({
   },
   replyList: {
     overflowY: 'auto',
+    // Wide enough for avatar, name, state and the stop action on one row.
+    width: 336,
     maxHeight: 'min(480px, 60vh)',
   },
   popover: {

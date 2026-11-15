@@ -74,30 +74,46 @@ export function ReplyDetail({
           size={24}
           title={name}
         />
-        <Flexbox flex={1} style={{ minWidth: 0 }}>
-          {agentId ? (
-            <Button
-              aria-label={t('openAgentNamed', { name })}
-              icon={ExternalLink}
-              iconPosition="end"
-              outdent="start"
-              size="small"
-              style={{ alignSelf: 'flex-start', maxWidth: '100%', minWidth: 0 }}
-              title={t('openAgentNamed', { name })}
-              type="text"
-              onClick={openAgent}
-            >
-              <Text ellipsis as="span" style={{ minWidth: 0 }} weight={500}>
-                {name}
-              </Text>
-            </Button>
-          ) : (
-            <Text ellipsis weight={500}>
+        {/* Name, then its state; the stop action sits at the far end of the same row. The name
+            takes its own width and only shrinks (to an ellipsis) when the row runs out. */}
+        {agentId ? (
+          <Button
+            aria-label={t('openAgentNamed', { name })}
+            icon={ExternalLink}
+            iconPosition="end"
+            outdent="start"
+            size="small"
+            style={{ flex: '0 1 auto', minWidth: 0 }}
+            title={t('openAgentNamed', { name })}
+            type="text"
+            onClick={openAgent}
+          >
+            <Text ellipsis as="span" style={{ minWidth: 0 }} weight={500}>
               {name}
             </Text>
-          )}
-        </Flexbox>
-        <ChannelStatus label={t(channelJobStatus(job))} tone={channelJobTone(job)} />
+          </Button>
+        ) : (
+          <Text ellipsis style={{ flex: '0 1 auto', minWidth: 0 }} weight={500}>
+            {name}
+          </Text>
+        )}
+        {/* The state stays whole on the row; the name gives way first. */}
+        <span style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
+          <ChannelStatus label={t(channelJobStatus(job))} tone={channelJobTone(job)} />
+        </span>
+        {job.canStop && isChannelJobActive(job) && (
+          <Button
+            danger
+            icon={Square}
+            loading={stopping}
+            size="small"
+            style={{ flexShrink: 0, marginInlineStart: 'auto' }}
+            type="text"
+            onClick={() => void stop()}
+          >
+            {t('stopReply')}
+          </Button>
+        )}
       </Flexbox>
       {job.worktreeBranch && (
         <Text ellipsis fontSize={12} title={job.worktreeBranch} type="secondary">
@@ -111,19 +127,6 @@ export function ReplyDetail({
             {job.errorMessage?.trim() || t('receipt.errorUnavailable')}
           </Text>
         </Flexbox>
-      )}
-      {job.canStop && isChannelJobActive(job) && (
-        <Button
-          danger
-          icon={Square}
-          loading={stopping}
-          size="small"
-          style={{ alignSelf: 'flex-start' }}
-          type="text"
-          onClick={() => void stop()}
-        >
-          {t('stopReply')}
-        </Button>
       )}
       {error !== undefined && <AsyncError error={error} variant="inline" />}
     </Flexbox>
