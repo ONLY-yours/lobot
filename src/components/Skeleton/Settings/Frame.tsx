@@ -5,7 +5,6 @@ import type { ReactNode } from 'react';
 
 import NavHeader from '@/features/NavHeader';
 import SettingContainer from '@/features/Setting/SettingContainer';
-import InsetSurface from '@/features/Settings/features/InsetSurface';
 import {
   getSettingsContainerMaxWidth,
   INSET_TABS,
@@ -44,7 +43,7 @@ export const SettingsSkeletonFrame = ({
   tab: string;
 }) => {
   const inset = INSET_TABS.has(tab);
-  const frame = (
+  return (
     <Flexbox aria-busy flex={1} height={'100%'} style={{ minHeight: 0, overflow: 'hidden' }}>
       <SettingsSkeletonHeader tab={tab} />
       <SettingContainer
@@ -58,7 +57,4 @@ export const SettingsSkeletonFrame = ({
       </SettingContainer>
     </Flexbox>
   );
-
-  // Inset tabs draw their gray surface behind the header too, like the settled page.
-  return inset ? <InsetSurface>{frame}</InsetSurface> : frame;
 };

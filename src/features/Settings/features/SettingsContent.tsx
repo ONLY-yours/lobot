@@ -10,7 +10,6 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { SettingsTabs } from '@/store/global/initialState';
 
 import { componentMap } from './componentMap';
-import InsetSurface from './InsetSurface';
 import { getSettingsContainerMaxWidth, INSET_TABS, OWN_FRAME_TABS } from './ownFrameTabs';
 import { SettingsPageActionsContext, SettingsPageActionsRow } from './SettingsPageActions';
 import { hasSettingsSubPage, renderSettingsSubPage } from './subPages';
@@ -87,8 +86,8 @@ const SettingsContent = ({ mobile, activeTab, subPage }: SettingsContentProps) =
         const content = renderComponent(tabKey);
         if (OWN_FRAME_TABS.has(tabKey)) return <Fragment key={tabKey}>{content}</Fragment>;
         const inset = INSET_TABS.has(tabKey);
-        const frame = (
-          <>
+        return (
+          <Fragment key={tabKey}>
             <NavHeader styles={{ center: { alignItems: 'center' } }}>
               {title && <Text weight={500}>{title}</Text>}
             </NavHeader>
@@ -104,12 +103,7 @@ const SettingsContent = ({ mobile, activeTab, subPage }: SettingsContentProps) =
                 {content}
               </SettingContainer>
             </SettingsPageActionsContext>
-          </>
-        );
-        return inset ? (
-          <InsetSurface key={tabKey}>{frame}</InsetSurface>
-        ) : (
-          <Fragment key={tabKey}>{frame}</Fragment>
+          </Fragment>
         );
       })}
     </>

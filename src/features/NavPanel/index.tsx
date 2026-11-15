@@ -9,7 +9,7 @@ import {
   NavSideBarSkeleton,
 } from './components/SideBarSkeleton';
 import { NAV_PANEL_RIGHT_DRAWER_ID } from './constants';
-import { NAV_PANEL_HIDDEN_KEY } from './railRouteKey';
+import { isDetachedNavKey, NAV_PANEL_HIDDEN_KEY } from './railRouteKey';
 import { getNavPanelRegistrySnapshot, subscribeNavPanelRegistry } from './registry';
 import { useActiveNavKey } from './useActiveNavKey';
 
@@ -40,7 +40,13 @@ const NavPanel = memo(() => {
 
   return (
     <>
-      {!hidden && <NavPanelDraggable activeContent={activeContent} homeContent={homeContent} />}
+      {!hidden && (
+        <NavPanelDraggable
+          activeContent={activeContent}
+          detached={isDetachedNavKey(activeNavKey)}
+          homeContent={homeContent}
+        />
+      )}
       <div
         id={NAV_PANEL_RIGHT_DRAWER_ID}
         style={{

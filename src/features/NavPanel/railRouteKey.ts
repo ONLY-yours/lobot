@@ -6,6 +6,15 @@ import { resolveNavPanelKey } from './routeKey';
  */
 export const NAV_PANEL_HIDDEN_KEY = 'none';
 
+/**
+ * Nav keys laid out Telegram-style: the list column is its own rounded card and
+ * the content sits straight on the window background, instead of both sharing
+ * one bordered surface.
+ */
+const DETACHED_NAV_KEYS = new Set(['settings']);
+
+export const isDetachedNavKey = (navKey: string) => DETACHED_NAV_KEYS.has(navKey);
+
 /** The IM-style conversation list (agents + groups) behind the Messages tab. */
 export const NAV_PANEL_MESSAGES_KEY = 'home';
 

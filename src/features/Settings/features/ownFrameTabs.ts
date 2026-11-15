@@ -16,9 +16,10 @@ export const OWN_FRAME_TABS = new Set<string>([
 export const FULL_WIDTH_TABS = new Set<string>([SettingsTabs.Devices]);
 
 /**
- * Tabs laid out as Telegram-style inset groups: rounded cards on the inset
- * surface (see `InsetSurface`), in a narrower column so label and value stay
- * within one glance.
+ * Tabs laid out as Telegram-style inset groups: rounded cards straight on the
+ * window background (Settings is a detached section, see `isDetachedNavKey`),
+ * in a narrower column so label and value stay within one glance. Other tabs
+ * keep a white page, drawn as a card by the settings layout.
  */
 export const INSET_TABS = new Set<string>([SettingsTabs.Profile]);
 

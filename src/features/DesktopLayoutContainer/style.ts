@@ -25,6 +25,10 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
     border-radius: 0;
   `,
 
+  innerTransparent: css`
+    background: transparent;
+  `,
+
   // Outer container
   outerContainer: css`
     position: relative;

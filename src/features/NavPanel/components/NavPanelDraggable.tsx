@@ -30,6 +30,14 @@ const draggableStyles = createStaticStyles(({ css, cssVar }) => ({
     border-inline-end: 1px solid ${cssVar.colorBorderSecondary};
     background: ${LIST_COLUMN_BACKGROUND};
   `,
+  // Detached sections (Settings): the list column is its own rounded card on the
+  // window background, mirroring the wrap it replaces.
+  detachedPanel: css`
+    overflow: hidden;
+    border: 1px solid ${cssVar.colorBorderSecondary};
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 3%);
+  `,
   content: css`
     position: relative;
 
@@ -112,6 +120,7 @@ interface NavPanelDraggableProps {
     key: string;
     node: ReactNode;
   };
+  detached?: boolean;
   homeContent?: ReactNode;
 }
 
@@ -121,88 +130,94 @@ const classNames = {
 
 const hiddenLayerStyle = { display: 'none' };
 
-export const NavPanelDraggable = memo<NavPanelDraggableProps>(({ activeContent, homeContent }) => {
-  const [expand, togglePanel, isStatusInit] = useGlobalStore((s) => [
-    systemStatusSelectors.showLeftPanel(s),
-    s.toggleLeftPanel,
-    systemStatusSelectors.isStatusInit(s),
-  ]);
-  const handleSizeChange = useNavPanelSizeChangeHandler();
+export const NavPanelDraggable = memo<NavPanelDraggableProps>(
+  ({ activeContent, detached, homeContent }) => {
+    const [expand, togglePanel, isStatusInit] = useGlobalStore((s) => [
+      systemStatusSelectors.showLeftPanel(s),
+      s.toggleLeftPanel,
+      systemStatusSelectors.isStatusInit(s),
+    ]);
+    const handleSizeChange = useNavPanelSizeChangeHandler();
 
-  // Defer DraggablePanel mount until system status hydrates; otherwise defaultSize
-  // captures the pre-hydration default and the DOM drifts off NavigationBar's live width.
-  const defaultWidthRef = useRef(0);
-  if (defaultWidthRef.current === 0 && isStatusInit) {
-    defaultWidthRef.current = systemStatusSelectors.leftPanelWidth(useGlobalStore.getState());
-  }
+    // Defer DraggablePanel mount until system status hydrates; otherwise defaultSize
+    // captures the pre-hydration default and the DOM drifts off NavigationBar's live width.
+    const defaultWidthRef = useRef(0);
+    if (defaultWidthRef.current === 0 && isStatusInit) {
+      defaultWidthRef.current = systemStatusSelectors.leftPanelWidth(useGlobalStore.getState());
+    }
 
-  const imLayout = useImLayout();
-  const styles = useMemo(
-    () => ({
-      background: imLayout
-        ? LIST_COLUMN_BACKGROUND
-        : isDesktop && isMacOS()
-          ? MAC_VIBRANCY_BACKGROUND
-          : cssVar.colorBgLayout,
-      zIndex: 11,
-    }),
-    [imLayout],
-  );
+    const imLayout = useImLayout();
+    const styles = useMemo(
+      () => ({
+        background: imLayout
+          ? LIST_COLUMN_BACKGROUND
+          : isDesktop && isMacOS()
+            ? MAC_VIBRANCY_BACKGROUND
+            : cssVar.colorBgLayout,
+        zIndex: 11,
+      }),
+      [imLayout],
+    );
 
-  if (defaultWidthRef.current === 0) {
-    const pendingWidth = systemStatusSelectors.leftPanelWidth(useGlobalStore.getState());
-    return <div aria-hidden style={{ flexShrink: 0, height: '100%', width: pendingWidth }} />;
-  }
+    if (defaultWidthRef.current === 0) {
+      const pendingWidth = systemStatusSelectors.leftPanelWidth(useGlobalStore.getState());
+      return <div aria-hidden style={{ flexShrink: 0, height: '100%', width: pendingWidth }} />;
+    }
 
-  const defaultSize = { height: '100%', width: defaultWidthRef.current };
-  const isHomeActive = activeContent.key === 'home';
+    const defaultSize = { height: '100%', width: defaultWidthRef.current };
+    const isHomeActive = activeContent.key === 'home';
 
-  return (
-    <DraggablePanel
-      className={cx(draggableStyles.panel, imLayout && draggableStyles.imPanel)}
-      classNames={classNames}
-      defaultSize={defaultSize}
-      expand={expand}
-      expandable={false}
-      maxWidth={NAV_PANEL_MAX_WIDTH}
-      minWidth={NAV_PANEL_MIN_WIDTH}
-      placement="left"
-      showBorder={false}
-      style={styles}
-      onExpandChange={togglePanel}
-      onSizeDragging={handleSizeChange}
-    >
-      <div className={draggableStyles.inner}>
-        {/* Home stays mounted while a route-owned panel is active so its list
+    return (
+      <DraggablePanel
+        classNames={classNames}
+        defaultSize={defaultSize}
+        expand={expand}
+        expandable={false}
+        maxWidth={NAV_PANEL_MAX_WIDTH}
+        minWidth={NAV_PANEL_MIN_WIDTH}
+        placement="left"
+        showBorder={false}
+        style={styles}
+        className={cx(
+          draggableStyles.panel,
+          imLayout && draggableStyles.imPanel,
+          detached && draggableStyles.detachedPanel,
+        )}
+        onExpandChange={togglePanel}
+        onSizeDragging={handleSizeChange}
+      >
+        <div className={draggableStyles.inner}>
+          {/* Home stays mounted while a route-owned panel is active so its list
             state survives the round trip. Activity keeps the fibers but not the
             visibility, so the layer is force-hidden like HomeLayout does. */}
-        {homeContent && (
-          <Activity mode={isHomeActive ? 'visible' : 'hidden'} name="NavPanelHome">
-            <div
-              className={draggableStyles.layer}
-              style={isHomeActive ? undefined : hiddenLayerStyle}
-            >
-              {homeContent}
+          {homeContent && (
+            <Activity mode={isHomeActive ? 'visible' : 'hidden'} name="NavPanelHome">
+              <div
+                className={draggableStyles.layer}
+                style={isHomeActive ? undefined : hiddenLayerStyle}
+              >
+                {homeContent}
+              </div>
+            </Activity>
+          )}
+          {!isHomeActive && (
+            <div className={draggableStyles.layer} key={activeContent.key}>
+              {activeContent.node}
             </div>
-          </Activity>
-        )}
-        {!isHomeActive && (
-          <div className={draggableStyles.layer} key={activeContent.key}>
-            {activeContent.node}
-          </div>
-        )}
-      </div>
-      <Suspense fallback={null}>
-        <NavPanelUpgradeEntry />
-      </Suspense>
-      {/* The tab bar owns navigation, settings and help under `im_layout`. */}
-      {imLayout ? (
-        <NavTabBar />
-      ) : (
-        <Suspense>
-          <Footer />
+          )}
+        </div>
+        <Suspense fallback={null}>
+          <NavPanelUpgradeEntry />
         </Suspense>
-      )}
-    </DraggablePanel>
-  );
-});
+        {/* The tab bar owns navigation, settings and help under `im_layout`. */}
+        {imLayout ? (
+          <NavTabBar />
+        ) : (
+          <Suspense>
+            <Footer />
+          </Suspense>
+        )}
+      </DraggablePanel>
+    );
+  },
+);

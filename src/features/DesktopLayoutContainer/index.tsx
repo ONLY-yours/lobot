@@ -16,9 +16,15 @@ interface DesktopLayoutContainerProps extends PropsWithChildren {
    * `im_layout` rail wrap already draws the rounded border around it.
    */
   flush?: boolean;
+  /** No surface of its own: the routed page shows the window background (detached sections) */
+  transparent?: boolean;
 }
 
-const DesktopLayoutContainer: FC<DesktopLayoutContainerProps> = ({ children, flush }) => {
+const DesktopLayoutContainer: FC<DesktopLayoutContainerProps> = ({
+  children,
+  flush,
+  transparent,
+}) => {
   const innerContainerRef = useRef<HTMLDivElement>(null);
   const isDarkMode = useIsDark();
   const [expand] = useGlobalStore((s) => [systemStatusSelectors.showLeftPanel(s)]);
@@ -53,11 +59,15 @@ const DesktopLayoutContainer: FC<DesktopLayoutContainerProps> = ({ children, flu
       width={'100%'}
     >
       <Flexbox
-        className={cx(styles.innerContainer, flush && styles.innerFlush)}
         height={'100%'}
         ref={innerContainerRef}
         style={innerCssVariables}
         width={'100%'}
+        className={cx(
+          styles.innerContainer,
+          flush && styles.innerFlush,
+          transparent && styles.innerTransparent,
+        )}
       >
         <LayoutContainerContext value={innerContainerRef}>{children}</LayoutContainerContext>
       </Flexbox>

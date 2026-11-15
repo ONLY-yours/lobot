@@ -20,6 +20,15 @@ export const wrapStyles = stylex.create({
     backgroundColor: cssVar.colorBgContainer,
     boxShadow: '0 1px 2px rgb(0 0 0 / 3%)',
   },
+  // Detached sections (Settings): no shared surface; the list column draws its
+  // own card and the content shows the window background, like Telegram.
+  wrapDetached: {
+    overflow: 'visible',
+    gap: '8px',
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+    boxShadow: 'none',
+  },
   // Electron: the title bar already sits above the wrap.
   wrapDesktop: {
     marginBlockStart: 0,

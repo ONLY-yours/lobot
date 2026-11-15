@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isRailContactsRoute, resolveRailNavPanelKey } from './railRouteKey';
+import { isDetachedNavKey, isRailContactsRoute, resolveRailNavPanelKey } from './railRouteKey';
 
 describe('resolveRailNavPanelKey', () => {
   it.each([
@@ -54,5 +54,18 @@ describe('isRailContactsRoute', () => {
     ['/tasks', null, false],
   ])('%s → %s', (pathname, activeWorkspaceSlug, expected) => {
     expect(isRailContactsRoute(pathname, activeWorkspaceSlug)).toBe(expected);
+  });
+});
+
+describe('isDetachedNavKey', () => {
+  it('detaches the Settings section from the shared surface', () => {
+    expect(isDetachedNavKey(resolveRailNavPanelKey('/settings/profile', null))).toBe(true);
+    expect(isDetachedNavKey(resolveRailNavPanelKey('/settings/profile/username', null))).toBe(true);
+  });
+
+  it('keeps the other sections on the shared surface', () => {
+    for (const pathname of ['/', '/agents', '/tasks', '/channels/chn_1']) {
+      expect(isDetachedNavKey(resolveRailNavPanelKey(pathname, null))).toBe(false);
+    }
   });
 });

@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import NavHeader from '@/features/NavHeader';
 import BackButton from '@/features/NavPanel/components/BackButton';
 import SettingContainer from '@/features/Setting/SettingContainer';
-import InsetSurface from '@/features/Settings/features/InsetSurface';
 import { getSettingsContainerMaxWidth } from '@/features/Settings/features/ownFrameTabs';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { SettingsTabs } from '@/store/global/initialState';
@@ -70,7 +69,7 @@ const UsernamePage = () => {
   };
 
   return (
-    <InsetSurface>
+    <>
       <NavHeader
         left={<BackButton title={tCommon('back')} to={PROFILE_URL} />}
         showTogglePanelButton={false}
@@ -121,7 +120,7 @@ const UsernamePage = () => {
           />
         </InsetGroup>
       </SettingContainer>
-    </InsetSurface>
+    </>
   );
 };
 

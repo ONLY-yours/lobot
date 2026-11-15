@@ -30,7 +30,9 @@ import TabCacheBridges from '@/features/Electron/titlebar/TabBar/TabCacheBridges
 import TitleBar from '@/features/Electron/titlebar/TitleBar';
 import WorkspaceMentionNotifier from '@/features/Electron/WorkspaceMentionNotifier';
 import HotkeyHelperPanel from '@/features/HotkeyHelperPanel';
+import { isDetachedNavKey } from '@/features/NavPanel/railRouteKey';
 import NavPanelShell from '@/features/NavPanel/Shell';
+import { useActiveNavKey } from '@/features/NavPanel/useActiveNavKey';
 import { useImLayout, useSyncImLayoutHint } from '@/features/NavRail/useImLayout';
 import { wrapStyles } from '@/features/NavRail/wrapStyle';
 import { DndContextWrapper } from '@/features/ResourceManager/DndContextWrapper';
@@ -54,6 +56,7 @@ const Layout: FC = () => {
   const { showCloudPromotion } = useServerConfigStore(featureFlagsSelectors);
   // `im_layout`: one rounded wrap (list column with a bottom tab bar + content); off keeps this layout.
   const imLayout = useImLayout();
+  const detached = isDetachedNavKey(useActiveNavKey());
   useSyncImLayoutHint(imLayout);
 
   useSeedTabsOnBoot();
@@ -95,9 +98,16 @@ const Layout: FC = () => {
             {imLayout ? (
               <>
                 <WorkspaceRail />
-                <Flexbox horizontal {...stylex.props(wrapStyles.wrap, wrapStyles.wrapDesktop)}>
+                <Flexbox
+                  horizontal
+                  {...stylex.props(
+                    wrapStyles.wrap,
+                    wrapStyles.wrapDesktop,
+                    detached && wrapStyles.wrapDetached,
+                  )}
+                >
                   <NavPanelShell />
-                  <DesktopLayoutContainer flush>
+                  <DesktopLayoutContainer flush transparent={detached}>
                     <Flexbox height={'100%'} style={tabHostContainer} width={'100%'}>
                       <TabHost />
                     </Flexbox>
