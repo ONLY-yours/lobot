@@ -76,7 +76,8 @@ const Header = memo(() => {
       <SearchBar
         allowClear
         placeholder={t('messageList.search')}
-        style={{ flex: 1 }}
+        // Shrinks below its input's natural width so the row fits a narrow column.
+        style={{ flex: 1, minWidth: 0 }}
         value={query}
         variant={'filled'}
         onChange={(e) => setQuery(e.target.value)}
@@ -86,6 +87,8 @@ const Header = memo(() => {
           icon={PlusIcon}
           loading={isLoading}
           size={DESKTOP_HEADER_ICON_SIZE}
+          // Keeps its square: the search box gives way in a narrow column, not this button.
+          style={{ flex: 'none' }}
           title={t('messageList.newChat')}
         />
       </DropdownMenu>
