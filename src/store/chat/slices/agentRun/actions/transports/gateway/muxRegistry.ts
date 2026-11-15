@@ -20,12 +20,61 @@ const registry = new Map<string, GatewayMuxClient>();
 
 /**
  * Identities whose mux gave up on protocol v2 (`/v2/ws` missing, the token
- * endpoint absent, the hub refusing the token). Page-scoped on purpose: a
- * reload retries v2, so a transient outage does not pin the tab to v1 for the
- * rest of the session, while a deployment that genuinely has no v2 only pays
- * the dial budget once per page.
+ * endpoint absent, the hub refusing the token). Not final: a desktop window
+ * rarely reloads, so a verdict reached while offline (launch before the network,
+ * a wake from sleep) would otherwise keep v2 off for the whole session. Each
+ * verdict expires on the next sign of recovery — the network coming back, the
+ * window becoming visible, or a timer backing off up to half an hour — so a
+ * deployment that really has no v2 pays the dial budget only that often.
  */
 const unavailableIdentities = new Set<string>();
+
+const RETRY_INITIAL_DELAY = 60_000;
+const RETRY_MAX_DELAY = 30 * 60_000;
+
+/** Verdicts in a row per identity, since its mux last connected; sets the retry backoff. */
+const retryAttempts = new Map<string, number>();
+const pendingRetries = new Map<string, () => void>();
+
+let availabilityVersion = 0;
+const availabilityListeners = new Set<() => void>();
+
+/**
+ * Bumps whenever an expired verdict lets an identity dial v2 again, so a socket owner that
+ * skipped an unavailable mux can try again (`useSyncExternalStore` snapshot).
+ */
+export const getGatewayMuxAvailabilityVersion = (): number => availabilityVersion;
+
+export const subscribeGatewayMuxAvailability = (listener: () => void): (() => void) => {
+  availabilityListeners.add(listener);
+  return () => availabilityListeners.delete(listener);
+};
+
+const scheduleRetry = (key: string): void => {
+  if (pendingRetries.has(key) || typeof window === 'undefined') return;
+  const attempt = retryAttempts.get(key) ?? 0;
+  retryAttempts.set(key, attempt + 1);
+
+  const cancel = () => {
+    clearTimeout(timer);
+    window.removeEventListener('online', retry);
+    document.removeEventListener('visibilitychange', onVisible);
+    pendingRetries.delete(key);
+  };
+  function retry() {
+    cancel();
+    unavailableIdentities.delete(key);
+    availabilityVersion++;
+    for (const listener of availabilityListeners) listener();
+  }
+  function onVisible() {
+    if (document.visibilityState === 'visible') retry();
+  }
+  const timer = setTimeout(retry, Math.min(RETRY_MAX_DELAY, RETRY_INITIAL_DELAY * 2 ** attempt));
+  window.addEventListener('online', retry);
+  document.addEventListener('visibilitychange', onVisible);
+  pendingRetries.set(key, cancel);
+};
 
 const identityKey = ({ agentShareId, gatewayUrl }: GatewayMuxIdentity): string =>
   `${gatewayUrl}|${agentShareId ?? 'owner'}`;
@@ -63,6 +112,7 @@ export const getGatewayMux = (identity: GatewayMuxIdentity): GatewayMuxClient =>
       getToken: buildGetToken(identity),
       keepAlive: true,
     });
+    mux.on('connected', () => retryAttempts.delete(key));
     registry.set(key, mux);
   }
   return mux;
@@ -84,6 +134,7 @@ export const markGatewayMuxUnavailable = (identity: GatewayMuxIdentity): void =>
   const key = identityKey(identity);
   unavailableIdentities.add(key);
   registry.delete(key);
+  scheduleRetry(key);
 };
 
 /**
@@ -99,4 +150,6 @@ export const resetGatewayMuxRegistry = (): void => {
   // A new user-data context is a new deployment as far as this page knows
   // (the desktop app switching remote servers), so the v2 verdict starts over.
   unavailableIdentities.clear();
+  for (const cancel of pendingRetries.values()) cancel();
+  retryAttempts.clear();
 };

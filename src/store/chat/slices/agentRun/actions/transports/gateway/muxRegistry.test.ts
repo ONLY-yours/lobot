@@ -3,7 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { aiAgentService } from '@/services/aiAgent';
 import { shareChatService } from '@/services/shareChat';
 
-import { getGatewayMux, resetGatewayMuxRegistry } from './muxRegistry';
+import {
+  getGatewayMux,
+  getGatewayMuxAvailabilityVersion,
+  isGatewayMuxUnavailable,
+  markGatewayMuxUnavailable,
+  resetGatewayMuxRegistry,
+  subscribeGatewayMuxAvailability,
+} from './muxRegistry';
 
 vi.mock('@/services/aiAgent', () => ({
   aiAgentService: { issueGatewayUserToken: vi.fn() },
@@ -85,5 +92,58 @@ describe('muxRegistry', () => {
 
     expect(disconnect).toHaveBeenCalledTimes(1);
     expect(getGatewayMux({ gatewayUrl: GATEWAY_URL })).not.toBe(owner);
+  });
+});
+
+// A desktop window that dialed while offline kept v2 (and Channel push) off until it reloaded.
+describe('muxRegistry unavailable verdict', () => {
+  const identity = { gatewayUrl: GATEWAY_URL };
+
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => {
+    resetGatewayMuxRegistry();
+    vi.useRealTimers();
+  });
+
+  it('expires when the network comes back and tells subscribers', () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeGatewayMuxAvailability(listener);
+    const version = getGatewayMuxAvailabilityVersion();
+
+    markGatewayMuxUnavailable(identity);
+    expect(isGatewayMuxUnavailable(identity)).toBe(true);
+
+    window.dispatchEvent(new Event('online'));
+
+    expect(isGatewayMuxUnavailable(identity)).toBe(false);
+    expect(getGatewayMuxAvailabilityVersion()).toBe(version + 1);
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
+  it('expires on a backed-off timer when nothing else signals recovery', () => {
+    markGatewayMuxUnavailable(identity);
+    vi.advanceTimersByTime(60_000);
+    expect(isGatewayMuxUnavailable(identity)).toBe(false);
+
+    // The second verdict in a row waits twice as long.
+    markGatewayMuxUnavailable(identity);
+    vi.advanceTimersByTime(60_000);
+    expect(isGatewayMuxUnavailable(identity)).toBe(true);
+    vi.advanceTimersByTime(60_000);
+    expect(isGatewayMuxUnavailable(identity)).toBe(false);
+  });
+
+  it('stops retrying once the registry resets', () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeGatewayMuxAvailability(listener);
+    markGatewayMuxUnavailable(identity);
+
+    resetGatewayMuxRegistry();
+    window.dispatchEvent(new Event('online'));
+    vi.advanceTimersByTime(30 * 60_000);
+
+    expect(listener).not.toHaveBeenCalled();
+    unsubscribe();
   });
 });

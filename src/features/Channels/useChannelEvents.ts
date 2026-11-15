@@ -1,12 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 
 import { canUseGatewayProtocolV2 } from '@/helpers/gatewayProtocol';
 import type { ChannelViewParams } from '@/services/channel';
 import { channelActions } from '@/store/channel';
 import {
   getGatewayMux,
+  getGatewayMuxAvailabilityVersion,
   isGatewayMuxUnavailable,
   markGatewayMuxUnavailable,
+  subscribeGatewayMuxAvailability,
 } from '@/store/chat/slices/agentRun/actions/transports/gateway/muxRegistry';
 import { useServerConfigStore } from '@/store/serverConfig';
 
@@ -17,6 +19,11 @@ export const useChannelEvents = (params?: ChannelViewParams) => {
   const channelId = params?.channelId;
   const threadId = params?.threadId;
   const before = params?.before;
+  // Re-subscribes once an unavailable verdict expires, so a socket lost while offline comes back.
+  const availability = useSyncExternalStore(
+    subscribeGatewayMuxAvailability,
+    getGatewayMuxAvailabilityVersion,
+  );
   useEffect(() => {
     if (!gatewayUrl || !enabled || !canUseGatewayProtocolV2()) return;
     const identity = { gatewayUrl };
@@ -38,5 +45,5 @@ export const useChannelEvents = (params?: ChannelViewParams) => {
     ];
     mux.connect();
     return () => remove.forEach((unsubscribe) => unsubscribe());
-  }, [gatewayUrl, enabled, channelId, threadId, before]);
+  }, [availability, gatewayUrl, enabled, channelId, threadId, before]);
 };
