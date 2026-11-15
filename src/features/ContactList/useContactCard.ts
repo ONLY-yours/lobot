@@ -1,4 +1,4 @@
-import { AGENT_CHAT_URL, AGENT_PROFILE_URL, GROUP_CHAT_URL, OFFICIAL_URL } from '@lobechat/const';
+import { AGENT_CHAT_URL, AGENT_PROFILE_URL, GROUP_CHAT_URL } from '@lobechat/const';
 import {
   agentDisplayName,
   agentSecondaryDisplayName,
@@ -7,9 +7,9 @@ import {
 import isEqual from 'fast-deep-equal';
 import { useTranslation } from 'react-i18next';
 
-import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { webAppUrl } from '@/features/Electron/navigation/webApp';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
-import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { usePermission } from '@/hooks/usePermission';
 import { useHomeStore } from '@/store/home';
@@ -47,7 +47,8 @@ export const useContactCard = (id: string): ContactCardState => {
   const isInit = useHomeStore(homeAgentListSelectors.isAgentListInit);
   const item = useHomeStore(homeAgentListSelectors.getAgentById(id), isEqual);
   const isGroup = item?.type === 'group';
-  const workspaceSlug = useActiveWorkspaceSlug();
+  // The web address carries the active workspace; re-render when it switches.
+  useActiveWorkspaceId();
 
   const { allowed: canEditContent } = usePermission('edit_own_content');
   const { canEditResource } = useResourceAccess(
@@ -66,7 +67,7 @@ export const useContactCard = (id: string): ContactCardState => {
     canEdit: !!canEditContent && canEditResource,
     chatUrl,
     item,
-    manageUrl: `${OFFICIAL_URL}${buildWorkspaceAwarePath(chatUrl, workspaceSlug)}`,
+    manageUrl: webAppUrl(chatUrl),
     profileUrl: isGroup ? `/group/${id}/profile` : AGENT_PROFILE_URL(id),
     role: isGroup ? undefined : agentSecondaryDisplayName(item),
     slug: isGroup ? undefined : item.slug || undefined,

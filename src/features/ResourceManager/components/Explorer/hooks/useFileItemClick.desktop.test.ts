@@ -19,6 +19,12 @@ vi.mock(
   '@/features/Electron/navigation/appNavigate',
   async () => await import('@/features/Electron/navigation/appNavigate.desktop'),
 );
+// The library explorer is a LobeHub page Lobot itself sends to the web app; this
+// covers its click handling, so keep its paths in the tab router.
+vi.mock('@/features/Electron/navigation/webApp', () => ({
+  isLobotPath: () => true,
+  openInWebApp: vi.fn(),
+}));
 
 const { getOrCreateTabRouter, getTabRouter, resetTabRouterManager } =
   await import('@/features/Electron/TabHost/tabRouterManager');

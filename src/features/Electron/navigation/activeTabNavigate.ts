@@ -6,7 +6,24 @@ import { type NavigateOptions, type To } from 'react-router';
 import { getTabRouter } from '@/features/Electron/TabHost/tabRouterManager';
 import { useElectronStore } from '@/store/electron';
 
+import { isLobotPath, openInWebApp } from './webApp';
+
+const absolutePath = (to: To): string | undefined => {
+  if (typeof to === 'string') return to.startsWith('/') ? to : undefined;
+  return to.pathname?.startsWith('/')
+    ? `${to.pathname}${to.search ?? ''}${to.hash ?? ''}`
+    : undefined;
+};
+
 export const navigateTab = (tabId: string | null, to: To, options?: NavigateOptions): void => {
+  // A LobeHub page Lobot does not have (an Agent's profile, a group, memory...)
+  // opens in the web app instead of an empty in-app route.
+  const path = absolutePath(to);
+  if (path && !isLobotPath(path)) {
+    openInWebApp(path);
+    return;
+  }
+
   const router = tabId ? getTabRouter(tabId) : undefined;
   if (!router) {
     // The active tab always has a live router (never evicted); an originating

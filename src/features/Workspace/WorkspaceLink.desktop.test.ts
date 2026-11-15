@@ -65,13 +65,13 @@ describe('WorkspaceLink (desktop)', () => {
       React.createElement(
         TabIdContext,
         { value: 'origin' },
-        React.createElement(WorkspaceLink, { to: '/agent/x/tasks' }, 'tasks'),
+        React.createElement(WorkspaceLink, { to: '/channels/x/settings' }, 'tasks'),
       ),
     );
 
     fireEvent.click(screen.getByText('tasks'));
 
-    expect(originNavigate).toHaveBeenCalledWith('/agent/x/tasks', {});
+    expect(originNavigate).toHaveBeenCalledWith('/channels/x/settings', {});
     expect(activeNavigate).not.toHaveBeenCalled();
   });
 

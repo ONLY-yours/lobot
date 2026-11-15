@@ -37,18 +37,18 @@ describe('appNavigate (desktop)', () => {
     vi.spyOn(slugModule, 'getActiveWorkspaceSlug').mockReturnValue('acme');
     const navigate = seedActiveRouter();
 
-    appNavigate('/agent/x');
+    appNavigate('/channels/x');
 
-    expect(navigate).toHaveBeenCalledWith('/acme/agent/x', {});
+    expect(navigate).toHaveBeenCalledWith('/acme/channels/x', {});
   });
 
   it('skips workspace resolution when escape is set', () => {
     vi.spyOn(slugModule, 'getActiveWorkspaceSlug').mockReturnValue('acme');
     const navigate = seedActiveRouter();
 
-    appNavigate('/agent/x', { escape: true });
+    appNavigate('/channels/x', { escape: true });
 
-    expect(navigate).toHaveBeenCalledWith('/agent/x', {});
+    expect(navigate).toHaveBeenCalledWith('/channels/x', {});
   });
 
   it('forwards react-router options (replace) to the active tab router', () => {
@@ -63,7 +63,7 @@ describe('appNavigate (desktop)', () => {
     mocks.storeState.activeTabId = 'missing';
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    expect(() => appNavigate('/agent/x')).not.toThrow();
+    expect(() => appNavigate('/channels/x')).not.toThrow();
     expect(warn).toHaveBeenCalled();
   });
 });
