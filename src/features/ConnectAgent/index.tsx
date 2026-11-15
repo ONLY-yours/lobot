@@ -835,8 +835,10 @@ export const ConnectAgentContent = memo<ConnectAgentContentProps>(
               )}
               {isDesktop && deviceListState === 'empty' && (
                 <div className={styles.commandHint}>
-                  <Text type={'secondary'}>{t('connectAgent.create.noDevicesCliHint')}</Text>
-                  <CommandLine command={t('connectAgent.create.noDevicesCmd')} />
+                  <Text fontSize={12} type={'secondary'}>
+                    {t('connectAgent.create.noDevicesCliHint')}
+                  </Text>
+                  <CommandLine command={t('connectAgent.create.noDevicesCmd')} size={'small'} />
                 </div>
               )}
             </Flexbox>
