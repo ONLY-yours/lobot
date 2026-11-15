@@ -1,8 +1,8 @@
 'use client';
 
+import type { IconType } from '@lobehub/icons';
 import { Icon, Tooltip } from '@lobehub/ui';
 import * as stylex from '@stylexjs/stylex';
-import { type LucideIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -16,7 +16,7 @@ interface TabItemProps {
   badge?: number;
   /** Replaces the icon, e.g. the avatar on the Settings tab. */
   children?: ReactNode;
-  icon?: LucideIcon;
+  icon?: IconType;
   title: string;
   url: string;
 }

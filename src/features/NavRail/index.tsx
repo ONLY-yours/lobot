@@ -2,7 +2,6 @@
 
 import { Flexbox } from '@lobehub/ui';
 import * as stylex from '@stylexjs/stylex';
-import { MessageCircleIcon, UsersIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -15,6 +14,7 @@ import { channelSelectors, useChannelStore } from '@/store/channel';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 
+import { ContactsSolidIcon, MessagesSolidIcon } from './icons';
 import { ActiveChannelSync, useMessagesUrl } from './messagesTarget';
 import { resolveRailTab } from './railTab';
 import { styles } from './style';
@@ -50,9 +50,14 @@ const NavTabBar = memo(() => {
   // Lobot's IA is two tabs: Contacts and Messages (Channels), in Telegram's order.
   const tabs = useMemo(
     () => [
-      { icon: UsersIcon, key: 'contacts' as const, title: t('tab.contacts'), url: '/agents' },
       {
-        icon: MessageCircleIcon,
+        icon: ContactsSolidIcon,
+        key: 'contacts' as const,
+        title: t('tab.contacts'),
+        url: '/agents',
+      },
+      {
+        icon: MessagesSolidIcon,
         key: 'messages' as const,
         title: t('tab.messages'),
         url: messagesUrl,

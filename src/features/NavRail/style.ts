@@ -1,9 +1,9 @@
 import { cssVar } from '@lobehub/ui/stylex/cssVar.stylex';
 import * as stylex from '@stylexjs/stylex';
 
-// Telegram-style tab bar at the foot of the list column: larger glyphs than the
-// old 48px rail (16px) since the bar has room, each in a 36px hit area.
-export const TAB_ICON_SIZE = { size: 20, strokeWidth: 1.5 };
+// Telegram-style tab bar at the foot of the list column: solid glyphs as large as the avatar
+// tab beside them, each in a 36px hit area.
+export const TAB_ICON_SIZE = 24;
 
 export const styles = stylex.create({
   badge: {

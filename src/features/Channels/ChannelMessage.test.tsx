@@ -199,6 +199,7 @@ describe('ChannelMessage collapse', () => {
 
     expect(collapsibleProps.current.collapsed).toBe(true);
     expect(collapsibleProps.current.overflowThreshold).toBeGreaterThan(0);
+    expect(collapsibleProps.current.fade).toBe(false);
 
     act(() => collapsibleProps.current.onCollapsedChange(false));
     act(() => collapsibleProps.current.onOverflowChange(true));

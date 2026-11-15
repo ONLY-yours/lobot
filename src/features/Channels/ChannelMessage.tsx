@@ -300,6 +300,7 @@ export const ChannelMessage = ({
                 <CollapsibleContent
                   hideCollapseToggle
                   collapsed={collapsed}
+                  fade={false}
                   key={message.id}
                   maxHeight={160}
                   // Folding unasked is only worth it for a really long message.

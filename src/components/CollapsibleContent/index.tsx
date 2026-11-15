@@ -22,8 +22,8 @@ const OVERFLOW_THRESHOLD = 32;
 
 const styles = stylex.create({
   container: { position: 'relative', width: '100%' },
-  contentCollapsed: {
-    overflow: 'hidden',
+  contentClipped: { overflow: 'hidden' },
+  contentFaded: {
     maskImage: 'linear-gradient(to bottom, #000 calc(100% - var(--collapse-fade)), transparent)',
   },
   contentExpanded: { overflow: 'visible' },
@@ -50,6 +50,8 @@ interface CollapsibleContentProps {
   children: ReactNode;
   /** Controlled collapsed state. Omit to let the component own it. Pass it when something outside the toggle expands the content — an editor gaining focus, for instance. */
   collapsed?: boolean;
+  /** Fades the clipped edge out. Turn it off where a hard edge above the toggle reads cleaner, as in a channel feed. */
+  fade?: boolean;
   /** Keeps the inline toggle for expanding only, for hosts that offer collapsing from their own menu. */
   hideCollapseToggle?: boolean;
   /** Upper bound for the collapsed height; the effective clamp also honours the viewport. */
@@ -80,6 +82,7 @@ const CollapsibleContent = memo<CollapsibleContentProps>(
   ({
     children,
     collapsed: collapsedProp,
+    fade = true,
     hideCollapseToggle = false,
     maxHeight: maxHeightLimit = DEFAULT_MAX_HEIGHT,
     onCollapsedChange,
@@ -111,20 +114,23 @@ const CollapsibleContent = memo<CollapsibleContentProps>(
       if (!content || !isCollapsed) return;
       const handleReveal = (event: Event) => {
         const { bottom } = (event as RevealInPageEvent).detail;
-        const fade = Math.min(DEFAULT_FADE_HEIGHT, maxHeight * FADE_RATIO);
+        const fadeHeight = fade ? Math.min(DEFAULT_FADE_HEIGHT, maxHeight * FADE_RATIO) : 0;
         // Text under the fade mask counts as hidden too.
-        if (bottom > content.getBoundingClientRect().bottom - fade) expand();
+        if (bottom > content.getBoundingClientRect().bottom - fadeHeight) expand();
       };
       content.addEventListener(REVEAL_IN_PAGE_EVENT, handleReveal);
       return () => content.removeEventListener(REVEAL_IN_PAGE_EVENT, handleReveal);
-    }, [expand, isCollapsed, maxHeight]);
+    }, [expand, fade, isCollapsed, maxHeight]);
 
     return (
       <div {...stylex.props(styles.container)}>
         <div
           ref={contentRef}
           className={
-            stylex.props(isCollapsed ? styles.contentCollapsed : styles.contentExpanded).className
+            stylex.props(
+              isCollapsed ? styles.contentClipped : styles.contentExpanded,
+              isCollapsed && fade && styles.contentFaded,
+            ).className
           }
           style={
             isCollapsed
