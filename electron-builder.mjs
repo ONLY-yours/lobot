@@ -186,19 +186,22 @@ const getProtocolScheme = () => {
 const protocolScheme = getProtocolScheme();
 
 const sparklePublicKey = process.env.SPARKLE_ED_PUBLIC_KEY;
+// Release CI passes the host as APP_UPDATE_SERVER_URL only (see afterPack), so the appcast
+// URL falls back to it.
+const sparkleServerUrl = updateServerUrl ?? withUrlScheme(process.env.APP_UPDATE_SERVER_URL);
 const { useSparkle } = resolveSparklePackaging({
   channel,
   hasAppleCertificate,
   platform: process.platform,
   sparklePublicKey,
-  updateServerUrl,
+  updateServerUrl: sparkleServerUrl,
 });
 const sparklePackageDir = useSparkle
   ? await fs.realpath(path.join(__dirname, 'node_modules/electron-sparkle-updater'))
   : null;
 const sparkleFeedUrl =
-  useSparkle && updateServerUrl
-    ? `${stripChannelSuffix(updateServerUrl).replace(/\/$/, '')}/${isCanary || channel === 'beta' ? 'canary' : 'stable'}/appcast-${arch}.xml`
+  useSparkle && sparkleServerUrl
+    ? `${stripChannelSuffix(sparkleServerUrl).replace(/\/$/, '')}/${isCanary || channel === 'beta' ? 'canary' : 'stable'}/appcast-${arch}.xml`
     : undefined;
 
 // Determine icon file based on version type
