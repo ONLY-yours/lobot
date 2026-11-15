@@ -37,7 +37,7 @@ import { userProfileSelectors } from '@/store/user/selectors';
 import { authorAvatar, isCurrentUserAuthor, memberName } from './memberName';
 import { CHANNEL_MENTION_TAG, remarkChannelMentions } from './mentionMarkdown';
 import { MessageAttachments } from './MessageAttachments';
-import { channelMessageTime, channelTimeFormatters } from './messagePresentation';
+import { channelMessageTime, channelTimeFormatters, foldsByDefault } from './messagePresentation';
 import { MessageFailureMark, MessageRoutingStatus } from './MessageReceipts';
 import { showsReplyQuote } from './replyQuote';
 import type { ReplyTopic } from './ReplyTopicPanel';
@@ -56,6 +56,7 @@ const messageComponents = {
   [EntityLinkElement.tag]: EntityLinkElement.Component,
 };
 const rehypePlugins = [EntityLinkElement.rehypePlugin];
+const HISTORIC_FOLD_OVERFLOW = 240;
 
 /** Message text with the members it mentioned shown as chips. */
 const MessageText = ({ content, names }: { content: string; names: string[] }) => {
@@ -145,10 +146,12 @@ export const ChannelMessage = ({
     ? detail.members.find((member) => member.agentId === agentAuthorId)
     : undefined;
   const sourceTopicId = message.sourceTopicId;
-  // A direct conversation is a chat with one Agent; folding its answers only adds a click.
-  const collapsible = !detail.channel.agentId;
-  // Long messages stay open by default; folding one is an explicit choice from "more".
-  const [collapsed, setCollapsed] = useState(false);
+  // A long message from before yesterday folds by default so scrolling back stays quick; a
+  // recent one stays open and folding it is an explicit choice from "more".
+  const [historic] = useState(() => foldsByDefault(date));
+  // A direct conversation is a chat with one Agent; folding its recent answers only adds a click.
+  const collapsible = historic || !detail.channel.agentId;
+  const [collapsed, setCollapsed] = useState(historic);
   const [overflowing, setOverflowing] = useState(false);
   const moreItems = [
     ...(agentAuthorId && sourceTopicId && onOpenTopic
@@ -296,6 +299,8 @@ export const ChannelMessage = ({
                   collapsed={collapsed}
                   key={message.id}
                   maxHeight={160}
+                  // Folding unasked is only worth it for a really long message.
+                  overflowThreshold={historic ? HISTORIC_FOLD_OVERFLOW : undefined}
                   onCollapsedChange={setCollapsed}
                   onOverflowChange={setOverflowing}
                 >

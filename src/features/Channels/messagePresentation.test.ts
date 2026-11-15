@@ -5,6 +5,7 @@ import type { TimelineItem } from './joinEvents';
 import {
   channelMessageTime,
   channelTimeFormatters,
+  foldsByDefault,
   presentChannelTimeline,
 } from './messagePresentation';
 
@@ -96,5 +97,15 @@ describe('channelMessageTime', () => {
     expect(label(new Date(2026, 10, 6, 10, 15))).toBe('2026/11/6 10:15');
     expect(label(new Date(2025, 5, 22, 1, 33))).toBe('2025/6/22 01:33');
     expect(label(new Date(2026, 10, 6, 10, 15), 'en-US')).toBe('11/6/2026 10:15 AM');
+  });
+});
+
+describe('foldsByDefault', () => {
+  const now = new Date(2026, 10, 15, 0, 30);
+
+  it('keeps today and yesterday open and folds anything earlier, by calendar day', () => {
+    expect(foldsByDefault(new Date(2026, 10, 15, 0, 1), now)).toBe(false);
+    expect(foldsByDefault(new Date(2026, 10, 14, 0, 1), now)).toBe(false);
+    expect(foldsByDefault(new Date(2026, 10, 13, 23, 59), now)).toBe(true);
   });
 });

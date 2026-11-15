@@ -78,3 +78,6 @@ export const channelMessageTime = (
         }).format(date);
   return `${day} ${time}`;
 };
+
+/** Messages from before yesterday are history: a long one folds by default so scrolling back stays quick. */
+export const foldsByDefault = (date: Date, now = new Date()) => calendarDaysAgo(date, now) >= 2;

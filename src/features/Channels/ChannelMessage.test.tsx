@@ -167,8 +167,8 @@ describe('ChannelMessage collapse', () => {
     content: 'A long reply',
   };
 
-  it('shows a long message in full and only offers collapsing from the more menu', () => {
-    render(<ChannelMessage detail={detail} message={longMessage} />);
+  it('shows a recent long message in full and only offers collapsing from the more menu', () => {
+    render(<ChannelMessage detail={detail} message={{ ...longMessage, createdAt: new Date() }} />);
 
     expect(collapsibleProps.current.collapsed).toBe(false);
     expect(collapsibleProps.current.hideCollapseToggle).toBe(true);
@@ -179,6 +179,37 @@ describe('ChannelMessage collapse', () => {
 
     expect(collapsibleProps.current.collapsed).toBe(true);
     expect(screen.getByText('message.expand')).toBeTruthy();
+  });
+
+  it('folds a long message from before yesterday, even in a direct conversation', () => {
+    const createdAt = new Date();
+    createdAt.setDate(createdAt.getDate() - 3);
+    render(
+      <ChannelMessage
+        detail={{ ...detail, channel: { ...detail.channel, agentId: 'agt_1' } } as ChannelDetail}
+        message={{ ...longMessage, createdAt }}
+      />,
+    );
+
+    expect(collapsibleProps.current.collapsed).toBe(true);
+    expect(collapsibleProps.current.overflowThreshold).toBeGreaterThan(0);
+
+    act(() => collapsibleProps.current.onCollapsedChange(false));
+    act(() => collapsibleProps.current.onOverflowChange(true));
+    expect(collapsibleProps.current.collapsed).toBe(false);
+    expect(screen.getByText('message.collapse')).toBeTruthy();
+  });
+
+  it('leaves a recent message open in a direct conversation', () => {
+    collapsibleProps.current = undefined;
+    render(
+      <ChannelMessage
+        detail={{ ...detail, channel: { ...detail.channel, agentId: 'agt_1' } } as ChannelDetail}
+        message={{ ...longMessage, createdAt: new Date() }}
+      />,
+    );
+
+    expect(collapsibleProps.current).toBeUndefined();
   });
 });
 
