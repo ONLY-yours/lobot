@@ -6,7 +6,7 @@ const { nullComponent, passthrough } = vi.hoisted(() => ({
   passthrough: () => ({ default: ({ children }: { children?: unknown }) => children }),
 }));
 
-vi.mock('@/const/version', () => ({ isDesktop: true }));
+vi.mock('@/const/version', () => ({ CURRENT_VERSION: '0.0.0', isDesktop: true }));
 vi.mock('@/hooks/usePlatform', () => ({ usePlatform: () => ({ isPWA: false }) }));
 vi.mock('@/store/serverConfig', () => ({
   featureFlagsSelectors: () => ({ showCloudPromotion: false }),
@@ -32,6 +32,7 @@ vi.mock('@/components/Skeleton/RouteSegment', nullComponent);
 vi.mock('@/features/DesktopBrowserGatewayBridge', nullComponent);
 vi.mock('@/features/DesktopFileMenuBridge', nullComponent);
 vi.mock('@/features/DesktopLayoutContainer', passthrough);
+vi.mock('@/features/Channels/notifications/ChannelNotifier', nullComponent);
 vi.mock('@/features/DesktopNavigationBridge', nullComponent);
 vi.mock('@/features/Electron/ActiveConversationBridge', nullComponent);
 vi.mock('@/features/Electron/ScreenCapture/OverlayCaptureUploader', nullComponent);

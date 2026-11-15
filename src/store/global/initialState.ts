@@ -247,6 +247,10 @@ export interface SystemStatus {
    * Order of the sidebar Channel sections. Device-local view setting.
    */
   channelListSort?: ChannelListSort;
+  /**
+   * Which Channel activity raises a desktop notification on this device; unset means `all`.
+   */
+  channelNotificationLevel?: 'all' | 'mentions' | 'off';
   chatInputHeight?: number;
   /**
    * Which topicGroups are collapsed, bucketed by group mode. We persist the

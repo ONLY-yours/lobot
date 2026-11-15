@@ -471,6 +471,8 @@ const showRightPanel = (s: GlobalState) => s.status.showRightPanel;
 const showWorkingOverview = (s: GlobalState) =>
   s.status.showWorkingOverview ?? !s.status.showRightPanel;
 const showLeftPanel = (s: GlobalState) => s.status.showLeftPanel;
+/** Channel desktop notifications are on for every message unless the user narrows them. */
+const channelNotificationLevel = (s: GlobalState) => s.status.channelNotificationLevel ?? 'all';
 const showPageAgentPanel = (s: GlobalState) => s.status.showPageAgentPanel;
 const showTaskAgentPanel = (s: GlobalState) => s.status.showTaskAgentPanel;
 const showTerminalPanel = (s: GlobalState) => s.status.showTerminalPanel;
@@ -567,6 +569,7 @@ const tokenDisplayFormatShort = (s: GlobalState) =>
 const homeSelectedAgentId = (s: GlobalState) => s.status.homeSelectedAgentId;
 
 export const systemStatusSelectors = {
+  channelNotificationLevel,
   agentBuilderPanelWidth,
   agentDocumentSort,
   contactListSortBy,

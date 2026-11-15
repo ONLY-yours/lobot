@@ -1,4 +1,15 @@
 export default {
+  'channelNotification.desc.all':
+    'Every new message in your Channels shows a banner and plays a sound; the dock badge counts what is unread.',
+  'channelNotification.desc.mentions':
+    'Only @mentions of you and messages in direct conversations notify; the dock badge still counts every unread message.',
+  'channelNotification.desc.off':
+    'No banners or sounds for Channel messages and mentions; unread counts and the dock badge still update.',
+  'channelNotification.label': 'Notify me about',
+  'channelNotification.level.all': 'All messages',
+  'channelNotification.level.mentions': 'Mentions & direct',
+  'channelNotification.level.off': 'Off',
+  'channelNotification.title': 'Channel messages',
   'systemAgent.channelRouting.title': 'Channel decision model',
   'systemAgent.channelRouting.modelDesc':
     'Choose which Agents reply to messages without @mentions. When off, all eligible Agents reply.',

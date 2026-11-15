@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MentionNotificationRow } from './mentionNotification';
 
 const mocks = vi.hoisted(() => ({
-  enableBusinessFeatures: true,
+  level: 'all' as 'all' | 'mentions' | 'off',
   list: vi.fn(),
   listeners: new Set<() => void>(),
   rows: [] as MentionNotificationRow[],
@@ -38,9 +38,11 @@ vi.mock('@/services/electron/desktopNotification', () => ({
   desktopNotificationService: { showNotification: mocks.showNotification },
 }));
 vi.mock('@/services/notification', () => ({ notificationService: { list: mocks.list } }));
-vi.mock('@/store/serverConfig', () => ({
-  serverConfigSelectors: { enableBusinessFeatures: () => mocks.enableBusinessFeatures },
-  useServerConfigStore: (selector: (s: unknown) => unknown) => selector({}),
+vi.mock('@/store/global', () => ({
+  useGlobalStore: (selector: (s: unknown) => unknown) => selector({}),
+}));
+vi.mock('@/store/global/selectors', () => ({
+  systemStatusSelectors: { channelNotificationLevel: () => mocks.level },
 }));
 vi.mock('@/store/user', () => ({
   useUserStore: (selector: (s: unknown) => unknown) => selector({}),
@@ -66,7 +68,7 @@ const row = (id: string): MentionNotificationRow => ({
 
 describe('useWorkspaceMentionNotifier', () => {
   beforeEach(() => {
-    mocks.enableBusinessFeatures = true;
+    mocks.level = 'all';
     mocks.listeners.clear();
     mocks.rows = [];
     mocks.showNotification.mockReset().mockResolvedValue({ success: true });
@@ -102,8 +104,14 @@ describe('useWorkspaceMentionNotifier', () => {
     expect(mocks.swrKey).toBeNull();
   });
 
-  it('stays idle without business features', () => {
-    mocks.enableBusinessFeatures = false;
+  it('watches mentions without any business-features flag (Lobot is Cloud-only)', () => {
+    renderHook(() => useWorkspaceMentionNotifier());
+
+    expect(mocks.swrKey).not.toBeNull();
+  });
+
+  it('stays idle when notifications are turned off', () => {
+    mocks.level = 'off';
     renderHook(() => useWorkspaceMentionNotifier());
 
     expect(mocks.swrKey).toBeNull();

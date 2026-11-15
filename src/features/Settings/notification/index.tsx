@@ -10,9 +10,12 @@ import { useTranslation } from 'react-i18next';
 
 import { SettingsSectionSkeleton } from '@/components/Skeleton';
 import { FORM_STYLE } from '@/const/layoutTokens';
+import type { ChannelNotificationLevel } from '@/features/Channels/notifications/activity';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
 import { completionSoundService } from '@/services/electron/completionSound';
 import { desktopNotificationService } from '@/services/electron/desktopNotification';
+import { useGlobalStore } from '@/store/global';
+import { systemStatusSelectors } from '@/store/global/selectors';
 
 const IMPORTED = 'imported';
 const IMPORT = 'import';
@@ -24,6 +27,8 @@ export const DesktopNotificationSettings = () => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const form = useForm();
+  const channelLevel = useGlobalStore(systemStatusSelectors.channelNotificationLevel);
+  const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
 
   const report = useCallback(async (action: () => Promise<CompletionSoundSettings | void>) => {
     setError(false);
@@ -96,6 +101,32 @@ export const DesktopNotificationSettings = () => {
           style={FORM_STYLE.style}
           variant={'filled'}
           items={[
+            {
+              children: [
+                {
+                  children: (
+                    <Segmented<ChannelNotificationLevel>
+                      value={channelLevel}
+                      options={[
+                        { label: t('channelNotification.level.all'), value: 'all' },
+                        { label: t('channelNotification.level.mentions'), value: 'mentions' },
+                        { label: t('channelNotification.level.off'), value: 'off' },
+                      ]}
+                      onChange={(channelNotificationLevel) =>
+                        updateSystemStatus({ channelNotificationLevel })
+                      }
+                    />
+                  ),
+                  desc: t(`channelNotification.desc.${channelLevel}`),
+                  label: (
+                    <SettingsSearchAnchor id={'notification-channel-messages'}>
+                      {t('channelNotification.label')}
+                    </SettingsSearchAnchor>
+                  ),
+                },
+              ],
+              title: t('channelNotification.title'),
+            },
             {
               children: [
                 {

@@ -7,7 +7,8 @@ import { useClientPollingSWR } from '@/libs/swr';
 import { inboxKeys } from '@/libs/swr/keys';
 import { desktopNotificationService } from '@/services/electron/desktopNotification';
 import { notificationService } from '@/services/notification';
-import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
+import { useGlobalStore } from '@/store/global';
+import { systemStatusSelectors } from '@/store/global/selectors';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 
@@ -34,10 +35,11 @@ const MENTION_PAGE_SIZE = MAX_MENTION_BANNERS_PER_POLL * 5;
  * twice — the inbox bell still carries the mention.
  */
 export const useWorkspaceMentionNotifier = (): void => {
-  const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
+  // Lobot only talks to LobeHub Cloud, so mentions are never behind the business-features flag.
   const isLogin = useUserStore(authSelectors.isLogin);
   const workspaceId = useActiveWorkspaceId();
-  const enabled = enableBusinessFeatures && isLogin === true && !!workspaceId;
+  const muted = useGlobalStore((s) => systemStatusSelectors.channelNotificationLevel(s) === 'off');
+  const enabled = isLogin === true && !!workspaceId && !muted;
 
   // Per workspace, so switching away and back doesn't re-announce old mentions.
   const watermarkByWorkspace = useSingleton(() => new Map<string, MentionWatermark>());

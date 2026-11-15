@@ -742,6 +742,14 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
   },
   // Notification
   {
+    anchor: 'notification-channel-messages',
+    descKey: 'channelNotification.desc.all',
+    keywords: ['channel', 'message', 'mention', 'badge', 'banner', '通知', '提及'],
+    labelKey: 'channelNotification.title',
+    tab: SettingsTabs.Notification,
+    visible: (ctx) => ctx.isDesktop,
+  },
+  {
     anchor: 'notification-completion-sound',
     descKey: 'completionSound.desc',
     keywords: ['sound', 'audio', 'OpenPeon', 'completion'],

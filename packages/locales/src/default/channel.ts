@@ -1,6 +1,9 @@
 export default {
   'message.relayReplyFrom': '{{name}} replied in #{{channel}}',
   'message.relayedBy': 'Relayed by {{name}}',
+  'notification.mentioned': 'You were mentioned in {{channel}}',
+  'notification.mentionedBy': '{{name}} mentioned you in {{channel}}',
+  'notification.newMessage': 'New message',
   'recipients.automatic': 'The decision model will choose which Agents reply',
 
   'people.empty': 'All available workspace members have joined',
