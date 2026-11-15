@@ -7,6 +7,9 @@ import path from 'node:path';
 // raw base64 (32-byte public key, 32-byte private seed) where the OTA secrets hold PEM.
 const isPem = (key) => key.trimStart().startsWith('-----BEGIN');
 
+// PKCS8 DER of an Ed25519 private key, up to its 32-byte seed (RFC 8410).
+const ED25519_PKCS8_PREFIX = Buffer.from('302e020100300506032b657004220420', 'hex');
+
 const rawBase64 = (jwkValue) => Buffer.from(jwkValue, 'base64url').toString('base64');
 
 /** SUPublicEDKey value for a raw base64 or SPKI PEM Ed25519 public key. */
@@ -31,11 +34,14 @@ export const toSparklePrivateKey = (key) => {
 export const sparklePublicKeyOf = (privateKey) => {
   const seed = Buffer.from(toSparklePrivateKey(privateKey), 'base64');
   if (seed.length !== 32) throw new Error('Sparkle private key must be a 32-byte Ed25519 seed');
-  const jwk = createPrivateKey({
-    format: 'jwk',
-    key: { crv: 'Ed25519', d: seed.toString('base64url'), kty: 'OKP', x: '' },
+  // A JWK needs `x`, the public key this derives, and newer Node rejects one without it;
+  // wrapping the seed in the fixed Ed25519 PKCS8 header needs nothing else.
+  const key = createPrivateKey({
+    format: 'der',
+    key: Buffer.concat([ED25519_PKCS8_PREFIX, seed]),
+    type: 'pkcs8',
   });
-  return rawBase64(createPublicKey(jwk).export({ format: 'jwk' }).x);
+  return rawBase64(createPublicKey(key).export({ format: 'jwk' }).x);
 };
 
 // Usage: SPARKLE_ED_PRIVATE_KEY=... [SPARKLE_ED_PUBLIC_KEY=...] node scripts/sparkleKeys.mjs write-private <file>

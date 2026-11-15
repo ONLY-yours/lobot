@@ -4,9 +4,22 @@ import { mkdtempSync, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { sparklePublicKeyOf, toSparklePrivateKey, toSparklePublicKey } from '../sparkleKeys.mjs';
+
+// Newer Node 24 releases reject an OKP JWK without `x` (CI did, the local Node did not);
+// reproduce that strictness so the derivation cannot lean on the lenient behaviour.
+vi.mock('node:crypto', async (importOriginal) => {
+  const crypto = await importOriginal();
+  const createPrivateKey = (key) => {
+    if (key?.format === 'jwk' && key.key?.kty === 'OKP' && !key.key.x) {
+      throw new TypeError('Invalid JWK OKP key');
+    }
+    return crypto.createPrivateKey(key);
+  };
+  return { ...crypto, createPrivateKey, default: { ...crypto, createPrivateKey } };
+});
 
 const SCRIPT = path.resolve(__dirname, '../sparkleKeys.mjs');
 
