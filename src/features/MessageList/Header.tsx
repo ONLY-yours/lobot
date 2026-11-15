@@ -6,7 +6,7 @@ import { HashIcon, PlusIcon } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
+import { DESKTOP_HEADER_ICON_SIZE } from '@/const/layoutTokens';
 import { openCreateChannel } from '@/features/Channels/CreateChannel';
 import { useChannelsEnabled } from '@/features/Channels/useChannelsEnabled';
 import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
@@ -76,7 +76,6 @@ const Header = memo(() => {
       <SearchBar
         allowClear
         placeholder={t('messageList.search')}
-        size={'small'}
         style={{ flex: 1 }}
         value={query}
         variant={'filled'}
@@ -86,7 +85,7 @@ const Header = memo(() => {
         <ActionIcon
           icon={PlusIcon}
           loading={isLoading}
-          size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+          size={DESKTOP_HEADER_ICON_SIZE}
           title={t('messageList.newChat')}
         />
       </DropdownMenu>
