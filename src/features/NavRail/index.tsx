@@ -8,8 +8,8 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { useChannelsEnabled } from '@/features/Channels/useChannelsEnabled';
-import User from '@/features/HomeSidebar/Header/components/User';
 import { messagesUnreadCount } from '@/features/MessageList/conversations';
+import UserAvatar from '@/features/User/UserAvatar';
 import { useActiveLocation } from '@/hooks/useActiveLocation';
 import { channelSelectors, useChannelStore } from '@/store/channel';
 import { useHomeStore } from '@/store/home';
@@ -75,8 +75,12 @@ const NavTabBar = memo(() => {
           url={tab.url}
         />
       ))}
-      {/* The avatar opens the user panel, which owns settings, like Telegram's last tab. */}
-      <User lite />
+      {/* Like Telegram's last tab, the avatar opens Settings in the list column and content. */}
+      <TabItem active={activeTab === 'settings'} title={t('tab.setting')} url={'/settings'}>
+        <span {...stylex.props(styles.avatar, activeTab === 'settings' && styles.avatarActive)}>
+          <UserAvatar shape={'circle'} size={26} />
+        </span>
+      </TabItem>
     </Flexbox>
   );
 });

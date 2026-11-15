@@ -4,6 +4,7 @@ import ContactListPortal from '@/features/ContactList';
 import HomeNavPanelPortal from '@/features/HomeSidebar';
 import MessageListPortal from '@/features/MessageList';
 import { useImLayout } from '@/features/NavRail/useImLayout';
+import SettingsListPortal from '@/features/Settings/Layout/SideBar';
 import TaskNavPortal from '@/features/TaskNav';
 
 import NavPanel from './index';
@@ -16,7 +17,7 @@ import NavPanel from './index';
 // no `home` entry at all, so the panel is stuck on the loading skeleton.
 //
 // Under the `im_layout` trial, `home` is the Messages conversation list and
-// Contacts / the Tasks scope list are shell-owned for the same reason.
+// Contacts / the Tasks scope list / the Settings list are shell-owned for the same reason.
 const NavPanelShell = () => {
   const imLayout = useImLayout();
 
@@ -27,6 +28,7 @@ const NavPanelShell = () => {
           <MessageListPortal />
           <ContactListPortal />
           <TaskNavPortal />
+          <SettingsListPortal />
         </>
       ) : (
         <HomeNavPanelPortal />

@@ -51,6 +51,15 @@ export const styles = stylex.create({
     backgroundColor: { 'default': null, ':hover': cssVar.colorFillTertiary },
     transition: 'color 0.15s, background-color 0.15s',
   },
+  avatar: {
+    display: 'flex',
+    borderRadius: '50%',
+    transition: 'box-shadow 0.15s',
+  },
+  // Telegram rings the avatar of the active Settings tab instead of tinting a glyph.
+  avatarActive: {
+    boxShadow: `0 0 0 2px ${cssVar.colorPrimary}`,
+  },
   // Like Telegram, the active tab is told apart by the primary color, not a filled chip.
   itemActive: {
     color: { 'default': cssVar.colorPrimary, ':hover': cssVar.colorPrimary },

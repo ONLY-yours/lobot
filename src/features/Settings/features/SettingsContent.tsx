@@ -1,0 +1,102 @@
+'use client';
+
+import { Text } from '@lobehub/ui';
+import { Fragment, useEffect, useState } from 'react';
+
+import NavHeader from '@/features/NavHeader';
+import SettingContainer from '@/features/Setting/SettingContainer';
+import { useSettingsAnchorScroll } from '@/features/SettingsSearch/anchor';
+import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { SettingsTabs } from '@/store/global/initialState';
+
+import { componentMap } from './componentMap';
+import { getSettingsContainerMaxWidth, OWN_FRAME_TABS } from './ownFrameTabs';
+import { SettingsPageActionsContext, SettingsPageActionsRow } from './SettingsPageActions';
+import { useSettingsTabTitle } from './tabTitles';
+
+const REDIRECT_MAP: Record<string, string> = {
+  [SettingsTabs.Common]: SettingsTabs.Appearance,
+  [SettingsTabs.ChatAppearance]: SettingsTabs.Appearance,
+};
+
+/**
+ * Where a tab URL lands instead: legacy aliases map to their new tab, and tabs
+ * Lobot does not offer (providers, skills, OAuth apps, …) go to the profile.
+ */
+export const getSettingsRedirect = (tab: string | undefined): string | undefined => {
+  if (!tab) return;
+  if (REDIRECT_MAP[tab]) return REDIRECT_MAP[tab];
+  if (!(tab in componentMap)) return SettingsTabs.Profile;
+};
+
+interface SettingsContentProps {
+  activeTab?: string;
+  mobile?: boolean;
+}
+
+const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
+  const navigate = useWorkspaceAwareNavigate();
+  const title = useSettingsTabTitle(activeTab);
+  const [pageActions, setPageActions] = useState<HTMLElement | null>(null);
+
+  useSettingsAnchorScroll();
+
+  const redirectTo = getSettingsRedirect(activeTab);
+
+  useEffect(() => {
+    // `escape: true` keeps the user in personal context even when a workspace is active.
+    if (redirectTo) navigate(`/settings/${redirectTo}`, { escape: true, replace: true });
+  }, [redirectTo, navigate]);
+
+  const renderComponent = (tab: string) => {
+    const Component = componentMap[tab as keyof typeof componentMap];
+    if (!Component) return null;
+
+    // The shared navigation header (desktop) or the mobile layout header shows
+    // the tab title, so no tab draws a second, in-page title.
+    const componentProps: { mobile?: boolean; showSettingHeader?: boolean } = {
+      showSettingHeader: false,
+    };
+    if ([SettingsTabs.About, SettingsTabs.Profile].includes(tab as any)) {
+      componentProps.mobile = mobile;
+    }
+
+    return <Component {...componentProps} />;
+  };
+
+  if (redirectTo) return null;
+
+  if (mobile) {
+    return activeTab ? renderComponent(activeTab) : renderComponent(SettingsTabs.Profile);
+  }
+
+  return (
+    <>
+      {Object.keys(componentMap).map((tabKey) => {
+        if (activeTab !== tabKey) return null;
+        const content = renderComponent(tabKey);
+        if (OWN_FRAME_TABS.has(tabKey)) return <Fragment key={tabKey}>{content}</Fragment>;
+        return (
+          <Fragment key={tabKey}>
+            <NavHeader styles={{ center: { alignItems: 'center' } }}>
+              {title && <Text weight={500}>{title}</Text>}
+            </NavHeader>
+            <SettingsPageActionsContext value={pageActions}>
+              <SettingContainer
+                maxWidth={getSettingsContainerMaxWidth(tabKey)}
+                paddingBlock={'24px 128px'}
+                paddingInline={24}
+              >
+                {/* Page actions sit in the content column so they align with the body. */}
+                <SettingsPageActionsRow ref={setPageActions} />
+                {content}
+              </SettingContainer>
+            </SettingsPageActionsContext>
+          </Fragment>
+        );
+      })}
+    </>
+  );
+};
+
+export default SettingsContent;

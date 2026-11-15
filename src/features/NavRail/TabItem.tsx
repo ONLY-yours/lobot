@@ -3,7 +3,7 @@
 import { Icon, Tooltip } from '@lobehub/ui';
 import * as stylex from '@stylexjs/stylex';
 import { type LucideIcon } from 'lucide-react';
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
@@ -14,12 +14,14 @@ import { styles, TAB_ICON_SIZE } from './style';
 interface TabItemProps {
   active?: boolean;
   badge?: number;
-  icon: LucideIcon;
+  /** Replaces the icon, e.g. the avatar on the Settings tab. */
+  children?: ReactNode;
+  icon?: LucideIcon;
   title: string;
   url: string;
 }
 
-const TabItem = memo<TabItemProps>(({ active, badge, icon, title, url }) => {
+const TabItem = memo<TabItemProps>(({ active, badge, children, icon, title, url }) => {
   const navigate = useWorkspaceAwareNavigate();
 
   return (
@@ -35,7 +37,7 @@ const TabItem = memo<TabItemProps>(({ active, badge, icon, title, url }) => {
           navigate(url);
         }}
       >
-        <Icon icon={icon} size={TAB_ICON_SIZE} />
+        {children ?? (icon && <Icon icon={icon} size={TAB_ICON_SIZE} />)}
         {!!badge && badge > 0 && (
           <span {...stylex.props(styles.badge)}>{badge > 99 ? '99+' : badge}</span>
         )}

@@ -33,7 +33,7 @@ vi.mock('@/features/HomeSidebar/Header/components/useInboxUnreadCount', () => ({
   useInboxUnreadCount: () => mocks.inbox,
 }));
 vi.mock('@/features/HomeSidebar/Header/components/InboxModal', () => ({ openInboxModal: vi.fn() }));
-vi.mock('@/features/HomeSidebar/Header/components/User', () => ({
+vi.mock('@/features/User/UserAvatar', () => ({
   default: () => <div data-testid="user-avatar" />,
 }));
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
@@ -56,7 +56,7 @@ describe('NavTabBar', () => {
     render(<NavTabBar />);
 
     const labels = screen.getAllByRole('link').map((el) => el.getAttribute('aria-label'));
-    expect(labels).toEqual(['tab.contacts', 'tab.messages']);
+    expect(labels).toEqual(['tab.contacts', 'tab.messages', 'tab.setting']);
     expect(screen.queryByRole('button', { name: 'inbox.title' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'tab.more' })).not.toBeInTheDocument();
     expect(screen.getByTestId('user-avatar')).toBeInTheDocument();
@@ -74,4 +74,16 @@ describe('NavTabBar', () => {
     expect(screen.getByRole('link', { name: 'tab.messages' })).not.toHaveAttribute('aria-current');
     expect(screen.getByText('99+')).toBeInTheDocument();
   });
+
+  it('opens Settings from the avatar tab and marks it on settings routes', () => {
+    mocks.pathname = '/settings/appearance';
+    render(<NavTabBar />);
+
+    const settings = screen.getByRole('link', { name: 'tab.setting' });
+    expect(settings).toHaveAttribute('href', '/settings');
+    expect(settings).toHaveAttribute('aria-current', 'page');
+    expect(settings).toContainElement(screen.getByTestId('user-avatar'));
+    expect(screen.getByRole('link', { name: 'tab.contacts' })).not.toHaveAttribute('aria-current');
+  });
+
 });

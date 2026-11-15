@@ -10,6 +10,7 @@ import { withSegmentFallback } from '@/spa/router/withSegmentFallback';
 import { dynamicLayout, ErrorBoundary } from '@/utils/router';
 
 import { collaborationRoutes } from './collaborationRoutes';
+import { settingsRoute } from './settingsRoutes';
 
 export interface MainAreaRouteOptions {
   /** Electron renders Home inside each tab router; it redirects to the first Channel. */
@@ -20,12 +21,13 @@ const deferPlatformElement = (factory?: () => ReactElement) =>
   factory ? createElement(factory) : undefined;
 
 /**
- * Lobot ships exactly two surfaces: Contacts (agents) and Channels.
+ * Lobot ships two surfaces, Contacts (agents) and Channels, plus Settings.
  * Every other LobeHub route is intentionally absent from this build.
  */
 const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): RouteObject[] => [
   { element: deferPlatformElement(options.createHomeElement), index: true },
   ...collaborationRoutes,
+  settingsRoute,
 ];
 
 /**
