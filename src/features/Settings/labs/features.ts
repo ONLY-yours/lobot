@@ -17,12 +17,10 @@ type LabFeatureI18nKey =
   | 'agentGraphConfig'
   | 'agentIdentity'
   | 'artifactDeployment'
-  | 'claudeCodeSdk'
   | 'codexAppServer'
   | 'deviceTunnel'
   | 'evalCapture'
   | 'goals'
-  | 'heteroSessionImport'
   | 'imessage'
   | 'messageTextSelectionActions'
   | 'oauthApps'
@@ -152,26 +150,10 @@ const ALL_LAB_FEATURES: LabFeatureItem[] = [
   },
   {
     desktopOnly: true,
-    flag: 'enableClaudeCodeSdk',
-    i18nKey: 'claudeCodeSdk',
-    searchKeywords: ['claude code', 'claude sdk'],
-    stage: 'alpha',
-  },
-  {
-    desktopOnly: true,
     flag: 'enableCodexAppServer',
     i18nKey: 'codexAppServer',
     searchKeywords: ['codex', 'app server'],
     stage: 'alpha',
-  },
-  // rides on the Claude Code hetero-agent stack: scans local CLI transcripts
-  // via the Electron main process — desktop only
-  {
-    desktopOnly: true,
-    flag: 'enableHeteroSessionImport',
-    i18nKey: 'heteroSessionImport',
-    searchKeywords: ['import session', 'claude code', 'codex'],
-    stage: 'beta',
   },
 ];
 

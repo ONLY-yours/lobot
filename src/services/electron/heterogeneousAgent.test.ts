@@ -1,16 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const mockHeterogeneousAgent = vi.hoisted(() => ({
-  cancelSession: vi.fn(),
   consumeCodexRateLimitResetCredit: vi.fn(),
   getClaudeCodeQuota: vi.fn(),
   getCodexQuota: vi.fn(),
-  getSessionInfo: vi.fn(),
   listModels: vi.fn(),
-  sendPrompt: vi.fn(),
-  startSession: vi.fn(),
-  stopSession: vi.fn(),
-  submitIntervention: vi.fn(),
+  resolveClaudeCodeAccount: vi.fn(),
 }));
 
 vi.mock('@/utils/electron/ipc', () => ({
@@ -108,45 +103,12 @@ describe('heterogeneousAgentService', () => {
     expect(mockHeterogeneousAgent.consumeCodexRateLimitResetCredit).toHaveBeenCalledWith(params);
   });
 
-  it('forwards session lifecycle calls over IPC', async () => {
+  it('wraps the provider account id for Claude Code account resolution', async () => {
     const { heterogeneousAgentService } = await import('./heterogeneousAgent');
 
-    mockHeterogeneousAgent.startSession.mockResolvedValue({ sessionId: 's1' });
-    await expect(
-      heterogeneousAgentService.startSession({ agentType: 'claude-code', command: 'claude' }),
-    ).resolves.toEqual({ sessionId: 's1' });
-
-    await heterogeneousAgentService.sendPrompt({
-      operationId: 'op1',
-      prompt: 'hi',
-      sessionId: 's1',
-      topicId: 'topic-1',
-    });
-    expect(mockHeterogeneousAgent.sendPrompt).toHaveBeenCalledWith({
-      operationId: 'op1',
-      prompt: 'hi',
-      sessionId: 's1',
-      topicId: 'topic-1',
-    });
-
-    await heterogeneousAgentService.cancelSession('s1');
-    expect(mockHeterogeneousAgent.cancelSession).toHaveBeenCalledWith({ sessionId: 's1' });
-
-    await heterogeneousAgentService.stopSession('s1');
-    expect(mockHeterogeneousAgent.stopSession).toHaveBeenCalledWith({ sessionId: 's1' });
-
-    await heterogeneousAgentService.getSessionInfo('s1');
-    expect(mockHeterogeneousAgent.getSessionInfo).toHaveBeenCalledWith({ sessionId: 's1' });
-
-    await heterogeneousAgentService.submitIntervention({
-      operationId: 'op1',
-      result: { answer: 'yes' },
-      toolCallId: 't1',
-    });
-    expect(mockHeterogeneousAgent.submitIntervention).toHaveBeenCalledWith({
-      operationId: 'op1',
-      result: { answer: 'yes' },
-      toolCallId: 't1',
+    await heterogeneousAgentService.resolveClaudeCodeAccount('acct-1');
+    expect(mockHeterogeneousAgent.resolveClaudeCodeAccount).toHaveBeenCalledWith({
+      externalAccountId: 'acct-1',
     });
   });
 });

@@ -183,10 +183,6 @@ export const UserLabSchema = z.object({
    */
   enablePageCollab: z.boolean().optional(),
   /**
-   * run Claude Code hetero sessions through the Claude Agent SDK instead of CLI spawn
-   */
-  enableClaudeCodeSdk: z.boolean().optional(),
-  /**
    * run Codex hetero sessions through codex app-server instead of one-shot CLI spawn
    */
   enableCodexAppServer: z.boolean().optional(),
@@ -195,10 +191,6 @@ export const UserLabSchema = z.object({
    * preferences still parse
    */
   enableDesktopSplitView: z.boolean().optional(),
-  /**
-   * one-click import of local Claude Code / Codex CLI sessions as topics (desktop only)
-   */
-  enableHeteroSessionImport: z.boolean().optional(),
   /**
    * enable multi-agent group chat mode
    */

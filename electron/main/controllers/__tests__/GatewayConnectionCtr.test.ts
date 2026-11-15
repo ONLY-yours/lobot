@@ -322,9 +322,7 @@ const mockShellCommandCtr = {
 
 const mockHeterogeneousAgentCtr = {
   cancelLhHeteroExec: vi.fn().mockResolvedValue(undefined),
-  sendPrompt: vi.fn().mockResolvedValue(undefined),
   spawnLhHeteroExec: vi.fn().mockResolvedValue({ status: 'accepted' }),
-  startSession: vi.fn().mockResolvedValue({ sessionId: 'mock-session-id' }),
 } as unknown as HeterogeneousAgentCtr;
 
 const mockImessageBridgeSrv = {
@@ -1809,7 +1807,7 @@ describe('GatewayConnectionCtr', () => {
         await vi.advanceTimersByTimeAsync(0);
 
         // Simulate the child process spawning — onChildSpawned is called by
-        // HeterogeneousAgentImpl once the real child emits 'spawn'.
+        // HeterogeneousAgentCtr once the real child emits 'spawn'.
         const mockChild = new EventEmitter() as any;
         mockChild.pid = 12345;
         capturedOnChildSpawned?.(mockChild);

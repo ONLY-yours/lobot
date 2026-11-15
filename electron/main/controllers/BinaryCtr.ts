@@ -1,10 +1,4 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-
-import type {
-  ClaudeAuthStatus,
-  DetectHeterogeneousAgentCommandParams,
-} from '@lobechat/electron-client-ipc';
+import type { DetectHeterogeneousAgentCommandParams } from '@lobechat/electron-client-ipc';
 import {
   getHeterogeneousAgentConfigOrThrow,
   isLocalRuntimeHeterogeneousType,
@@ -18,8 +12,6 @@ import { detectHeterogeneousCliCommand, invalidateLoginShellPathCache } from '@/
 import { createLogger } from '@/utils/logger';
 
 import { ControllerModule, IpcMethod } from './index';
-
-const execFilePromise = promisify(execFile);
 
 const logger = createLogger('controllers:BinaryCtr');
 
@@ -165,25 +157,5 @@ export default class BinaryCtr extends ControllerModule {
       name: spec.name,
       priority: spec.priority,
     }));
-  }
-
-  /**
-   * Get Claude Code CLI auth/account status by running `claude auth status --json`.
-   * Returns null if the CLI is unavailable or the command fails.
-   */
-  @IpcMethod()
-  async getClaudeAuthStatus(command = 'claude'): Promise<ClaudeAuthStatus | null> {
-    const resolvedCommand = command.trim() || 'claude';
-
-    try {
-      const { stdout } = await execFilePromise(resolvedCommand, ['auth', 'status', '--json'], {
-        timeout: 5000,
-        windowsHide: true,
-      });
-      return JSON.parse(stdout.trim()) as ClaudeAuthStatus;
-    } catch (error) {
-      logger.debug('Failed to get claude auth status:', error);
-      return null;
-    }
   }
 }

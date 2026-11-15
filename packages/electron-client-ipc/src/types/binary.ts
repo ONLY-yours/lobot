@@ -44,16 +44,3 @@ export interface DetectHeterogeneousAgentCommandParams {
   agentType: DetectableHeterogeneousAgentType;
   command: string;
 }
-
-/**
- * Claude Code CLI auth status (from `claude auth status --json`)
- */
-export interface ClaudeAuthStatus {
-  apiProvider?: string;
-  authMethod?: string;
-  email?: string;
-  loggedIn: boolean;
-  orgId?: string;
-  orgName?: string;
-  subscriptionType?: string;
-}

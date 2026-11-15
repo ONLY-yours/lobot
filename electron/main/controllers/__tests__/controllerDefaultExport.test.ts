@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import HeteroSessionCtr from '../HeteroSessionCtr';
+import HeterogeneousAgentCtr from '../HeterogeneousAgentCtr';
 import McpInstallCtr from '../McpInstallCtr';
 import { controllerIpcConstructors } from '../registry';
 
@@ -20,9 +20,9 @@ describe('controller default exports', () => {
 });
 
 describe('controllerIpcConstructors', () => {
-  it('registers HeteroSessionCtr with unique non-empty group names', () => {
-    expect(controllerIpcConstructors).toContain(HeteroSessionCtr);
-    expect(HeteroSessionCtr.groupName).toBe('heteroSession');
+  it('registers HeterogeneousAgentCtr with unique non-empty group names', () => {
+    expect(controllerIpcConstructors).toContain(HeterogeneousAgentCtr);
+    expect(HeterogeneousAgentCtr.groupName).toBe('heterogeneousAgent');
     expect(McpInstallCtr.groupName).toBe('mcpInstall');
 
     const names = controllerIpcConstructors.map((Ctor) => Ctor.groupName);

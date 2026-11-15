@@ -1,7 +1,6 @@
 import type { ACPBroadcastEvents } from './acp';
 import type { BrowserSidebarBroadcastEvents } from './browserSidebar';
 import type { GatewayConnectionBroadcastEvents } from './gatewayConnection';
-import type { HeterogeneousAgentBroadcastEvents } from './heterogeneousAgent';
 import type { NavigationBroadcastEvents } from './navigation';
 import type { ProtocolBroadcastEvents } from './protocol';
 import type { RemoteServerBroadcastEvents } from './remoteServer';
@@ -22,7 +21,6 @@ export interface MainBroadcastEvents
     UpdateBroadcastEvents,
     BrowserSidebarBroadcastEvents,
     GatewayConnectionBroadcastEvents,
-    HeterogeneousAgentBroadcastEvents,
     NavigationBroadcastEvents,
     RemoteServerBroadcastEvents,
     ScreenCaptureBroadcastEvents,

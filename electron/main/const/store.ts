@@ -33,7 +33,6 @@ export const STORE_DEFAULTS: ElectronMainStore = {
   gatewayDeviceId: '',
   gatewayKeepAwake: true,
   gatewayWorkspaceEnrollmentsByAccount: {},
-  heteroSessionDirPrefs: {},
   heteroTracingEnabled: false,
   imessageBridgeConfigs: [],
   lastWorkspaceSlugByAccount: {},

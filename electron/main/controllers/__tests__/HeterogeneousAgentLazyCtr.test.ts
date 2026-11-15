@@ -1,76 +1,72 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { App } from '@/core/App';
-import type { RemoteServerAuth } from '@/modules/heterogeneousAgent/fileStorePort';
 
 import HeterogeneousAgentCtr from '../HeterogeneousAgentCtr';
 
-const implementationMocks = vi.hoisted(() => ({
-  afterAppReady: vi.fn(),
-  constructor: vi.fn<(app: App, remoteServerAuth?: RemoteServerAuth) => void>(),
-  startSession: vi.fn(async (..._args: unknown[]) => ({ sessionId: 'session-1' })),
+const lazyMocks = vi.hoisted(() => ({
+  accountsLoaded: vi.fn(),
+  createClaudeCodeAccountProfiles: vi.fn(() => ({
+    list: vi.fn(async () => [{ id: 'default' }]),
+    resolve: vi.fn(async (externalAccountId: string) => ({ externalAccountId })),
+  })),
+  fetchClaudeCodeQuota: vi.fn(async () => ({ provider: 'claude-code', updatedAt: Date.now() })),
+  samplerLoaded: vi.fn(),
 }));
 
-vi.mock('../HeterogeneousAgentImpl', () => ({
-  default: class MockHeterogeneousAgentImplementation {
-    constructor(app: App, remoteServerAuth?: RemoteServerAuth) {
-      implementationMocks.constructor(app, remoteServerAuth);
-    }
-
-    afterAppReady() {
-      implementationMocks.afterAppReady();
-    }
-
-    startSession(...args: unknown[]) {
-      return implementationMocks.startSession(...args);
-    }
-  },
+vi.mock('electron', () => ({
+  app: { getPath: vi.fn(() => '/fake/desktop'), isPackaged: false },
+  ipcMain: { handle: vi.fn() },
 }));
 
-describe('HeterogeneousAgentCtr lazy implementation', () => {
+vi.mock('@lobechat/heterogeneous-agents/quota-sampler', async (importOriginal) => {
+  lazyMocks.samplerLoaded();
+  return {
+    ...(await importOriginal<Record<string, unknown>>()),
+    fetchClaudeCodeQuota: lazyMocks.fetchClaudeCodeQuota,
+  };
+});
+
+vi.mock('@/modules/heterogeneousAgent/claudeCodeAccountsHost', () => {
+  lazyMocks.accountsLoaded();
+  return { createClaudeCodeAccountProfiles: lazyMocks.createClaudeCodeAccountProfiles };
+});
+
+const createApp = () =>
+  ({ appStoragePath: '/tmp/lobehub-lazy', storeManager: { get: vi.fn() } }) as unknown as App;
+
+describe('HeterogeneousAgentCtr lazy modules', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('defers the heavy implementation and initializes it exactly once on first use', async () => {
-    const app = {} as App;
-    const controller = new HeterogeneousAgentCtr(app);
+  it('loads the quota sampler on the first quota read and shares one cache afterwards', async () => {
+    const controller = new HeterogeneousAgentCtr(createApp());
+    expect(lazyMocks.samplerLoaded).not.toHaveBeenCalled();
 
-    expect(implementationMocks.constructor).not.toHaveBeenCalled();
-    expect(implementationMocks.afterAppReady).not.toHaveBeenCalled();
+    await controller.getClaudeCodeQuota();
+    await controller.getClaudeCodeQuota();
 
-    await expect((controller as any).startSession({ prompt: 'first' })).resolves.toEqual({
-      sessionId: 'session-1',
-    });
-    await (controller as any).startSession({ prompt: 'second' });
-
-    expect(implementationMocks.constructor).toHaveBeenCalledOnce();
-    expect(implementationMocks.constructor).toHaveBeenCalledWith(app, expect.any(Object));
-    expect(implementationMocks.afterAppReady).toHaveBeenCalledOnce();
-    expect(implementationMocks.startSession).toHaveBeenCalledTimes(2);
+    expect(lazyMocks.samplerLoaded).toHaveBeenCalledOnce();
+    // The second read is served from the snapshot cache built with the sampler.
+    expect(lazyMocks.fetchClaudeCodeQuota).toHaveBeenCalledOnce();
   });
 
-  it('injects remote-server auth resolved on the eager side of the lazy boundary', async () => {
-    const remoteServerConfigCtr = {
-      getAccessToken: vi.fn(async () => 'token-1'),
-      getRemoteServerUrl: vi.fn(async () => 'https://cloud.lobehub.com'),
-    };
-    const getController = vi.fn(() => remoteServerConfigCtr as any);
-    const app = { getController } as unknown as App;
-
+  it('builds the Claude Code account profiles once, on first account access', async () => {
+    const app = createApp();
     const controller = new HeterogeneousAgentCtr(app);
-    await (controller as any).startSession({ prompt: 'first' });
+    expect(lazyMocks.accountsLoaded).not.toHaveBeenCalled();
 
-    const auth = implementationMocks.constructor.mock.calls[0][1] as RemoteServerAuth;
+    await expect(controller.listClaudeCodeAccounts()).resolves.toEqual([{ id: 'default' }]);
+    await expect(
+      controller.resolveClaudeCodeAccount({ externalAccountId: 'acct-1' }),
+    ).resolves.toEqual({ externalAccountId: 'acct-1' });
 
-    await expect(auth.getServerUrl()).resolves.toBe('https://cloud.lobehub.com');
-    await expect(auth.getAccessToken()).resolves.toBe('token-1');
-
-    // A registry lookup that comes back empty must degrade to "no authed remote
-    // server" — never a throw, which would escape as a fatal unhandled rejection.
-    getController.mockReturnValue(undefined as any);
-
-    await expect(auth.getServerUrl()).resolves.toBeNull();
-    await expect(auth.getAccessToken()).resolves.toBeNull();
+    expect(lazyMocks.accountsLoaded).toHaveBeenCalledOnce();
+    expect(lazyMocks.createClaudeCodeAccountProfiles).toHaveBeenCalledOnce();
+    expect(lazyMocks.createClaudeCodeAccountProfiles).toHaveBeenCalledWith(
+      app,
+      expect.any(Function),
+    );
   });
 });

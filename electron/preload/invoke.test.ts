@@ -72,7 +72,7 @@ describe('invoke', () => {
       },
     });
 
-    await expect(invoke('heterogeneousAgent.sendPrompt')).rejects.toMatchObject({
+    await expect(invoke('heterogeneousAgent.listModels')).rejects.toMatchObject({
       cause: { code: 'ENOTFOUND', message: 'getaddrinfo ENOTFOUND example.com' },
       message: 'fetch failed',
       name: 'TypeError',

@@ -10,12 +10,9 @@ export const labPreferSelectors = {
   enableAgentIdentity: (s: UserState): boolean => s.preference.lab?.enableAgentIdentity ?? false,
   enableArtifactDeployment: (s: UserState): boolean =>
     s.preference.lab?.enableArtifactDeployment ?? false,
-  enableClaudeCodeSdk: (s: UserState): boolean => s.preference.lab?.enableClaudeCodeSdk ?? false,
   enableCodexAppServer: (s: UserState): boolean => s.preference.lab?.enableCodexAppServer ?? false,
   enableDeviceTunnel: (s: UserState): boolean => s.preference.lab?.enableDeviceTunnel ?? false,
   enableEvalCapture: (s: UserState): boolean => s.preference.lab?.enableEvalCapture ?? false,
-  enableHeteroSessionImport: (s: UserState): boolean =>
-    s.preference.lab?.enableHeteroSessionImport ?? false,
   enableImessage: (s: UserState): boolean => s.preference.lab?.enableImessage ?? false,
   enableMessageTextSelectionActions: (s: UserState): boolean =>
     s.preference.lab?.enableMessageTextSelectionActions ??

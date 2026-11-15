@@ -1,16 +1,11 @@
 'use client';
 
 import { isDesktop } from '@lobechat/const';
-import {
-  type HeterogeneousAgentRuntimeState,
-  type HeterogeneousAgentRuntimeStatus,
-  useWatchBroadcast,
-} from '@lobechat/electron-client-ipc';
 import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { cssVar } from '@lobehub/ui/stylex/cssVar.stylex';
 import * as stylex from '@stylexjs/stylex';
-import { ActivityIcon, CircleAlertIcon, RadioTowerIcon, TimerResetIcon } from 'lucide-react';
-import { memo, useState } from 'react';
+import { CircleAlertIcon } from 'lucide-react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ChatInputCredits from '@/business/client/features/ChatInputCredits';
@@ -73,57 +68,7 @@ const styles = stylex.create({
     '::-webkit-scrollbar': { display: 'none' },
   },
   rightGroup: { flex: 'none' },
-  sdkRuntime: {
-    cursor: 'default',
-    display: 'flex',
-    flex: 'none',
-    gap: '6px',
-    alignItems: 'center',
-    paddingBlock: '2px',
-    paddingInline: '4px',
-    borderRadius: '4px',
-    fontSize: '12px',
-    color: cssVar.colorInfo,
-    whiteSpace: 'nowrap',
-    backgroundColor: `color-mix(in srgb, ${cssVar.colorInfoBg} 55%, transparent)`,
-    backgroundImage: 'none',
-  },
-  sdkRuntimeClosing: {
-    color: cssVar.colorTextDescription,
-    backgroundColor: cssVar.colorFillQuaternary,
-    backgroundImage: 'none',
-  },
-  sdkRuntimeError: {
-    color: cssVar.colorError,
-    backgroundColor: `color-mix(in srgb, ${cssVar.colorErrorBg} 55%, transparent)`,
-    backgroundImage: 'none',
-  },
-  sdkRuntimeIdle: {
-    color: cssVar.colorTextSecondary,
-    backgroundColor: cssVar.colorFillQuaternary,
-    backgroundImage: 'none',
-  },
-  sdkRuntimeMonitoring: {
-    color: cssVar.colorWarning,
-    backgroundColor: `color-mix(in srgb, ${cssVar.colorWarningBg} 55%, transparent)`,
-    backgroundImage: 'none',
-  },
-  sdkRuntimeStale: {
-    color: cssVar.colorWarning,
-    backgroundColor: `color-mix(in srgb, ${cssVar.colorWarningBg} 55%, transparent)`,
-    backgroundImage: 'none',
-  },
 });
-
-const visibleSdkRuntimeStates = new Set<HeterogeneousAgentRuntimeState>([
-  'starting',
-  'running',
-  'monitoring',
-  'idle',
-  'stale',
-  'closing',
-  'error',
-]);
 
 /**
  * Same 28px row as the loaded bar: the workspace / device chip on the left and,
@@ -150,12 +95,6 @@ const HeteroControlBar = memo(() => {
   const agentId = useAgentId();
   const topicId = useTopicId();
   const { canConfigureResource, isAccessLoading } = useChatInputResourceAccess();
-  const [runtimeStatus, setRuntimeStatus] = useState<HeterogeneousAgentRuntimeStatus>();
-
-  useWatchBroadcast('heteroAgentRuntimeStatus', (status) => {
-    if (status.transport !== 'claude-sdk') return;
-    setRuntimeStatus(status);
-  });
 
   // All hooks must be called unconditionally (Rules of Hooks)
   const isLoading = useAgentStore(agentByIdSelectors.isAgentConfigLoadingById(agentId));
@@ -274,44 +213,6 @@ const HeteroControlBar = memo(() => {
       <span {...stylex.props(styles.fullAccessLabel)}>{tChat('heteroAgent.fullAccess.label')}</span>
     </div>
   );
-  const shouldShowSdkRuntime =
-    heteroProvider?.type === 'claude-code' &&
-    isLocalHeteroExecution &&
-    runtimeStatus?.transport === 'claude-sdk' &&
-    visibleSdkRuntimeStates.has(runtimeStatus.state);
-  const sdkRuntimeClassName =
-    runtimeStatus?.state === 'monitoring'
-      ? styles.sdkRuntimeMonitoring
-      : runtimeStatus?.state === 'idle'
-        ? styles.sdkRuntimeIdle
-        : runtimeStatus?.state === 'stale'
-          ? styles.sdkRuntimeStale
-          : runtimeStatus?.state === 'closing'
-            ? styles.sdkRuntimeClosing
-            : runtimeStatus?.state === 'error'
-              ? styles.sdkRuntimeError
-              : undefined;
-  const sdkRuntimeIcon =
-    runtimeStatus?.state === 'monitoring'
-      ? RadioTowerIcon
-      : runtimeStatus?.state === 'idle' || runtimeStatus?.state === 'closing'
-        ? TimerResetIcon
-        : ActivityIcon;
-  const sdkRuntimeBadge = shouldShowSdkRuntime ? (
-    <Tooltip
-      title={tChat('heteroAgent.claudeSdkRuntime.tooltip', {
-        count: runtimeStatus.activeTasks.length,
-        state: tChat(`heteroAgent.claudeSdkRuntime.state.${runtimeStatus.state}`),
-      })}
-    >
-      <div {...stylex.props(styles.sdkRuntime, sdkRuntimeClassName)}>
-        <Icon icon={sdkRuntimeIcon} size={14} />
-        <span {...stylex.props(styles.fullAccessLabel)}>
-          {tChat(`heteroAgent.claudeSdkRuntime.state.${runtimeStatus.state}`)}
-        </span>
-      </div>
-    </Tooltip>
-  ) : null;
 
   return (
     <Flexbox
@@ -348,7 +249,6 @@ const HeteroControlBar = memo(() => {
         {shouldShowClaudeQuota && (
           <ClaudeCodeQuotaMenu deviceId={quotaDeviceId} env={heteroProvider?.env} />
         )}
-        {sdkRuntimeBadge}
         <Tooltip title={tChat('heteroAgent.fullAccess.tooltip')}>{fullAccessBadge}</Tooltip>
       </Flexbox>
     </Flexbox>

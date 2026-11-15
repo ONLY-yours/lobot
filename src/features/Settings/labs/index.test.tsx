@@ -163,8 +163,8 @@ describe('Labs settings page', () => {
   it('marks internal-testing experiments as alpha and usable ones as beta', () => {
     renderPage();
 
-    const claudeCodeSdk = screen.getByText('features.claudeCodeSdk.title');
-    expect(within(claudeCodeSdk).getByText('stage.alpha.label')).toBeDefined();
+    const codexAppServer = screen.getByText('features.codexAppServer.title');
+    expect(within(codexAppServer).getByText('stage.alpha.label')).toBeDefined();
 
     const goals = screen.getByText('features.goals.title');
     expect(within(goals).getByText('stage.beta.label')).toBeDefined();

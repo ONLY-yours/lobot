@@ -16,21 +16,15 @@ export default {
   'features.assistantMessageGroup.desc':
     'Group agent messages and their tool call results together for display',
   'features.assistantMessageGroup.title': 'Agent Message Grouping',
-  'features.claudeCodeSdk.desc':
-    'Run Claude Code sessions through the Claude Agent SDK instead of spawning the CLI. Enables richer streaming and session control.',
-  'features.claudeCodeSdk.title': 'Claude Code SDK Runtime',
   'features.codexAppServer.desc':
     'Run Codex sessions through the local app-server instead of one-shot CLI processes. Enables token streaming and native turn control.',
   'features.codexAppServer.title': 'Codex App Server Runtime',
-  'features.heteroSessionImport.desc':
-    'Add an "Import Local Agent Sessions" entry to the topic list menu: scan local Claude Code / Codex CLI transcripts and import them as topics, with incremental sync on re-import.',
   'features.evalCapture.desc':
     'Adds a message action that captures a conversation turn — its prior context, input and the answer it produced — as an evaluation test case.',
   'features.evalCapture.title': 'Save a turn as an eval case',
   'features.deviceTunnel.desc':
     'Give a port on the working device a link, so a dev server running there can be opened from here. The link only works for people who can reach that device.',
   'features.deviceTunnel.title': 'Remote Port Links',
-  'features.heteroSessionImport.title': 'Local Agent Session Import',
   'features.goals.desc':
     'Hand the agent a goal: it breaks the goal into tasks, tracks progress, and delivers the result for you to review.',
   'features.goals.title': 'Goals',

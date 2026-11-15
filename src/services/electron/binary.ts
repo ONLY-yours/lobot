@@ -2,7 +2,6 @@ import {
   type BinaryCategory,
   type BinaryInfo,
   type BinaryStatus,
-  type ClaudeAuthStatus,
   type DetectHeterogeneousAgentCommandParams,
 } from '@lobechat/electron-client-ipc';
 
@@ -86,13 +85,6 @@ class BinaryService {
    */
   getInCategory = async (category: BinaryCategory): Promise<BinaryInfo[]> => {
     return ensureElectronIpc().binary.getInCategory(category);
-  };
-
-  /**
-   * Get Claude Code CLI auth/account status
-   */
-  getClaudeAuthStatus = async (command = 'claude'): Promise<ClaudeAuthStatus | null> => {
-    return ensureElectronIpc().binary.getClaudeAuthStatus(command);
   };
 }
 

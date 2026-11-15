@@ -732,15 +732,6 @@ export default {
     'No Claude Code login found. Run claude in a terminal to sign in first.',
   'heteroAgent.claudeQuota.unavailableRequestBlocked':
     "Anthropic refused the quota request from this machine's network (usually a region restriction). Check the machine's network proxy, then refresh.",
-  'heteroAgent.claudeSdkRuntime.state.closed': 'SDK closed',
-  'heteroAgent.claudeSdkRuntime.state.closing': 'SDK closing',
-  'heteroAgent.claudeSdkRuntime.state.error': 'SDK error',
-  'heteroAgent.claudeSdkRuntime.state.idle': 'SDK idle',
-  'heteroAgent.claudeSdkRuntime.state.monitoring': 'SDK monitoring',
-  'heteroAgent.claudeSdkRuntime.state.running': 'SDK running',
-  'heteroAgent.claudeSdkRuntime.state.stale': 'SDK stale',
-  'heteroAgent.claudeSdkRuntime.state.starting': 'SDK starting',
-  'heteroAgent.claudeSdkRuntime.tooltip': '{{state}}. Active background tasks: {{count}}.',
   'heteroAgent.codexQuota.calendar.title': 'Codex usage calendar',
   'heteroAgent.codexQuota.doesNotExpire': 'Does not expire',
   'heteroAgent.codexQuota.errorConnection':
@@ -863,10 +854,6 @@ export default {
     'The previous Cursor session could not be restored through ACP, so a new conversation has started with fresh context.',
   'heteroAgent.resumeReset.resumeFailed':
     'The saved Codex thread could not be resumed safely, so a new conversation has started for this topic.',
-  'heteroAgent.restartRecovery.resumed_one':
-    'Picked up {{count}} local agent run that the app restart interrupted.',
-  'heteroAgent.restartRecovery.resumed_other':
-    'Picked up {{count}} local agent runs that the app restart interrupted.',
   'heteroAgent.switchCwd.cancel': 'Cancel',
   'heteroAgent.switchCwd.content':
     'Agent sessions are pinned to a working directory. Switching will start a new session for this topic — chat messages stay, but the previous session context cannot be resumed.',

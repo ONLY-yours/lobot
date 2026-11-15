@@ -1,9 +1,4 @@
-import type {
-  HeteroSessionImportPayload,
-  HeteroSessionImportResult,
-  HeteroSessionImportStatus,
-  UpdateTopicMetadataInput,
-} from '@lobechat/types';
+import type { UpdateTopicMetadataInput } from '@lobechat/types';
 
 import { INBOX_SESSION_ID } from '@/const/session';
 import { TopicTrigger } from '@/const/topic';
@@ -92,18 +87,6 @@ export class TopicService {
     groupId?: string | null;
   }): Promise<{ messageCount: number; topicId: string }> => {
     return lambdaClient.topic.importTopic.mutate(params);
-  };
-
-  getHeteroSessionImportStatus = (): Promise<HeteroSessionImportStatus> => {
-    return lambdaClient.topic.getHeteroSessionImportStatus.query();
-  };
-
-  importHeteroSessions = (params: {
-    agentId: string;
-    groupId?: string | null;
-    sessions: HeteroSessionImportPayload[];
-  }): Promise<HeteroSessionImportResult[]> => {
-    return lambdaClient.topic.importHeteroSessions.mutate(params);
   };
 
   getTopics = async (params: QueryTopicParams): Promise<{ items: ChatTopic[]; total: number }> => {

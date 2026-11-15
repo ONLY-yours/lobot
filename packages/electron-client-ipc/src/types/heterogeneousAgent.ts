@@ -104,35 +104,3 @@ export interface HeterogeneousAgentSessionError {
   stderr?: string;
   workingDirectory?: string;
 }
-
-export type HeterogeneousAgentRuntimeState =
-  'starting' | 'running' | 'monitoring' | 'idle' | 'stale' | 'closing' | 'closed' | 'error';
-
-export interface HeterogeneousAgentRuntimeTask {
-  description?: string;
-  lastEventAt: number;
-  startedAt: number;
-  taskId: string;
-  toolUseId?: string;
-  type?: string;
-}
-
-export interface HeterogeneousAgentRuntimeStatus {
-  activeTasks: HeterogeneousAgentRuntimeTask[];
-  idleDeadlineAt?: number;
-  lastEventAt: number;
-  operationId?: string;
-  sessionId: string;
-  staleDeadlineAt?: number;
-  state: HeterogeneousAgentRuntimeState;
-  transport:
-    | 'acp-stdio'
-    | 'claude-sdk'
-    | 'cli-spawn'
-    | 'codex-app-server'
-    | 'copilot-acp'
-    | 'cursor-acp'
-    | 'droid-acp'
-    | 'dsh-jsonrpc'
-    | 'trae-acp';
-}

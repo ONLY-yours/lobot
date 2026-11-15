@@ -2,7 +2,6 @@
  * @vitest-environment happy-dom
  */
 import type * as LobechatConstModule from '@lobechat/const';
-import type * as ElectronClientIpcModule from '@lobechat/electron-client-ipc';
 import type { HeterogeneousProviderConfig } from '@lobechat/types';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -35,11 +34,6 @@ const effectiveAgencyConfig = vi.hoisted(() => ({
 vi.mock('@lobechat/const', async (importOriginal) => ({
   ...(await importOriginal<typeof LobechatConstModule>()),
   isDesktop: true,
-}));
-
-vi.mock('@lobechat/electron-client-ipc', async (importOriginal) => ({
-  ...(await importOriginal<typeof ElectronClientIpcModule>()),
-  useWatchBroadcast: vi.fn(),
 }));
 
 vi.mock('@/business/client/features/ChatInputCredits', () => ({
