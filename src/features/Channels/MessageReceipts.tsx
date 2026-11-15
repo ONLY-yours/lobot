@@ -1,7 +1,7 @@
 import type { ChannelDetail, ChannelPublicJob, ChannelPublicMessage } from '@lobechat/types';
 import { Button, Flexbox, Popover, Text, usePopoverContext } from '@lobehub/ui';
 import * as stylex from '@stylexjs/stylex';
-import { ExternalLink, Square } from 'lucide-react';
+import { Square } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -75,12 +75,11 @@ export function ReplyDetail({
           title={name}
         />
         {/* Name, then its state; the stop action sits at the far end of the same row. The name
-            takes its own width and only shrinks (to an ellipsis) when the row runs out. */}
+            opens the Agent without an icon, keeps its own width and only shrinks (to an ellipsis)
+            when the row runs out. */}
         {agentId ? (
           <Button
             aria-label={t('openAgentNamed', { name })}
-            icon={ExternalLink}
-            iconPosition="end"
             outdent="start"
             size="small"
             style={{ flex: '0 1 auto', minWidth: 0 }}
