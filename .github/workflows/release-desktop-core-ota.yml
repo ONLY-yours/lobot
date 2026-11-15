@@ -49,7 +49,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       app_version: ${{ steps.base.outputs.app_version }}
-      feed_base_url: ${{ steps.server.outputs.feed_base_url }}
       requires_full_release: ${{ steps.gate.outputs.requires_full_release }}
       seq: ${{ steps.seq.outputs.seq }}
       shell_abi: ${{ steps.gate.outputs.shell_abi }}
@@ -57,6 +56,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Each job derives the URL itself: GitHub drops a job output that contains a
+      # secret, so passing it through `needs` would leave the other jobs with "".
       - name: Resolve update server base URL
         id: server
         env:
@@ -158,6 +159,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Resolve update server base URL
+        id: server
+        env:
+          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
+        run: |
+          set -euo pipefail
+          BASE="${UPDATE_SERVER_URL%/}"
+          case "$BASE" in */stable|*/nightly|*/canary|*/beta) BASE="${BASE%/*}" ;; esac
+          case "$BASE" in http://*|https://*) ;; *) BASE="https://$BASE" ;; esac
+          echo "feed_base_url=$BASE" >> "$GITHUB_OUTPUT"
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
 
@@ -197,7 +209,7 @@ jobs:
         env:
           CHANNEL: ${{ inputs.channel }}
           APP_VERSION: ${{ needs.gate.outputs.app_version }}
-          FEED_BASE_URL: ${{ needs.gate.outputs.feed_base_url }}
+          FEED_BASE_URL: ${{ steps.server.outputs.feed_base_url }}
           PLATFORM: ${{ matrix.platform }}
         run: |
           set -euo pipefail
@@ -221,7 +233,7 @@ jobs:
           RENDERER_OTA_PRIVATE_KEY: ${{ secrets.RENDERER_OTA_PRIVATE_KEY }}
           CHANNEL: ${{ inputs.channel }}
           APP_VERSION: ${{ needs.gate.outputs.app_version }}
-          FEED_BASE_URL: ${{ needs.gate.outputs.feed_base_url }}
+          FEED_BASE_URL: ${{ steps.server.outputs.feed_base_url }}
           PLATFORM: ${{ matrix.platform }}
           PREVIOUS_ARGS: ${{ steps.previous.outputs.args }}
           ROLLOUT: ${{ inputs.rollout }}
