@@ -102,7 +102,7 @@ export function MemberStatus({
             icon: Settings,
             key: 'settings',
             label: t('settings.title'),
-            onClick: () => navigate(`${CHANNEL_URL(channel.id, null, channel.projectId)}/settings`),
+            onClick: () => navigate(`${CHANNEL_URL(channel.id)}/settings`),
           },
         ]
       : []),

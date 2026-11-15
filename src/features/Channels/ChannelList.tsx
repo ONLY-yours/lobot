@@ -118,11 +118,9 @@ const styles = stylex.create({
 
 const ChannelThreads = ({
   channelId,
-  projectId,
   threadId,
 }: {
   channelId: string;
-  projectId: string | null;
   threadId: string | null;
 }) => {
   const { t } = useTranslation('channel');
@@ -140,7 +138,7 @@ const ChannelThreads = ({
   return (
     <Flexbox aria-label={t('thread')} gap={1} paddingBlock={1}>
       {shown.map(({ thread, index }, position) => {
-        const path = CHANNEL_URL(channelId, thread.id, projectId);
+        const path = CHANNEL_URL(channelId, thread.id);
         const active = thread.id === threadId;
         const items = threadMenu(detail.channel, thread);
         return (
@@ -215,8 +213,7 @@ const EnabledChannelSection = ({ itemKey = 'channels', projectId }: ChannelSecti
 
   const [showArchived, setShowArchived] = useState(false);
   const activeChannelId = matchChannel(pathname);
-  const create = () =>
-    openCreateChannel((id) => navigate(CHANNEL_URL(id, null, projectId)), projectId);
+  const create = () => openCreateChannel((id) => navigate(CHANNEL_URL(id)), projectId);
   // Only a thread opened as the page is the current entry; one beside the Channel is not.
   const query = new URLSearchParams(search);
   const activeThreadId = query.get('view') === 'page' ? query.get('thread') : null;
@@ -253,7 +250,7 @@ const EnabledChannelSection = ({ itemKey = 'channels', projectId }: ChannelSecti
   ];
 
   const renderChannel = (channel: ChannelListItem) => {
-    const path = CHANNEL_URL(channel.id, null, channel.projectId);
+    const path = CHANNEL_URL(channel.id);
     const open = activeChannelId === channel.id;
     // The open Channel is being read; its count clears once the read receipt lands.
     const unread = !open && (channel.unreadCount ?? 0) > 0;
@@ -291,13 +288,7 @@ const EnabledChannelSection = ({ itemKey = 'channels', projectId }: ChannelSecti
           // The glyph fills its whole box, so it reads larger than other nav icons at 18px.
           iconSize={14}
         />
-        {open && (
-          <ChannelThreads
-            channelId={channel.id}
-            projectId={channel.projectId}
-            threadId={activeThreadId}
-          />
-        )}
+        {open && <ChannelThreads channelId={channel.id} threadId={activeThreadId} />}
       </Flexbox>
     );
   };

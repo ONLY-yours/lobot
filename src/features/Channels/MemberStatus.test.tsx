@@ -7,7 +7,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { MemberStatus } from './MemberStatus';
 
-const { openEnvironment } = vi.hoisted(() => ({ openEnvironment: vi.fn() }));
+const { navigate, openEnvironment } = vi.hoisted(() => ({
+  navigate: vi.fn(),
+  openEnvironment: vi.fn(),
+}));
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('@lobehub/ui', () => ({
@@ -27,7 +30,7 @@ vi.mock('@lobehub/ui', () => ({
   Text: () => null,
 }));
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
-  useWorkspaceAwareNavigate: () => () => {},
+  useWorkspaceAwareNavigate: () => navigate,
 }));
 vi.mock('@/hooks/useCloseOnNavigate', () => ({ useCloseOnNavigate: () => 0 }));
 vi.mock('./AgentEnvironment', () => ({ openChannelAgentEnvironment: openEnvironment }));
@@ -112,6 +115,15 @@ describe('MemberStatus in a group Channel', () => {
     render(createElement(MemberStatus, { detail: detail({ agentId: null }) }));
 
     expect(menuKeys()).toEqual(['copyId', 'settings']);
+  });
+
+  // Lobot registers no `/project/*` routes, so a project-scoped path fell into the error page.
+  it('opens the settings of a project Channel at its own path', () => {
+    render(createElement(MemberStatus, { detail: detail({ agentId: null, projectId: 'prj_1' }) }));
+
+    fireEvent.click(screen.getByText('settings'));
+
+    expect(navigate).toHaveBeenCalledWith('/channels/chn_cook/settings');
   });
 
   it('offers no settings to a member who cannot manage the Channel', () => {

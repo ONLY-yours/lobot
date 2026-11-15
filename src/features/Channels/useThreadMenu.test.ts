@@ -46,7 +46,7 @@ describe('useThreadMenu', () => {
 
     await item(items, 'copyThreadLink').onClick();
     expect(copyToClipboard).toHaveBeenCalledWith(
-      'https://app.lobehub.com/acme/project/prj_1/channels/chn_abcdefghijkl?thread=cht_thread1&view=page',
+      'https://app.lobehub.com/acme/channels/chn_abcdefghijkl?thread=cht_thread1&view=page',
     );
     expect(success).toHaveBeenCalledWith('copyThreadLinkSuccess');
 

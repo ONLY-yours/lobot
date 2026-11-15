@@ -37,10 +37,7 @@ export const useThreadMenu = () => {
       label: t('copyThreadLink'),
       onClick: () =>
         copy(
-          `${appOrigin}${buildWorkspaceAwarePath(
-            CHANNEL_URL(channel.id, thread.id, channel.projectId),
-            slug,
-          )}`,
+          `${appOrigin}${buildWorkspaceAwarePath(CHANNEL_URL(channel.id, thread.id), slug)}`,
           t('copyThreadLinkSuccess'),
         ),
     },

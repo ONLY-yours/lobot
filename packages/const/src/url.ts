@@ -87,15 +87,11 @@ export const GROUP_CHAT_TOPIC_URL = (groupId: string, topicId: string) =>
 
 /**
  * A Channel page. A thread link opens the thread as the page (`view=page`); opening one from
- * a message instead shows it beside the Channel (`?thread=` alone). A project's Channel opens
- * inside the project so its sidebar stays in place.
+ * a message instead shows it beside the Channel (`?thread=` alone). Lobot has no project pages,
+ * so a project's Channel opens at the same path as any other.
  */
-export const CHANNEL_URL = (
-  channelId: string,
-  threadId?: string | null,
-  projectId?: string | null,
-) => {
-  const path = projectId ? `/project/${projectId}/channels/${channelId}` : `/channels/${channelId}`;
+export const CHANNEL_URL = (channelId: string, threadId?: string | null) => {
+  const path = `/channels/${channelId}`;
   return threadId ? `${path}?thread=${encodeURIComponent(threadId)}&view=page` : path;
 };
 
