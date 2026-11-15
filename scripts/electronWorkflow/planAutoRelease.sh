@@ -10,7 +10,8 @@
 #   pushed commits) keeps changes from superseded CI runs from being dropped.
 # - Trigger: any of those commits is a user-facing type (feat / fix / style /
 #   perf, with or without a leading gitmoji). `[skip release]` in the head
-#   commit opts out.
+#   commit's subject opts out; the body is ignored so a message that merely
+#   explains the option does not trigger it.
 # - Version: the highest plain `vX.Y.Z` tag plus 0.0.1, or 0.0.1 when only the
 #   early date-stamped prereleases (v0.0.0-YYYYMMDD.N) exist.
 
@@ -32,9 +33,9 @@ if [ -n "$HEAD_TAGS" ]; then
   skip "already tagged: ${HEAD_TAGS%%$'\n'*}"
 fi
 
-HEAD_MESSAGE="$(git log -1 --format=%B "$SHA")"
-if grep -qiF '[skip release]' <<< "$HEAD_MESSAGE"; then
-  skip 'head commit asks for [skip release]'
+HEAD_SUBJECT="$(git log -1 --format=%s "$SHA")"
+if grep -qiF '[skip release]' <<< "$HEAD_SUBJECT"; then
+  skip 'head commit subject asks for [skip release]'
 fi
 
 BASE="$(git describe --tags --abbrev=0 --match 'v*' "$SHA" 2>/dev/null || true)"

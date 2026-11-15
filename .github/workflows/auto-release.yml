@@ -8,7 +8,7 @@ name: Auto Release
 # 提交打 vX.Y.Z tag，再以该 tag 触发 Release Desktop 构建并发布 stable。
 #
 # - 只发 CI 通过的提交；被后续 push 取消的 CI 不发，它的改动会随下一次发出
-# - head 提交写 [skip release] 可跳过本次
+# - head 提交的标题（首行）写 [skip release] 可跳过本次
 # - 用 GITHUB_TOKEN 推的 tag 不会再触发 Release Desktop 的 tag push，
 #   所以这里显式 dispatch，避免重复构建
 # ============================================
