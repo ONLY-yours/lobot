@@ -2,14 +2,13 @@ import { isDesktop } from '@lobechat/const';
 import { nanoid } from '@lobechat/utils';
 import {
   ActionIcon,
-  Button,
   Center,
   createStaticStyles,
+  type DropdownItem,
+  DropdownMenu,
   Empty,
   Flexbox,
-  Icon,
   Input,
-  Text,
   toast,
 } from '@lobehub/ui';
 import {
@@ -19,6 +18,7 @@ import {
   ExternalLink,
   Globe,
   Import,
+  MoreHorizontal,
   RefreshCw,
   SquareDashedMousePointer,
   XCircle,
@@ -26,9 +26,7 @@ import {
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { BrowserIcon } from '@/components/BrowserIcon';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
-import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 import { electronBrowserSidebarService } from '@/services/electron/browserSidebar';
 import { browserWebviewRegistry } from '@/services/electron/browserWebviewRegistry';
 import { useChatStore } from '@/store/chat';
@@ -36,7 +34,6 @@ import { useFileStore } from '@/store/file';
 import { useGlobalStore } from '@/store/global';
 
 import type { ComposerTarget } from '../../types';
-import { BROWSER_IMPORT_BANNER_DISMISSED_STORAGE_KEY } from './const';
 import { useBrowserSidebarState } from './useBrowserSidebarState';
 import {
   buildScreenshotFileName,
@@ -123,31 +120,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
       background: ${cssVar.colorBgContainer};
     }
   `,
-  importBanner: css`
-    container-type: inline-size;
-    flex-shrink: 0;
-    flex-wrap: wrap;
-
-    min-height: 72px;
-    padding-block: 12px;
-    padding-inline: 16px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  importCopy: css`
-    flex: 1;
-    min-width: 0;
-  `,
-  importActions: css`
-    margin-inline-start: auto;
-
-    @container (max-width: 480px) {
-      flex-basis: 100%;
-      justify-content: flex-end;
-      margin-inline-start: 44px;
-    }
-  `,
   toolbarActions: css`
     margin-inline-start: auto;
   `,
@@ -187,10 +159,6 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
   const [isImporting, setIsImporting] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isPicking, setIsPicking] = useState(false);
-  const [isImportBannerDismissed, setIsImportBannerDismissed] = useLocalStorageState(
-    BROWSER_IMPORT_BANNER_DISMISSED_STORAGE_KEY,
-    false,
-  );
   const globalRequest = useGlobalStore((s) => s.status.workingSidebarBrowserRequest);
   const clearBrowserTabRequest = useGlobalStore((s) => s.clearBrowserTabRequest);
   const ownsRequest = props.request !== undefined;
@@ -322,7 +290,9 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
     };
   }, [sessionId]);
 
+  // Re-running it refreshes the shared profile's cookies, so the menu offers it as a sync.
   const handleImportChromeLoginData = async () => {
+    if (isImporting) return;
     setIsImporting(true);
     try {
       const result = await electronBrowserSidebarService.importChromeLoginData();
@@ -332,7 +302,6 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
       }
 
       toast.success(t('workingPanel.browser.import.success', { count: result.importedCount }));
-      setIsImportBannerDismissed(true);
       if (state.attached) {
         void runAction(() => electronBrowserSidebarService.reload({ sessionId }));
       }
@@ -343,6 +312,16 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
       setIsImporting(false);
     }
   };
+
+  const moreItems: DropdownItem[] = [
+    {
+      disabled: isImporting,
+      icon: Import,
+      key: 'syncChromeLogin',
+      label: t('workingPanel.browser.import.sync'),
+      onClick: () => void handleImportChromeLoginData(),
+    },
+  ];
 
   // External open requests (web-browsing search results, store action) arrive as
   // one-shot nonces; the pane may mount after the request was fired, so consume
@@ -458,6 +437,14 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
             title={t('workingPanel.browser.actions.capture')}
             onClick={() => void addScreenshotToInput()}
           />
+          <DropdownMenu items={moreItems} placement={'bottomRight'}>
+            <ActionIcon
+              icon={MoreHorizontal}
+              loading={isImporting}
+              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              title={t('more', { ns: 'common' })}
+            />
+          </DropdownMenu>
         </Flexbox>
         {/* Sits on the toolbar edge so loading feedback remains stable. */}
         {state.isLoading && (
@@ -469,32 +456,6 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
           />
         )}
       </Flexbox>
-      {!isImportBannerDismissed && (
-        <Flexbox horizontal align={'center'} className={styles.importBanner} gap={12}>
-          <BrowserIcon browser={'Chrome'} size={32} />
-          <Flexbox className={styles.importCopy} gap={0}>
-            <Text strong>{t('workingPanel.browser.import.title')}</Text>
-            <Text ellipsis type={'secondary'}>
-              {t('workingPanel.browser.import.desc')}
-            </Text>
-          </Flexbox>
-          <Flexbox horizontal align={'center'} className={styles.importActions} gap={4}>
-            <Button
-              icon={<Icon icon={Import} />}
-              loading={isImporting}
-              onClick={handleImportChromeLoginData}
-            >
-              {t('workingPanel.browser.import.action')}
-            </Button>
-            <ActionIcon
-              icon={XCircle}
-              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-              title={t('workingPanel.browser.import.dismiss')}
-              onClick={() => setIsImportBannerDismissed(true)}
-            />
-          </Flexbox>
-        </Flexbox>
-      )}
       <Flexbox className={styles.container}>
         <div className={styles.viewport} ref={viewportRef} />
       </Flexbox>
