@@ -16,8 +16,9 @@ export const OWN_FRAME_TABS = new Set<string>([
 export const FULL_WIDTH_TABS = new Set<string>([SettingsTabs.Devices]);
 
 /**
- * Tabs laid out as Telegram-style inset groups: rounded cards on the secondary
- * background, in a narrower column so label and value stay within one glance.
+ * Tabs laid out as Telegram-style inset groups: rounded cards on the inset
+ * surface (see `InsetSurface`), in a narrower column so label and value stay
+ * within one glance.
  */
 export const INSET_TABS = new Set<string>([SettingsTabs.Profile]);
 
@@ -26,6 +27,3 @@ export const getSettingsContainerMaxWidth = (tab: string | undefined) => {
   if (tab && INSET_TABS.has(tab)) return 720;
   return 1024;
 };
-
-export const getSettingsContainerVariant = (tab: string | undefined) =>
-  tab && INSET_TABS.has(tab) ? 'secondary' : 'default';

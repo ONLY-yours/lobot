@@ -19,6 +19,8 @@ export const settingsRoute: RouteObject = {
   children: [
     { element: settingsElement, handle: { meta: settingsRouteMeta }, index: true },
     { element: settingsElement, handle: { meta: settingsRouteMeta }, path: ':tab' },
+    // Second-level pages inside a tab, e.g. /settings/profile/username.
+    { element: settingsElement, handle: { meta: settingsRouteMeta }, path: ':tab/:sub' },
   ],
   element: dynamicLayout(
     () => import('@/routes/(main)/settings/_layout'),

@@ -415,6 +415,8 @@ export default {
   'profile.updateUsername': 'Update username',
   'profile.username': 'Username',
   'profile.usernameDuplicate': 'Username is already taken',
+  'profile.usernameEmpty': 'Not set',
+  'profile.usernameHint': 'Letters, numbers and underscores, up to 64 characters.',
   'profile.usernamePlaceholder': 'Enter a username with letters, numbers, or underscores',
   'profile.usernameRequired': 'Username cannot be empty',
   'profile.usernameRule': 'Username can only contain letters, numbers, or underscores',

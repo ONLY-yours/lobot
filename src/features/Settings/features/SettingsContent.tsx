@@ -10,12 +10,10 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { SettingsTabs } from '@/store/global/initialState';
 
 import { componentMap } from './componentMap';
-import {
-  getSettingsContainerMaxWidth,
-  getSettingsContainerVariant,
-  OWN_FRAME_TABS,
-} from './ownFrameTabs';
+import InsetSurface from './InsetSurface';
+import { getSettingsContainerMaxWidth, INSET_TABS, OWN_FRAME_TABS } from './ownFrameTabs';
 import { SettingsPageActionsContext, SettingsPageActionsRow } from './SettingsPageActions';
+import { hasSettingsSubPage, renderSettingsSubPage } from './subPages';
 import { useSettingsTabTitle } from './tabTitles';
 
 const REDIRECT_MAP: Record<string, string> = {
@@ -36,16 +34,21 @@ export const getSettingsRedirect = (tab: string | undefined): string | undefined
 interface SettingsContentProps {
   activeTab?: string;
   mobile?: boolean;
+  /** Second-level page inside the tab, e.g. `username` under profile */
+  subPage?: string;
 }
 
-const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
+const SettingsContent = ({ mobile, activeTab, subPage }: SettingsContentProps) => {
   const navigate = useWorkspaceAwareNavigate();
   const title = useSettingsTabTitle(activeTab);
   const [pageActions, setPageActions] = useState<HTMLElement | null>(null);
 
   useSettingsAnchorScroll();
 
-  const redirectTo = getSettingsRedirect(activeTab);
+  // An unknown sub page falls back to its tab rather than rendering nothing.
+  const redirectTo =
+    getSettingsRedirect(activeTab) ??
+    (subPage && !hasSettingsSubPage(activeTab, subPage) ? activeTab : undefined);
 
   useEffect(() => {
     // `escape: true` keeps the user in personal context even when a workspace is active.
@@ -70,6 +73,9 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
 
   if (redirectTo) return null;
 
+  // Sub pages (e.g. profile → username) draw their own header with a back button.
+  if (subPage) return renderSettingsSubPage(activeTab, subPage);
+
   if (mobile) {
     return activeTab ? renderComponent(activeTab) : renderComponent(SettingsTabs.Profile);
   }
@@ -80,8 +86,9 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
         if (activeTab !== tabKey) return null;
         const content = renderComponent(tabKey);
         if (OWN_FRAME_TABS.has(tabKey)) return <Fragment key={tabKey}>{content}</Fragment>;
-        return (
-          <Fragment key={tabKey}>
+        const inset = INSET_TABS.has(tabKey);
+        const frame = (
+          <>
             <NavHeader styles={{ center: { alignItems: 'center' } }}>
               {title && <Text weight={500}>{title}</Text>}
             </NavHeader>
@@ -90,14 +97,19 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
                 maxWidth={getSettingsContainerMaxWidth(tabKey)}
                 paddingBlock={'24px 128px'}
                 paddingInline={24}
-                variant={getSettingsContainerVariant(tabKey)}
+                style={inset ? { background: 'transparent' } : undefined}
               >
                 {/* Page actions sit in the content column so they align with the body. */}
                 <SettingsPageActionsRow ref={setPageActions} />
                 {content}
               </SettingContainer>
             </SettingsPageActionsContext>
-          </Fragment>
+          </>
+        );
+        return inset ? (
+          <InsetSurface key={tabKey}>{frame}</InsetSurface>
+        ) : (
+          <Fragment key={tabKey}>{frame}</Fragment>
         );
       })}
     </>

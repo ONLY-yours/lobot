@@ -24,7 +24,7 @@ const getSettingsTabFromMatches = (matches: ReturnType<typeof useMatches>) => {
 };
 
 const Layout = memo(() => {
-  const params = useParams<{ tab?: string }>();
+  const params = useParams<{ sub?: string; tab?: string }>();
   const matches = useMatches();
 
   const activeTab =
@@ -34,7 +34,7 @@ const Layout = memo(() => {
 
   // The mobile settings layout already owns the header and back button; the
   // mobile branch renders the tab body only.
-  return <SettingsContent activeTab={activeTab} mobile={isMobileSurface()} />;
+  return <SettingsContent activeTab={activeTab} mobile={isMobileSurface()} subPage={params.sub} />;
 });
 
 Layout.displayName = 'SettingsLayout';

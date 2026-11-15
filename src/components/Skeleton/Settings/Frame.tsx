@@ -5,9 +5,10 @@ import type { ReactNode } from 'react';
 
 import NavHeader from '@/features/NavHeader';
 import SettingContainer from '@/features/Setting/SettingContainer';
+import InsetSurface from '@/features/Settings/features/InsetSurface';
 import {
   getSettingsContainerMaxWidth,
-  getSettingsContainerVariant,
+  INSET_TABS,
 } from '@/features/Settings/features/ownFrameTabs';
 import { SettingsPageActionsRow } from '@/features/Settings/features/SettingsPageActions';
 import { useSettingsTabTitle } from '@/features/Settings/features/tabTitles';
@@ -41,17 +42,23 @@ export const SettingsSkeletonFrame = ({
   actions?: ReactNode;
   children: ReactNode;
   tab: string;
-}) => (
-  <Flexbox aria-busy flex={1} height={'100%'} style={{ minHeight: 0, overflow: 'hidden' }}>
-    <SettingsSkeletonHeader tab={tab} />
-    <SettingContainer
-      maxWidth={getSettingsContainerMaxWidth(tab)}
-      paddingBlock={'24px 128px'}
-      paddingInline={24}
-      variant={getSettingsContainerVariant(tab)}
-    >
-      {actions && <SettingsPageActionsRow>{actions}</SettingsPageActionsRow>}
-      {children}
-    </SettingContainer>
-  </Flexbox>
-);
+}) => {
+  const inset = INSET_TABS.has(tab);
+  const frame = (
+    <Flexbox aria-busy flex={1} height={'100%'} style={{ minHeight: 0, overflow: 'hidden' }}>
+      <SettingsSkeletonHeader tab={tab} />
+      <SettingContainer
+        maxWidth={getSettingsContainerMaxWidth(tab)}
+        paddingBlock={'24px 128px'}
+        paddingInline={24}
+        style={inset ? { background: 'transparent' } : undefined}
+      >
+        {actions && <SettingsPageActionsRow>{actions}</SettingsPageActionsRow>}
+        {children}
+      </SettingContainer>
+    </Flexbox>
+  );
+
+  // Inset tabs draw their gray surface behind the header too, like the settled page.
+  return inset ? <InsetSurface>{frame}</InsetSurface> : frame;
+};
