@@ -35,7 +35,6 @@
   "actions.import": "Konversation importieren",
   "actions.markCompleted": "Als abgeschlossen markieren",
   "actions.moveToAgent": "Zu einem anderen Assistenten wechseln",
-  "actions.openInNewTab": "In neuem Tab öffnen",
   "actions.openInNewWindow": "In neuem Fenster öffnen",
   "actions.pin": "Anheften",
   "actions.removeAll": "Alle Themen löschen",

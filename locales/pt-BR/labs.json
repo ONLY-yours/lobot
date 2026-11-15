@@ -12,8 +12,6 @@
   "features.claudeCodeSdk.title": "Runtime do SDK Claude Code",
   "features.codexAppServer.desc": "Execute sessões do Codex através do servidor de aplicativos local em vez de processos CLI de execução única. Permite streaming de tokens e controle nativo de turnos.",
   "features.codexAppServer.title": "Runtime do Servidor de Aplicativos Codex",
-  "features.desktopSplitView.desc": "Exiba duas abas da área de trabalho lado a lado, com navegação independente e um divisor redimensionável.",
-  "features.desktopSplitView.title": "Visualização Dividida de Abas",
   "features.deviceTunnel.desc": "Dê um link a uma porta no dispositivo de trabalho, para que um servidor de desenvolvimento em execução lá possa ser aberto daqui. O link só funciona para pessoas que podem acessar esse dispositivo.",
   "features.deviceTunnel.title": "Links de Porta Remota",
   "features.evalCapture.desc": "Adiciona uma ação de mensagem que captura uma interação de conversa — seu contexto anterior, entrada e a resposta produzida — como um caso de teste de avaliação.",

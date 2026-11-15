@@ -191,7 +191,8 @@ export const UserLabSchema = z.object({
    */
   enableCodexAppServer: z.boolean().optional(),
   /**
-   * enable displaying two desktop tabs side by side
+   * @deprecated the desktop window no longer has tabs to split; kept so stored
+   * preferences still parse
    */
   enableDesktopSplitView: z.boolean().optional(),
   /**

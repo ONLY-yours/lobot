@@ -12,8 +12,6 @@
   "features.claudeCodeSdk.title": "Claude Code SDK-Laufzeit",
   "features.codexAppServer.desc": "Führen Sie Codex-Sitzungen über den lokalen App-Server aus, anstatt über einmalige CLI-Prozesse. Ermöglicht Token-Streaming und native Steuerung von Dialogen.",
   "features.codexAppServer.title": "Codex App-Server-Laufzeit",
-  "features.desktopSplitView.desc": "Zeigen Sie zwei Desktop-Tabs nebeneinander an, mit unabhängiger Navigation und einem anpassbaren Trennbalken.",
-  "features.desktopSplitView.title": "Geteilte Tab-Ansicht",
   "features.deviceTunnel.desc": "Geben Sie einem Port auf dem Arbeitsgerät einen Link, damit ein dort laufender Entwicklungsserver von hier aus geöffnet werden kann. Der Link funktioniert nur für Personen, die auf dieses Gerät zugreifen können.",
   "features.deviceTunnel.title": "Remote-Port-Links",
   "features.evalCapture.desc": "Fügt eine Nachrichtenaktion hinzu, die eine Gesprächsrunde – ihren vorherigen Kontext, die Eingabe und die daraus resultierende Antwort – als Evaluierungstestfall erfasst.",

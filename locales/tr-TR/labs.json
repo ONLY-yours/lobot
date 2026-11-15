@@ -12,8 +12,6 @@
   "features.claudeCodeSdk.title": "Claude Code SDK Çalışma Zamanı",
   "features.codexAppServer.desc": "Codex oturumlarını tek seferlik CLI işlemleri yerine yerel uygulama sunucusu üzerinden çalıştırın. Token akışını ve yerel tur kontrolünü etkinleştirir.",
   "features.codexAppServer.title": "Codex Uygulama Sunucusu Çalışma Zamanı",
-  "features.desktopSplitView.desc": "İki masaüstü sekmesini yan yana göster, bağımsız gezinme ve yeniden boyutlandırılabilir bir ayırıcı ile.",
-  "features.desktopSplitView.title": "Sekme Bölme Görünümü",
   "features.deviceTunnel.desc": "Çalışan cihazdaki bir porta bir bağlantı verin, böylece orada çalışan bir geliştirme sunucusu buradan açılabilir. Bağlantı yalnızca o cihaza erişebilen kişiler için çalışır.",
   "features.deviceTunnel.title": "Uzaktan Port Bağlantıları",
   "features.evalCapture.desc": "Bir konuşma turunu — önceki bağlamı, girdi ve ürettiği cevabı — bir değerlendirme test vakası olarak yakalayan bir mesaj eylemi ekler.",

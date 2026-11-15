@@ -59,7 +59,6 @@ export default {
   'actions.unmarkCompleted': 'Unarchive',
   'actions.export': 'Export Topics',
   'actions.import': 'Import Topics',
-  'actions.openInNewTab': 'Open in New Tab',
   'actions.openInNewWindow': 'Open in a new window',
   'actions.removeAll': 'Delete All Topics',
   'actions.removeAllOwn': 'Delete My Topics',

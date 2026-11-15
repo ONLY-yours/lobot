@@ -12,8 +12,6 @@
   "features.claudeCodeSdk.title": "Claude Code SDKランタイム",
   "features.codexAppServer.desc": "CodexセッションをワンショットCLIプロセスではなく、ローカルのアプリサーバーを通じて実行します。トークンストリーミングとネイティブターン制御を可能にします。",
   "features.codexAppServer.title": "Codexアプリサーバーランタイム",
-  "features.desktopSplitView.desc": "2つのデスクトップタブを並べて表示し、独立したナビゲーションとサイズ変更可能な仕切りを備えています。",
-  "features.desktopSplitView.title": "タブ分割ビュー",
   "features.deviceTunnel.desc": "作業デバイス上のポートにリンクを提供し、そこで実行されている開発サーバーをここから開くことができます。このリンクは、そのデバイスにアクセスできる人だけが使用できます。",
   "features.deviceTunnel.title": "リモートポートリンク",
   "features.evalCapture.desc": "会話のターン、その前のコンテキスト、入力、および生成された回答を評価テストケースとしてキャプチャするメッセージアクションを追加します。",

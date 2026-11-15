@@ -12,8 +12,6 @@
   "features.claudeCodeSdk.title": "Entorno de Ejecución del SDK de Claude Code",
   "features.codexAppServer.desc": "Ejecuta sesiones de Codex a través del servidor de aplicaciones local en lugar de procesos CLI de una sola ejecución. Permite la transmisión de tokens y el control nativo de turnos.",
   "features.codexAppServer.title": "Entorno de Ejecución del Servidor de Aplicaciones Codex",
-  "features.desktopSplitView.desc": "Muestra dos pestañas de escritorio lado a lado, con navegación independiente y un divisor ajustable.",
-  "features.desktopSplitView.title": "Vista Dividida de Pestañas",
   "features.deviceTunnel.desc": "Asigna un enlace a un puerto en el dispositivo de trabajo, para que un servidor de desarrollo que se esté ejecutando allí pueda abrirse desde aquí. El enlace solo funciona para personas que puedan acceder a ese dispositivo.",
   "features.deviceTunnel.title": "Enlaces de Puertos Remotos",
   "features.evalCapture.desc": "Agrega una acción de mensaje que captura un turno de conversación —su contexto previo, entrada y la respuesta que produjo— como un caso de prueba de evaluación.",

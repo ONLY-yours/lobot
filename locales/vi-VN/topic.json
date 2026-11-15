@@ -35,7 +35,6 @@
   "actions.import": "Nhập cuộc trò chuyện",
   "actions.markCompleted": "Đánh dấu hoàn thành",
   "actions.moveToAgent": "Chuyển đến trợ lý khác",
-  "actions.openInNewTab": "Mở trong tab mới",
   "actions.openInNewWindow": "Mở trong cửa sổ mới",
   "actions.pin": "Ghim",
   "actions.removeAll": "Xóa tất cả chủ đề",

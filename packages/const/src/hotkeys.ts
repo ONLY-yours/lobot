@@ -49,9 +49,7 @@ export const HotkeyEnum = {
   EditMessage: 'editMessage',
   FindInTopic: 'findInTopic',
   NavigateToChat: 'navigateToChat',
-  NextTab: 'nextTab',
   OpenChatSettings: 'openChatSettings',
-  PrevTab: 'prevTab',
   OpenHotkeyHelper: 'openHotkeyHelper',
   OpenTaskFilter: 'openTaskFilter',
   RegenerateMessage: 'regenerateMessage',
@@ -60,7 +58,6 @@ export const HotkeyEnum = {
   Search: 'search',
   ShowApp: 'showApp',
   SwitchAgent: 'switchAgent',
-  SwitchTab: 'switchTab',
   ToggleFavorite: 'toggleFavorite',
   ToggleLeftPanel: 'toggleLeftPanel',
   ToggleRightPanel: 'toggleRightPanel',
@@ -94,7 +91,7 @@ export const HOTKEYS_REGISTRATION: HotkeyRegistration = [
     keys: combineKeys([KeyEnum.Mod, 'j']),
     scopes: [HotkeyScopeEnum.Global],
   },
-  // Desktop's number shortcuts select titlebar tabs, not agents.
+  // Pinned-agent number switching is web-only.
   ...(!isDesktop
     ? [
         {
@@ -106,27 +103,6 @@ export const HOTKEYS_REGISTRATION: HotkeyRegistration = [
         },
       ]
     : []),
-  {
-    group: HotkeyGroupEnum.Essential,
-    id: HotkeyEnum.SwitchTab,
-    keys: combineKeys([KeyEnum.Ctrl, KeyEnum.Number]),
-    nonEditable: true,
-    scopes: [HotkeyScopeEnum.Global],
-  },
-  {
-    group: HotkeyGroupEnum.Essential,
-    id: HotkeyEnum.NextTab,
-    keys: combineKeys([KeyEnum.Ctrl, KeyEnum.Tab]),
-    nonEditable: true,
-    scopes: [HotkeyScopeEnum.Global],
-  },
-  {
-    group: HotkeyGroupEnum.Essential,
-    id: HotkeyEnum.PrevTab,
-    keys: combineKeys([KeyEnum.Ctrl, KeyEnum.Shift, KeyEnum.Tab]),
-    nonEditable: true,
-    scopes: [HotkeyScopeEnum.Global],
-  },
   {
     group: HotkeyGroupEnum.Essential,
     id: HotkeyEnum.NavigateToChat,

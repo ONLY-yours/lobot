@@ -5,7 +5,7 @@ import * as slugModule from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { getOrCreateTabRouter, resetTabRouterManager } from '@/features/Electron/TabHost';
 
 const mocks = vi.hoisted(() => ({
-  storeState: { activeTabId: 't1' as string | null, addNewTab: vi.fn() },
+  storeState: { activeTabId: 't1' as string | null },
 }));
 
 vi.mock('@/store/electron', () => ({
@@ -30,7 +30,6 @@ afterEach(() => {
   resetTabRouterManager();
   vi.restoreAllMocks();
   mocks.storeState.activeTabId = 't1';
-  mocks.storeState.addNewTab = vi.fn();
 });
 
 describe('appNavigate (desktop)', () => {
@@ -58,16 +57,6 @@ describe('appNavigate (desktop)', () => {
     appNavigate('/settings', { replace: true });
 
     expect(navigate).toHaveBeenCalledWith('/settings', { replace: true });
-  });
-
-  it('opens a new tab via the store without navigating any router', () => {
-    vi.spyOn(slugModule, 'getActiveWorkspaceSlug').mockReturnValue('acme');
-    const navigate = seedActiveRouter();
-
-    appNavigate('/group/y', { target: 'newTab' });
-
-    expect(mocks.storeState.addNewTab).toHaveBeenCalledWith('/acme/group/y');
-    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('drops the navigation when the active tab has no live router', () => {

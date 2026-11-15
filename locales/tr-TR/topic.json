@@ -35,7 +35,6 @@
   "actions.import": "Konuşmayı İçe Aktar",
   "actions.markCompleted": "Tamamlandı olarak işaretle",
   "actions.moveToAgent": "Başka bir ajana taşı",
-  "actions.openInNewTab": "Yeni Sekmede Aç",
   "actions.openInNewWindow": "Yeni pencerede aç",
   "actions.pin": "Sabitle",
   "actions.removeAll": "Tüm Konuları Sil",

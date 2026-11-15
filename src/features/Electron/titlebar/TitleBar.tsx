@@ -2,7 +2,6 @@ import { TITLE_BAR_HEIGHT } from '@lobechat/desktop-bridge';
 import { Divider, Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
-import { useDeferredMount } from '@/hooks/useDeferredMount';
 import { electronStylish } from '@/styles/electron';
 import { getPlatform } from '@/utils/platform';
 
@@ -12,14 +11,15 @@ import { useWatchThemeUpdate } from '../system/useWatchThemeUpdate';
 import { UpdateNotification } from '../updater/UpdateNotification';
 import { getTitleBarLayoutConfig } from './layout';
 import NavigationBar from './NavigationBar';
-import TabBar from './TabBar';
+import ScopeTitle from './ScopeTitle';
+import { useMenuPageCommands } from './useMenuPageCommands';
 import WinControl from './WinControl';
 
 const platform = getPlatform();
 
 const TitleBar = memo(() => {
   useWatchThemeUpdate();
-  const tabBarMounted = useDeferredMount();
+  useMenuPageCommands();
 
   const { padding, showCustomWinControl } = getTitleBarLayoutConfig(platform);
 
@@ -30,11 +30,11 @@ const TitleBar = memo(() => {
       className={electronStylish.draggable}
       height={TITLE_BAR_HEIGHT}
       justify={'space-between'}
-      style={{ minHeight: TITLE_BAR_HEIGHT, padding }}
+      style={{ minHeight: TITLE_BAR_HEIGHT, padding, position: 'relative' }}
       width={'100%'}
     >
       <NavigationBar />
-      {tabBarMounted && <TabBar />}
+      <ScopeTitle />
 
       <Flexbox horizontal align={'center'} gap={4}>
         <Flexbox horizontal className={electronStylish.nodrag} gap={8}>

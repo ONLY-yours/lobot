@@ -35,7 +35,6 @@
   "actions.import": "Импортирай разговор",
   "actions.markCompleted": "Отбележи като завършена",
   "actions.moveToAgent": "Премести към друг асистент",
-  "actions.openInNewTab": "Отвори в нов раздел",
   "actions.openInNewWindow": "Отвори в нов прозорец",
   "actions.pin": "Закачи",
   "actions.removeAll": "Изтрий всички теми",

@@ -35,7 +35,6 @@
   "actions.import": "وارد کردن گفت‌وگو",
   "actions.markCompleted": "علامت‌گذاری به‌عنوان انجام‌شده",
   "actions.moveToAgent": "انتقال به دستیار دیگر",
-  "actions.openInNewTab": "باز کردن در تب جدید",
   "actions.openInNewWindow": "باز کردن در پنجره جدید",
   "actions.pin": "سنجاق کردن",
   "actions.removeAll": "حذف تمام گفت‌وگوها",

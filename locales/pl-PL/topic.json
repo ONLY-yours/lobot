@@ -35,7 +35,6 @@
   "actions.import": "Importuj rozmowę",
   "actions.markCompleted": "Oznacz jako ukończone",
   "actions.moveToAgent": "Przenieś do innego asystenta",
-  "actions.openInNewTab": "Otwórz w nowej karcie",
   "actions.openInNewWindow": "Otwórz w nowym oknie",
   "actions.pin": "Przypnij",
   "actions.removeAll": "Usuń wszystkie tematy",

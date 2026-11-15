@@ -12,8 +12,6 @@
   "features.claudeCodeSdk.title": "Thời gian chạy Claude Code SDK",
   "features.codexAppServer.desc": "Chạy các phiên Codex thông qua máy chủ ứng dụng cục bộ thay vì các quy trình CLI một lần. Cho phép truyền tải token và kiểm soát lượt tự nhiên.",
   "features.codexAppServer.title": "Thời gian chạy Máy chủ Ứng dụng Codex",
-  "features.desktopSplitView.desc": "Hiển thị hai tab trên màn hình máy tính cạnh nhau, với khả năng điều hướng độc lập và thanh chia có thể điều chỉnh kích thước.",
-  "features.desktopSplitView.title": "Chế độ Xem Tab Chia",
   "features.deviceTunnel.desc": "Cung cấp một cổng trên thiết bị làm việc một liên kết, để một máy chủ phát triển đang chạy ở đó có thể được mở từ đây. Liên kết chỉ hoạt động cho những người có thể truy cập thiết bị đó.",
   "features.deviceTunnel.title": "Liên Kết Cổng Từ Xa",
   "features.evalCapture.desc": "Thêm một hành động tin nhắn để ghi lại một lượt hội thoại — bao gồm ngữ cảnh trước đó, đầu vào và câu trả lời đã tạo ra — làm một trường hợp kiểm tra đánh giá.",

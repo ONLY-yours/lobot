@@ -12,8 +12,6 @@
   "features.claudeCodeSdk.title": "وقت تشغيل Claude Code SDK",
   "features.codexAppServer.desc": "تشغيل جلسات Codex من خلال خادم التطبيق المحلي بدلاً من عمليات CLI الفردية. يتيح تدفق الرموز والتحكم الأصلي في الأدوار.",
   "features.codexAppServer.title": "وقت تشغيل خادم تطبيق Codex",
-  "features.desktopSplitView.desc": "عرض علامتي تبويب سطح المكتب جنبًا إلى جنب، مع التنقل المستقل وفاصل قابل لتغيير الحجم.",
-  "features.desktopSplitView.title": "عرض علامات التبويب المنقسمة",
   "features.deviceTunnel.desc": "امنح منفذًا على الجهاز العامل رابطًا، بحيث يمكن فتح خادم التطوير الذي يعمل هناك من هنا. يعمل الرابط فقط للأشخاص الذين يمكنهم الوصول إلى ذلك الجهاز.",
   "features.deviceTunnel.title": "روابط المنافذ البعيدة",
   "features.evalCapture.desc": "يضيف إجراء رسالة يلتقط دورة المحادثة - سياقها السابق، الإدخال والإجابة التي أنتجتها - كحالة اختبار تقييم.",

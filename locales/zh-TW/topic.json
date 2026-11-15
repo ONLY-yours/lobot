@@ -35,7 +35,6 @@
   "actions.import": "匯入對話",
   "actions.markCompleted": "標記為已完成",
   "actions.moveToAgent": "移至另一位助理",
-  "actions.openInNewTab": "在新分頁中開啟",
   "actions.openInNewWindow": "在新視窗中開啟",
   "actions.pin": "置頂",
   "actions.removeAll": "刪除全部話題",

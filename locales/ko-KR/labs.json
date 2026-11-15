@@ -12,8 +12,6 @@
   "features.claudeCodeSdk.title": "Claude Code SDK 런타임",
   "features.codexAppServer.desc": "Codex 세션을 단발성 CLI 프로세스 대신 로컬 앱 서버를 통해 실행합니다. 토큰 스트리밍과 네이티브 턴 제어를 활성화합니다.",
   "features.codexAppServer.title": "Codex 앱 서버 런타임",
-  "features.desktopSplitView.desc": "두 개의 데스크탑 탭을 나란히 표시하며, 독립적인 탐색과 크기 조정이 가능한 구분선을 제공합니다.",
-  "features.desktopSplitView.title": "탭 분할 보기",
   "features.deviceTunnel.desc": "작업 중인 장치의 포트에 링크를 제공하여, 해당 장치에서 실행 중인 개발 서버를 여기서 열 수 있도록 합니다. 이 링크는 해당 장치에 접근할 수 있는 사람들만 사용할 수 있습니다.",
   "features.deviceTunnel.title": "원격 포트 링크",
   "features.evalCapture.desc": "대화의 이전 컨텍스트, 입력 및 생성된 답변을 평가 테스트 케이스로 캡처하는 메시지 작업을 추가합니다.",

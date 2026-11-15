@@ -40,10 +40,6 @@ vi.mock('@/features/ShareModal', () => ({
   openShareModal: vi.fn(),
 }));
 
-vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
-  useWorkspaceAwareNavigate: () => vi.fn(),
-}));
-
 vi.mock('@/hooks/useAppOrigin', () => ({
   useAppOrigin: () => 'https://example.com',
 }));
@@ -66,11 +62,6 @@ vi.mock('@/store/chat', () => ({
       unmarkTopicCompleted: vi.fn(),
       updateTopicTitle: vi.fn(),
     }),
-}));
-
-vi.mock('@/store/electron', () => ({
-  useElectronStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({ addTab: vi.fn() }),
 }));
 
 vi.mock('@/store/global', () => ({
@@ -117,7 +108,6 @@ describe('PageEditor Copilot TopicSelector useDropdownMenu', () => {
       'favorite',
       'autoRename',
       'rename',
-      'openInNewTab',
       'openInNewWindow',
       'copySessionId',
       'copyLink',

@@ -10,7 +10,7 @@ import {
 } from '@/features/Electron/TabHost/tabRouterManager';
 
 const mocks = vi.hoisted(() => ({
-  storeState: { activeTabId: 'active' as string | null, addNewTab: vi.fn() },
+  storeState: { activeTabId: 'active' as string | null },
 }));
 
 vi.mock('@/store/electron', () => ({

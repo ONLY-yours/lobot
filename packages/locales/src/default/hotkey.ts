@@ -20,14 +20,8 @@ export default {
   'findInTopic.title': 'Find in Topic or Task',
   'navigateToChat.desc': 'Switch to the Chat tab and enter Lobe AI',
   'navigateToChat.title': 'Switch to Default Chat',
-  'nextTab.desc':
-    'Cycle to the next browser-style tab in the Desktop app; wraps around to the first tab at the end',
-  'nextTab.title': 'Next Tab',
   'openChatSettings.desc': 'View and modify the settings for the current conversation',
   'openChatSettings.title': 'Open Chat Settings',
-  'prevTab.desc':
-    'Cycle to the previous tab in the Desktop app; wraps around to the last tab at the beginning',
-  'prevTab.title': 'Previous Tab',
   'openHotkeyHelper.desc': 'View instructions for all keyboard shortcuts',
   'openHotkeyHelper.title': 'Open Hotkey Help',
   'regenerateMessage.desc': 'Regenerate the last message',
@@ -43,8 +37,6 @@ export default {
   'switchAgent.desc':
     'Switch between pinned agents in the sidebar by holding Ctrl and pressing numbers 0-9',
   'switchAgent.title': 'Quick Switch Agent',
-  'switchTab.desc': 'Jump to a specific tab by its position (1–9) in the Desktop app tab bar',
-  'switchTab.title': 'Switch to Tab by Number',
   'openTaskFilter.desc': 'Open the filter menu on the Tasks page',
   'openTaskFilter.title': 'Filter Tasks',
   'toggleFavorite.desc': 'Add the open page to the Favorites section of the sidebar, or remove it',

@@ -13,8 +13,6 @@ export const labPreferSelectors = {
   enableClaudeCodeSdk: (s: UserState): boolean => s.preference.lab?.enableClaudeCodeSdk ?? false,
   enableCodexAppServer: (s: UserState): boolean => s.preference.lab?.enableCodexAppServer ?? false,
   enableDeviceTunnel: (s: UserState): boolean => s.preference.lab?.enableDeviceTunnel ?? false,
-  enableDesktopSplitView: (s: UserState): boolean =>
-    s.preference.lab?.enableDesktopSplitView ?? false,
   enableEvalCapture: (s: UserState): boolean => s.preference.lab?.enableEvalCapture ?? false,
   enableHeteroSessionImport: (s: UserState): boolean =>
     s.preference.lab?.enableHeteroSessionImport ?? false,

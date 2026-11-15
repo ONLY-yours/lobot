@@ -35,7 +35,6 @@
   "actions.import": "Import Topics",
   "actions.markCompleted": "Archive",
   "actions.moveToAgent": "Move to another agent",
-  "actions.openInNewTab": "Open in New Tab",
   "actions.openInNewWindow": "Open in a new window",
   "actions.pin": "Pin",
   "actions.removeAll": "Delete All Topics",

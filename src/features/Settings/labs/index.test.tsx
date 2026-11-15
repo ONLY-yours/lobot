@@ -103,13 +103,6 @@ describe('Labs settings page', () => {
     expect(screen.getByText('features.messageTextSelectionActions.title')).toBeDefined();
   });
 
-  it('renders the desktop split view as an alpha lab toggle', () => {
-    renderPage();
-
-    const splitView = screen.getByText('features.desktopSplitView.title');
-    expect(within(splitView).getByText('stage.alpha.label')).toBeDefined();
-  });
-
   it('puts the self-evolving usage note on its own line below the description', () => {
     renderPage();
 

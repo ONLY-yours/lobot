@@ -9,7 +9,6 @@ import {
   Hash,
   Link2,
   LucideCopy,
-  PanelTop,
   PencilLine,
   Pin,
   PinOff,
@@ -25,12 +24,10 @@ import { openRenameModal } from '@/components/RenameModal';
 import { isDesktop } from '@/const/version';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
 import { openShareModal } from '@/features/ShareModal';
-import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
-import { useElectronStore } from '@/store/electron';
 import { useGlobalStore } from '@/store/global';
 
 interface UseDropdownMenuProps {
@@ -55,12 +52,10 @@ export const useDropdownMenu = ({
   const { t } = useTranslation(['common', 'topic', 'chat']);
 
   const appOrigin = useAppOrigin();
-  const navigate = useWorkspaceAwareNavigate();
   const activeWorkspaceSlug = useActiveWorkspaceSlug();
   const { allowed: canCreateTopic } = usePermission('create_content');
   const { allowed: canEditTopic } = usePermission('edit_own_content');
 
-  const addTab = useElectronStore((s) => s.addTab);
   const openTopicInNewWindow = useGlobalStore((s) => s.openTopicInNewWindow);
 
   const [
@@ -155,22 +150,6 @@ export const useDropdownMenu = ({
           ? [
               {
                 disabled: !agentId,
-                icon: <Icon icon={PanelTop} />,
-                key: 'openInNewTab',
-                label: t('actions.openInNewTab', { ns: 'topic' }),
-                onClick: () => {
-                  if (!agentId) return;
-                  const url = buildWorkspaceAwarePath(
-                    AGENT_CHAT_TOPIC_URL(agentId, topicId),
-                    activeWorkspaceSlug,
-                  );
-                  addTab(url);
-                  navigate(url, { escape: true });
-                  onClose();
-                },
-              },
-              {
-                disabled: !agentId,
                 icon: <Icon icon={ExternalLink} />,
                 key: 'openInNewWindow',
                 label: t('actions.openInNewWindow', { ns: 'topic' }),
@@ -252,7 +231,6 @@ export const useDropdownMenu = ({
         },
       ].filter(Boolean) as DropdownItem[],
     [
-      addTab,
       activeWorkspaceSlug,
       agentId,
       appOrigin,
@@ -265,7 +243,6 @@ export const useDropdownMenu = ({
       handleOpenShareModal,
       isCompleted,
       markTopicCompleted,
-      navigate,
       onClose,
       onDelete,
       openTopicInNewWindow,

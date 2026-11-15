@@ -298,7 +298,7 @@ describe('MacOSMenu', () => {
       expect(mainWindow.broadcast).toHaveBeenCalledWith('createNewTab', { path: '/settings' });
     });
 
-    it('should place New Window after New Tab in the File menu', () => {
+    it('should place New Window after New Topic in the File menu, with no New Tab', () => {
       macOSMenu.buildAndSetAppMenu();
 
       const template = (Menu.buildFromTemplate as any).mock.calls[0][0];
@@ -306,7 +306,8 @@ describe('MacOSMenu', () => {
       const labels = fileMenu.submenu.map((item: any) => item.label);
       const newWindowItem = fileMenu.submenu.find((item: any) => item.label === 'New Window');
 
-      expect(labels.indexOf('New Window')).toBe(labels.indexOf('New Tab') + 1);
+      expect(labels).not.toContain('New Tab');
+      expect(labels.indexOf('New Window')).toBe(labels.indexOf('New Topic') + 1);
       expect(newWindowItem.accelerator).toBe('Shift+Command+N');
 
       newWindowItem.click(undefined, null);

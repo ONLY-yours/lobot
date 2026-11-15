@@ -35,7 +35,6 @@
   "actions.import": "Импорт беседы",
   "actions.markCompleted": "Отметить как выполнено",
   "actions.moveToAgent": "Переместить к другому ассистенту",
-  "actions.openInNewTab": "Открыть в новой вкладке",
   "actions.openInNewWindow": "Открыть в новом окне",
   "actions.pin": "Закрепить",
   "actions.removeAll": "Удалить все темы",

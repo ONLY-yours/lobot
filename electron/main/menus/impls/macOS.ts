@@ -129,15 +129,6 @@ export class MacOSMenu extends BaseMenuPlatform implements IMenuPlatform {
             label: t('file.newTopic'),
           },
           {
-            accelerator: 'Command+T',
-            click: () => {
-              const mainWindow = this.app.browserManager.getMainWindow();
-              mainWindow.show();
-              mainWindow.broadcast('createNewTab');
-            },
-            label: t('file.newTab'),
-          },
-          {
             accelerator: 'Shift+Command+N',
             click: (_item, targetWindow) => this.openNewWindow(targetWindow),
             label: t('file.newWindow'),

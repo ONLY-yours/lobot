@@ -9,4 +9,3 @@ export {
   subscribeTabHistory,
 } from './tabRouterManager';
 export { useSeedTabsOnBoot } from './useSeedTabsOnBoot';
-export { captureVisibleTabPreviews } from './useTabPreviewCapture';

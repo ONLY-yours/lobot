@@ -19,7 +19,6 @@ type LabFeatureI18nKey =
   | 'artifactDeployment'
   | 'claudeCodeSdk'
   | 'codexAppServer'
-  | 'desktopSplitView'
   | 'deviceTunnel'
   | 'evalCapture'
   | 'goals'
@@ -143,13 +142,6 @@ const ALL_LAB_FEATURES: LabFeatureItem[] = [
     searchKeywords: ['collaboration', 'co-editing', 'realtime', 'live editing', 'page'],
     stage: 'alpha',
     workspaceOnly: true,
-  },
-  {
-    desktopOnly: true,
-    flag: 'enableDesktopSplitView',
-    i18nKey: 'desktopSplitView',
-    searchKeywords: ['split view', 'split tab'],
-    stage: 'alpha',
   },
   {
     desktopOnly: true,

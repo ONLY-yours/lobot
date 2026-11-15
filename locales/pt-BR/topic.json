@@ -35,7 +35,6 @@
   "actions.import": "Importar Conversa",
   "actions.markCompleted": "Marcar como Concluída",
   "actions.moveToAgent": "Mover para outro assistente",
-  "actions.openInNewTab": "Abrir em Nova Aba",
   "actions.openInNewWindow": "Abrir em nova janela",
   "actions.pin": "Fixar",
   "actions.removeAll": "Excluir Todos os Tópicos",
