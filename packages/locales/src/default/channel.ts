@@ -137,6 +137,7 @@ export default {
   'followers': 'Replies from: {{names}}',
   'olderMessages': 'Older messages',
   'latestMessages': 'Latest messages',
+  'syncing': 'Syncing…',
   'threadEmpty': 'Keep discussing this message here.',
   'conversationEmpty': 'Start the conversation',
   'mentionHint':

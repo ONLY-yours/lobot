@@ -18,6 +18,7 @@ import { AgentProfilePanel } from './AgentProfilePanel';
 import { isChannelGone, visibleChannelDetail } from './channelAccess';
 import { ChannelConversation } from './ChannelConversation';
 import { ChannelEmpty } from './ChannelEmpty';
+import { ChannelSyncing } from './ChannelSyncing';
 import { MEMBER_FLOAT_BREAKPOINT, MemberPanel } from './MemberPanel';
 import { MemberStatus } from './MemberStatus';
 import { openTopic } from './openTopic';
@@ -89,6 +90,7 @@ function EnabledChannelPage() {
                 {detail?.channel.title || listItem?.title}
               </Text>
               {detail?.channel.status === 'archived' && <Tag size="small">{t('archived')}</Tag>}
+              <ChannelSyncing failed={!!sync.error} params={view} />
             </Flexbox>
           )
         }

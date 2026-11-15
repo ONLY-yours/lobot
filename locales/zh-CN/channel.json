@@ -254,6 +254,7 @@
   "status.working": "正在工作中…",
   "stopReply": "停止回复",
   "submit": "创建",
+  "syncing": "同步中…",
   "thread": "线程",
   "threadArchivedNotice": "此线程已归档。回复仍可查看，但不再接收新消息。",
   "threadCard.messages_one": "{{count}} 条消息",

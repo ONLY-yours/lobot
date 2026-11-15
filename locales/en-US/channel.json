@@ -254,6 +254,7 @@
   "status.working": "Working…",
   "stopReply": "Stop reply",
   "submit": "Create",
+  "syncing": "Syncing…",
   "thread": "Thread",
   "threadArchivedNotice": "This thread is archived. Its replies stay readable, but it takes no new messages.",
   "threadCard.messages_one": "{{count}} message",

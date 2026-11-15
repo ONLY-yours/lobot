@@ -16,7 +16,11 @@ vi.mock('@/store/serverConfig', () => ({
 }));
 vi.mock('@/store/channel', () => ({
   channelActions: { useFetchDetail: () => ({ error: mocks.error }) },
-  channelSelectors: { detail: () => () => undefined, list: () => mocks.list },
+  channelSelectors: {
+    detail: () => () => undefined,
+    isUnconfirmed: () => () => false,
+    list: () => mocks.list,
+  },
   useChannelStore: (selector: (s: object) => unknown) => selector({}),
 }));
 vi.mock('@/store/chat', () => ({

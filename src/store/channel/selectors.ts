@@ -41,6 +41,9 @@ export const channelSelectors = {
       )
     );
   },
+  /** The view on screen is a stored copy that no server answer has confirmed since it loaded. */
+  isUnconfirmed: (params: ChannelViewParams) => (state: ChannelState) =>
+    state.detailReplica.entries[channelViewKey(params)]?.source === 'storage',
   /** The caller's direct conversation with an Agent; a direct Channel never belongs to a project. */
   directByAgent: (agentId: string) => (state: ChannelState) =>
     state.listMap.all?.find((channel) => channel.agentId === agentId && !channel.projectId),
