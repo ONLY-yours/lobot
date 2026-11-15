@@ -14,11 +14,11 @@ import { channelSelectors, useChannelStore } from '@/store/channel';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 
-import { ContactsSolidIcon, MessagesSolidIcon } from './icons';
 import { ActiveChannelSync, useMessagesUrl } from './messagesTarget';
 import { resolveRailTab } from './railTab';
 import { styles } from './style';
 import TabItem from './TabItem';
+import { railTabs } from './tabs';
 
 /** The badge sums the Messages list rows, so it always matches what the list shows. */
 const useMessagesUnread = (channelsEnabled: boolean) => {
@@ -47,25 +47,7 @@ const NavTabBar = memo(() => {
   // Messages returns to the active Channel, or home where the conversation list lives.
   const { activeChannelId, url: messagesUrl } = useMessagesUrl(pathname, activeWorkspaceSlug);
 
-  // Lobot's IA is two tabs: Messages (Channels) first, then Contacts.
-  const tabs = useMemo(
-    () => [
-      {
-        icon: ContactsSolidIcon,
-        key: 'contacts' as const,
-        title: t('tab.contacts'),
-        url: '/agents',
-      },
-      {
-        icon: MessagesSolidIcon,
-        key: 'messages' as const,
-        title: t('tab.messages'),
-        url: messagesUrl,
-      },
-      { icon: UsersIcon, key: 'contacts' as const, title: t('tab.contacts'), url: '/agents' },
-    ],
-    [messagesUrl, t],
-  );
+  const tabs = useMemo(() => railTabs(t, messagesUrl), [messagesUrl, t]);
 
   return (
     <Flexbox horizontal {...stylex.props(styles.bar)}>
