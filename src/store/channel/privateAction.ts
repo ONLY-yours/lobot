@@ -16,6 +16,7 @@ import {
   channelDetailResource,
   channelListResource,
   channelThreadEntityId,
+  channelViewKey,
 } from './projection';
 import type { ChannelState } from './store';
 
@@ -42,6 +43,22 @@ export class ChannelPrivateAction {
   constructor(set: StoreSetter<ChannelState>, get: () => ChannelState) {
     this.list = createReplicaSlice(channelListResource, {
       actionPrefix: 'channel/list',
+      effects: {
+        // A push, reconnect or poll that lists a newer sequence refreshes the loaded main view in
+        // the background, so opening that conversation shows its latest messages at once instead
+        // of the cached ones until its own read returns. The sequence counts thread messages too;
+        // the main view's `channel` carries the same counter, so threads do not read as stale.
+        onApplied: (items) => {
+          const { detailMap } = get();
+          for (const channel of items) {
+            const params = { channelId: channel.id };
+            const loaded = detailMap[channelViewKey(params)];
+            if (!loaded || loaded.channel.sequence >= channel.sequence) continue;
+            // A failed read keeps the cached view; opening it syncs again.
+            this.detail.fetch(params).catch(() => {});
+          }
+        },
+      },
       entity: arrayEntity<ChannelListItem>((channel) => channel.id),
       get,
       set,
