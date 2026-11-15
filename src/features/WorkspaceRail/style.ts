@@ -66,6 +66,9 @@ export const styles = stylex.create({
     flex: 'none',
     alignItems: 'center',
     width: '48px',
+    // The wrap keeps an 8px inset on every side; beside the rail that inset is the rail's own
+    // right gap, so pull it in or the tiles sit 8px from the window edge but 16px from the wrap.
+    marginInlineEnd: '-8px',
     // The Electron title bar sits above, so only the bottom matches the wrap's 8px inset.
     paddingBlockEnd: '8px',
     scrollbarWidth: 'none',
