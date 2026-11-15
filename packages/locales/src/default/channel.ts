@@ -297,4 +297,6 @@ export default {
   'settings.reply.instructionsHint':
     'Tell Agents who to answer and what to leave alone. It guides them and is not a hard rule.',
   'settings.reply.instructionsContent': 'Instructions',
+  'openDirect.failed': 'Could not open the conversation. Try again later.',
+  'openDirect.unavailable': "This Agent's conversation can't be opened right now.",
 };

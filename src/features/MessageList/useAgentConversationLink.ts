@@ -1,4 +1,6 @@
 import { CHANNEL_URL } from '@lobechat/const';
+import { toast } from '@lobehub/ui';
+import { t } from 'i18next';
 import { type MouseEvent, useCallback, useEffect, useRef } from 'react';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
@@ -16,9 +18,9 @@ import { isPlainClick } from './conversations';
 
 /**
  * With Channels on, an agent row opens the person's direct Channel with the Agent. An Agent made
- * before direct Channels has none yet, so the first click opens it; an Agent that cannot answer
- * in a Channel (no reachable device) or a failed open falls back to the Agent's own page. Without
- * an id yet (the inbox Agent while it loads) the row stays on the Agent's page.
+ * before direct Channels has none yet, so the first click opens it. Lobot has no Agent page to
+ * fall back to, so an Agent that cannot open one, or a failed open, keeps the person where they
+ * are and says why. Without an id yet (the inbox Agent while it loads) the row links the Agent.
  */
 export const useAgentConversationLink = (agentId: string | undefined, agentUrl: string) => {
   const enabled = useChannelsEnabled() && !!agentId;
@@ -52,16 +54,19 @@ export const useAgentConversationLink = (agentId: string | undefined, agentUrl: 
       };
       void channelActions
         .openDirect(agentId)
-        .then((channelId) => go(channelId ? CHANNEL_URL(channelId) : agentUrl))
+        .then((channelId) => {
+          if (channelId) go(CHANNEL_URL(channelId));
+          else toast.error(t('openDirect.unavailable', { ns: 'channel' }));
+        })
         .catch((error) => {
           console.error('[channel] Failed to open the direct Channel', error);
-          go(agentUrl);
+          toast.error(t('openDirect.failed', { ns: 'channel' }));
         })
         .finally(() => {
           opening.current = false;
         });
     },
-    [agentId, agentUrl, navigate],
+    [agentId, navigate],
   );
 
   if (directChannelId) return { url: CHANNEL_URL(directChannelId) };

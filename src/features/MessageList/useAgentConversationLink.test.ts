@@ -12,12 +12,15 @@ const state = vi.hoisted(() => ({
   enabled: true,
   inboxAgentId: 'agt_inbox' as string | undefined,
   navigate: vi.fn(),
+  toastError: vi.fn(),
   openDirect: vi.fn(),
   pathname: '/',
   scope: 'personal',
   slug: null as string | null,
 }));
 
+vi.mock('@lobehub/ui', () => ({ toast: { error: state.toastError } }));
+vi.mock('i18next', () => ({ t: (key: string) => key }));
 vi.mock('@/hooks/useActiveLocation', () => ({
   useActiveLocation: () => ({ pathname: state.pathname, search: '' }),
 }));
@@ -113,16 +116,26 @@ describe('useAgentConversationLink', () => {
     expect(state.navigate).toHaveBeenCalledWith('/channels/chn_000000000002');
   });
 
+  // Lobot has no Agent page: falling back to one landed on the "page unavailable" error screen.
   it.each([
-    ['cannot answer in a Channel', () => state.openDirect.mockResolvedValue(undefined)],
-    ['fails to open one', () => state.openDirect.mockRejectedValue(new Error('offline'))],
-  ])('falls back to the Agent page when the Agent %s', async (_, arrange) => {
+    [
+      'cannot open one',
+      () => state.openDirect.mockResolvedValue(undefined),
+      'openDirect.unavailable',
+    ],
+    [
+      'fails to open one',
+      () => state.openDirect.mockRejectedValue(new Error('offline')),
+      'openDirect.failed',
+    ],
+  ])('stays put and explains when the Agent %s', async (_, arrange, message) => {
     arrange();
     const { result } = render();
 
     await act(async () => result.current.onClick?.(click()));
 
-    expect(state.navigate).toHaveBeenCalledWith('/agent/agt_nasa');
+    expect(state.navigate).not.toHaveBeenCalled();
+    expect(state.toastError).toHaveBeenCalledWith(message);
   });
 
   // A slow open pulled the person away from the conversation they picked meanwhile.

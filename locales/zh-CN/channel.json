@@ -137,6 +137,8 @@
   "olderMessages": "更早的消息",
   "openAgent": "打开 Agent",
   "openAgentNamed": "打开 {{name}}",
+  "openDirect.failed": "无法打开对话，请稍后重试。",
+  "openDirect.unavailable": "这个助手的对话暂时无法打开。",
   "openThread": "打开线程",
   "openThreadPage": "在页面中打开",
   "otherAgents": "其他 Agent",
