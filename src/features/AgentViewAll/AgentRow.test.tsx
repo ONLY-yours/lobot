@@ -50,6 +50,23 @@ describe('AgentRow', () => {
     expect(link.textContent).toContain('Reviews and merges community PRs');
   });
 
+  it('puts the role right after the name, apart from the description column', () => {
+    render(
+      <AgentRow
+        item={{
+          ...baseItem,
+          description: 'Reviews and merges community PRs',
+          name: 'Cook',
+          title: 'Coding Agent',
+        }}
+      />,
+    );
+
+    const heading = screen.getByText('Cook').parentElement!;
+    expect(heading.textContent).toBe('CookCoding Agent');
+    expect(heading.contains(screen.getByText('Reviews and merges community PRs'))).toBe(false);
+  });
+
   it('leaves the role column empty when the title is already the primary label', () => {
     render(<AgentRow item={{ ...baseItem, description: null, title: 'LobeHub' }} />);
 

@@ -33,23 +33,36 @@ export const ACTION_COL_WIDTH = 64;
 /** Author avatar slot — reserved even when the author is unknown. */
 const AUTHOR_COL_WIDTH = 20;
 
-/** Name and role column widths, shared by every row so the columns line up. */
-export const NAME_COL_WIDTH = 240;
-export const ROLE_COL_WIDTH = 200;
-
 const styles = createStaticStyles(({ css, cssVar }) => ({
   /**
-   * Fills the rest of the identity link and truncates to one line. Its minimum
-   * makes the name and role columns give up width first on mid-size screens;
-   * only a row too narrow for all three drops it.
+   * Fills the rest of the identity link and truncates to one line; only a row
+   * too narrow for both columns drops it.
    */
   description: css`
     flex: 1 1 0;
-    min-width: 180px;
+    min-width: 0;
     color: ${cssVar.colorTextTertiary};
 
     @container agent-row (width < 600px) {
       display: none;
+    }
+  `,
+  /**
+   * Name + role as one column. Sized against the ROW container (`cqi`), not the
+   * identity link: the trailing label pills are content-sized, so a column that
+   * shrinks with the link would start each row's description at a different x.
+   */
+  heading: css`
+    flex: none;
+    gap: 8px;
+    align-items: baseline;
+
+    width: clamp(160px, 38cqi, 420px);
+    min-width: 0;
+
+    @container agent-row (width < 600px) {
+      flex: 1 1 0;
+      width: auto;
     }
   `,
   // The link spans the identity columns (name, role, description) but not the
@@ -72,24 +85,15 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
       text-decoration: underline;
     }
   `,
+  /** The name keeps its width; the role beside it truncates first. */
   name: css`
-    flex: 0 1 ${NAME_COL_WIDTH}px;
+    flex: 0 1 auto;
     min-width: 0;
-
-    /* Without the description, name and role share the space 3:2. */
-    @container agent-row (width < 600px) {
-      flex: 3 1 0;
-    }
   `,
-  /** Reserved even when empty so every row's description starts at the same x. */
   role: css`
-    flex: 0 1 ${ROLE_COL_WIDTH}px;
+    flex: 0 1000 auto;
     min-width: 0;
-    color: ${cssVar.colorTextSecondary};
-
-    @container agent-row (width < 600px) {
-      flex: 2 1 0;
-    }
+    color: ${cssVar.colorTextTertiary};
   `,
   row: css`
     container: agent-row / inline-size;
@@ -188,14 +192,18 @@ const AgentRow = memo<AgentRowProps>(
         >
           <WorkspaceLink aria-label={displayTitle} className={styles.identity} to={CONTACT_URL(id)}>
             <SidebarItemAvatar item={item} size={28} />
-            {/* Three single-line columns: who the agent is, the role it plays,
-              and what it is responsible for. */}
-            <Text ellipsis className={cx('agent-row-title', styles.name)} weight={500}>
-              {displayTitle}
-            </Text>
-            <Text ellipsis className={styles.role} title={role}>
-              {role}
-            </Text>
+            {/* Who the agent is with the role it plays right after the name,
+              then what it is responsible for. */}
+            <Flexbox horizontal className={styles.heading}>
+              <Text ellipsis className={cx('agent-row-title', styles.name)} weight={500}>
+                {displayTitle}
+              </Text>
+              {role && (
+                <Text ellipsis className={styles.role} title={role}>
+                  {role}
+                </Text>
+              )}
+            </Flexbox>
             <Text ellipsis className={styles.description} title={description ?? undefined}>
               {description}
             </Text>
