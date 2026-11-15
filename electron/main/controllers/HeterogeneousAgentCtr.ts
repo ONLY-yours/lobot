@@ -15,6 +15,10 @@ import type {
   HeterogeneousAgentCancellationSignal,
 } from '@lobechat/heterogeneous-agents/protocol';
 import { buildHeteroExecStdinPayload } from '@lobechat/heterogeneous-agents/protocol';
+// Static on purpose: the lazily loaded quota sampler also pulls these modules in, and a separate
+// dynamic import of the `quota` barrel splits them across chunks, which panics Rolldown's
+// development build of the main process.
+import { CLAUDE_CODE_EXTERNAL_ROUTING_ENV_KEYS } from '@lobechat/heterogeneous-agents/quota';
 import type * as QuotaSamplerModule from '@lobechat/heterogeneous-agents/quota-sampler';
 import type { QuotaSnapshotCache } from '@lobechat/heterogeneous-agents/quota-sampler';
 import {
@@ -343,8 +347,6 @@ export default class HeterogeneousAgentCtr extends ControllerModule {
    * subscription login, so gateway account routing has to see them.
    */
   async getClaudeCodeInheritedRoutingEnv(): Promise<Record<string, string>> {
-    const { CLAUDE_CODE_EXTERNAL_ROUTING_ENV_KEYS } =
-      await import('@lobechat/heterogeneous-agents/quota');
     const inherited = buildInheritedSpawnEnv();
     const flags: Record<string, string> = {};
     for (const key of CLAUDE_CODE_EXTERNAL_ROUTING_ENV_KEYS) {
