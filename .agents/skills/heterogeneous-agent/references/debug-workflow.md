@@ -14,36 +14,37 @@
 ## 1. Pipeline Map
 
 ```
-CLI raw stdout
-  -> HeterogeneousAgentCtr (Electron main)
-  -> heteroAgentRawLine broadcast
-  -> createAdapter(...)
-  -> executeHeterogeneousAgent(...)
-  -> persistToolBatch / persistToolResult
+server dispatch (device gateway)
+  -> GatewayConnectionCtr -> executeGatewayAgentRun (Electron main)
+  -> HeterogeneousAgentCtr.spawnLhHeteroExec -> embedded `lh hetero exec`
+  -> agent CLI raw stdout
+  -> createAdapter(...)            (inside `lh hetero exec`)
+  -> heteroIngest / heteroFinish   (server persists messages and tools)
   -> createGatewayEventHandler(...)
   -> UI hydration
 ```
+
+Electron main never parses the CLI stream: it only spawns / cancels the wrapper.
 
 Start at the leftmost broken layer. Do not jump straight to UI rendering unless raw and adapted events already look correct.
 
 ## 2. Capture Raw CLI Traces First
 
-### In-app live traces (the faithful capture — prefer this)
+### Device raw dumps (the faithful capture — prefer this)
 
-The running app already records every CLI session it spawns. This is the most
-faithful trace you can get, because it captures the **exact** spawn args, env
-keys, cwd, `--resume`/`--mcp-config` flags, model, and stdin that the app used —
-things a hand-rolled `claude -p` / `codex exec` repro will not reproduce. Reach
-for this before reproducing manually. The recorder lives in
-`apps/desktop/src/main/controllers/HeterogeneousAgentImpl.ts`
-(`createCliTraceSession`, `shouldTraceCliOutput`, `resolveTraceRootDir`).
+`lh hetero exec --raw-dump <dir>` tees the agent CLI's raw pre-adapter stdout /
+stderr to disk. It runs with the exact args, env, cwd and `--resume` flags of the
+real run, which a hand-rolled `claude -p` / `codex exec` repro will not reproduce.
+The desktop passes `--raw-dump` from `spawnLhHeteroExec`
+(`electron/main/controllers/HeterogeneousAgentCtr.ts`, gated by
+`shouldTraceCliOutput` / `resolveTraceRootDir`).
 
-When it records:
+When the desktop passes it:
 
 - **Dev build** (`!app.isPackaged`): always.
 - **Packaged build**: only when the user flips the Help-menu developer toggle
   (`heteroTracingEnabled`). Off by default so normal runs aren't polluted.
-- Never under `NODE_ENV=test`.
+- Never under `NODE_ENV=test`, and never when the run's cwd is missing.
 
 Where it writes:
 
@@ -53,28 +54,10 @@ Where it writes:
 - Toggle **on**: `<appStoragePath>/heteroAgent/tracing/` — keeps traces out of
   the user's project. This is the only path packaged builds ever use.
 
-Layout per session — `.../<agentType>/<YYYYMMDD-HHMMSS>-<sessionId>/`:
-
-- `meta.json` — spawn `args`, `command`, `cwd`, `envKeys`, `model`,
-  `resumeSessionId`/`agentSessionId`, attachment summaries. **Read this first**
-  to know exactly how the CLI was invoked.
-- `stdin.txt` — the stream-json request fed to the CLI.
-- `stdout.jsonl` — the raw provider NDJSON (the trace you actually read).
-- `stderr.log` — CLI stderr.
-- `exit.json` — `{ code, signal, finishedAt }`.
-
-`.heerogeneous-tracing/.last-live-trace` always points at the most recent
-session dir, so the fast path to "what just happened" is:
-
-```bash
-dir=$(cat .heerogeneous-tracing/.last-live-trace)
-cat "$dir/meta.json"      # how the CLI was spawned
-wc -l "$dir/stdout.jsonl" # raw event count
-```
-
-Reproduce the same session yourself by reusing the recorded `meta.json` `args`
-together with `stdin.txt` (the args already include `--resume <sessionId>`),
-instead of guessing flags.
+Layout per run — `.../<timestamp>-<operationId>/`: `meta.json` (how the CLI was
+invoked — read it first), then `<label>.stdout.jsonl` / `<label>.stderr.log` per
+spawn attempt (a resume retry is a second attempt). See `RawStreamDump` in
+`apps/cli/src/commands/hetero.ts`.
 
 ### Codex raw JSONL
 
@@ -108,7 +91,7 @@ If the repo already contains useful traces under `.heerogeneous-tracing/`, inspe
 
 ### Claude Code raw NDJSON
 
-Mirror the arguments from `apps/desktop/src/main/modules/heterogeneousAgent/drivers/claudeCode.ts`.
+Mirror the arguments `lh hetero exec` uses for Claude Code (see the dump's `meta.json`).
 
 - `-p`
 - `--input-format stream-json`
@@ -163,11 +146,8 @@ If you only need boundary semantics or tool persistence behavior, prefer existin
 
 ## 3. Compare Raw And Adapted Events
 
-In dev builds, `executeHeterogeneousAgent` stores raw lines plus adapted events on:
-
-- `window.__HETERO_AGENT_TRACE`
-
-Use that trace to compare:
+Run `lh hetero exec` standalone (no server ingest, `--render jsonl`) to print the
+adapted `AgentStreamEvent`s next to a raw dump, and compare:
 
 - raw `item.started` / `item.completed`
 - adapted `stream_chunk { chunkType: 'tools_calling' }`
@@ -214,12 +194,12 @@ Codex raw traces usually provide turn-level boundaries through:
 - `turn.started`
 - `turn.completed`
 
-The executor only cuts a new assistant message when it receives a step-boundary signal it understands. If the adapter emits `stream_start` without `newStep`, multiple Codex tools and text chunks can accumulate under the same assistant longer than intended.
+The coordinator only cuts a new assistant message when it receives a step-boundary signal it understands. If the adapter emits `stream_start` without `newStep`, multiple Codex tools and text chunks can accumulate under the same assistant longer than intended.
 
 Relevant files:
 
 - `packages/heterogeneous-agents/src/adapters/codex.ts`
-- `src/store/chat/slices/agentRun/actions/transports/hetero/heterogeneousAgentExecutor.ts`
+- `packages/heterogeneous-agents/src/mainAgentCoordinator/reducer.ts`
 
 ## 5. Check Tool Persistence Invariants
 
@@ -260,8 +240,7 @@ If subagent events leak to the main handler, the main bubble can inherit the wro
 Run the smallest useful test set first.
 
 For shared Codex modules consumed by Desktop, also check the Desktop consumer with
-`bun check --cwd=<repo>/apps/desktop -p tsconfig.json` from outside the repo. The
-root type-check excludes Desktop, whose `strict: false` makes Zod nullable output
+`bun run type-check:electron`. Electron main's `strict: false` makes Zod nullable output
 properties optional in type inference. A `satisfies z.ZodType<ProtocolType>`
 assertion can therefore fail only in Desktop despite unchanged runtime validation;
 remove a redundant assertion rather than changing global compiler settings. Pass
@@ -271,14 +250,14 @@ updating adjacent action entries: automatic related-test discovery may miss them
 ```bash
 bunx vitest run --silent='passed-only' 'packages/heterogeneous-agents/src/adapters/codex.test.ts'
 bunx vitest run --silent='passed-only' 'packages/heterogeneous-agents/src/adapters/claudeCode.test.ts'
-bunx vitest run --silent='passed-only' 'src/store/chat/slices/agentRun/actions/__tests__/heterogeneousAgentExecutor.test.ts'
+bunx vitest run --silent='passed-only' 'packages/heterogeneous-agents/src/mainAgentCoordinator/reducer.test.ts'
 ```
 
 Especially useful places:
 
 - `packages/heterogeneous-agents/src/adapters/codex.test.ts`
 - `packages/heterogeneous-agents/src/adapters/claudeCode.test.ts`
-- `src/store/chat/slices/agentRun/actions/__tests__/heterogeneousAgentExecutor.test.ts`
+- `packages/heterogeneous-agents/src/mainAgentCoordinator/reducer.test.ts`
 
 Claude Code-specific assertions worth adding when fixing bugs:
 
@@ -312,15 +291,15 @@ classifier that ignores the surrounding state will misfire on those.
 
 The procedure (recurring — run it every time):
 
-1. Pull the most recent real session: `dir=$(cat .heerogeneous-tracing/.last-live-trace)`.
+1. Pull the most recent raw dump: `dir=$(ls -dt .heerogeneous-tracing/*/ | head -1)`.
 
 2. Grep the field across **every** event state, not just the failing one, and
    count by co-occurring state. Example:
 
    ```bash
    # Which event statuses carry a rate_limit_info block?
-   grep -o '"status":"[a-z]*"' "$dir/stdout.jsonl" | sort | uniq -c
-   grep -c 'rate_limit_info' "$dir/stdout.jsonl"
+   grep -o '"status":"[a-z]*"' "$dir"/*.stdout.jsonl | sort | uniq -c
+   grep -c 'rate_limit_info' "$dir"/*.stdout.jsonl
    ```
 
 3. If the field rides on states you did not account for, the classifier needs an

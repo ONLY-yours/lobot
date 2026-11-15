@@ -1,6 +1,6 @@
 ---
 name: heterogeneous-agent
-description: 'Use for external-agent launchers and execution identity, Claude Code/Codex adapters, IPC, event mapping, sessions, persistence and tool-call chains.'
+description: 'Use for external-agent launchers and execution identity, the `lh hetero exec` device path, Claude Code/Codex adapters, event mapping, sessions, persistence and tool-call chains.'
 ---
 
 # Heterogeneous Agent Development
@@ -9,10 +9,10 @@ Use this skill when the bug or feature lives in the external CLI agent pipeline,
 
 ## Use This Skill For
 
-- Adding or changing a driver under `apps/desktop/src/main/modules/heterogeneousAgent/drivers/`
 - Editing an adapter under `packages/heterogeneous-agents/src/adapters/`
+- Changing `lh hetero exec` (`apps/cli/src/commands/hetero.ts`) or the desktop device spawn
+  (`electron/main/controllers/HeterogeneousAgentCtr.ts` — `spawnLhHeteroExec`)
 - Changing CLI/Desktop dispatch launchers, including OpenClaw/Hermes, or debugging task-comment authorship
-- Debugging `heteroAgentRawLine` transport, `window.__HETERO_AGENT_TRACE`, or `executeHeterogeneousAgent`
 - Fixing Claude Code stream-json bugs such as duplicate partial/full chunks, broken `message.id` boundaries, missing `tool_result`, TodoWrite state drift, or subagent thread routing
 - Fixing Codex JSONL bugs such as mixed multi-tool messages, broken turn boundaries, or missing tool-result mapping
 - Fixing step-boundary, tool persistence, subagent thread, or resume bugs in Claude Code / Codex flows
@@ -20,30 +20,41 @@ Use this skill when the bug or feature lives in the external CLI agent pipeline,
 
 ## Pipeline Map
 
-1. CLI raw stdout / JSONL
-2. Electron main spawns the CLI and broadcasts `heteroAgentRawLine`
-3. Adapter maps raw provider events into `HeterogeneousAgentEvent`
-4. `executeHeterogeneousAgent` persists assistant/tool messages and forwards stream events
-5. `createGatewayEventHandler` hydrates the UI
+Lobot never runs a CLI agent inside Electron main. Every run is dispatched by the
+server through the device gateway:
+
+1. The renderer dispatches the run via the gateway (`agentDispatcher` always picks `'gateway'`)
+2. On this desktop, `GatewayConnectionCtr` → `executeGatewayAgentRun` → `HeterogeneousAgentCtr.spawnLhHeteroExec`
+   spawns the embedded `lh hetero exec` (`ELECTRON_RUN_AS_NODE`, own process group, prompt on stdin)
+3. `lh hetero exec` spawns the agent CLI, reads its raw stdout / JSONL, and the adapter maps it into
+   `AgentStreamEvent`s
+4. The CLI posts the adapted events to the server (`heteroIngest` / `heteroFinish`), which persists them
+5. The renderer hydrates the UI from gateway events (`createGatewayEventHandler`)
 6. Only after this path looks correct should you move on to `agent-tracing` or context-engine debugging
+
+Cancellation: the server's `cancelHeteroTask` reaches `GatewayConnectionCtr`, which calls
+`HeterogeneousAgentCtr.cancelLhHeteroExec` to signal the whole process group and wait for it to exit.
 
 ## Read These Files First
 
-- `apps/desktop/src/main/controllers/HeterogeneousAgentCtr.ts`
-- `apps/desktop/src/main/modules/heterogeneousAgent/drivers/claudeCode.ts`
-- `apps/desktop/src/main/modules/heterogeneousAgent/drivers/codex.ts`
+- `electron/main/controllers/HeterogeneousAgentCtr.ts` (`spawnLhHeteroExec`, `cancelLhHeteroExec`)
+- `electron/main/controllers/gatewayAgentRun.ts`
+- `electron/main/modules/heterogeneousAgent/lhHeteroExecEnv.ts`
+- `apps/cli/src/commands/hetero.ts`
 - `packages/heterogeneous-agents/src/adapters/claudeCode.ts`
 - `packages/heterogeneous-agents/src/adapters/codex.ts`
-- `src/store/chat/slices/agentRun/actions/transports/hetero/heterogeneousAgentExecutor.ts`
-- `src/store/chat/slices/agentRun/actions/__tests__/heterogeneousAgentExecutor.test.ts`
+- `src/store/chat/slices/agentRun/actions/transports/gateway/gateway.ts`
 
 ## Default Debug Order
 
-1. Prove whether the raw CLI output is correct before touching UI code. The app records every real session — read the most recent one via `cat .heerogeneous-tracing/.last-live-trace` rather than hand-rolling a `claude -p` repro (see references/debug-workflow\.md §2).
-2. If raw output is correct, compare it with adapter output. In dev, `executeHeterogeneousAgent` exposes `window.__HETERO_AGENT_TRACE`.
-3. If adapted events look correct, inspect `persistToolBatch`, `persistToolResult`, step transitions, and subagent routing.
+1. Prove whether the raw CLI output is correct before touching UI code. Device runs can dump the raw
+   pre-adapter stream via `--raw-dump` (see references/debug-workflow\.md §2) — read that rather than
+   hand-rolling a `claude -p` repro.
+2. If raw output is correct, compare it with adapter output (`lh hetero exec --render jsonl` prints the
+   adapted events).
+3. If adapted events look correct, inspect server ingest persistence, step transitions, and subagent routing.
 4. Turn the repro into a focused test before fixing.
-5. Only after the transport/adapter/executor path looks sound should you debug later-stage message processing.
+5. Only after the transport/adapter path looks sound should you debug later-stage message processing.
 
 ## Critical Invariants
 
@@ -72,8 +83,8 @@ Check all four launch surfaces when changing this contract or adding a launcher:
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | CLI Agent dispatch      | `apps/cli/src/device/agentRun.ts` — `spawnHeteroAgentRun` (Agent ID forwarded by `apps/cli/src/commands/connect.ts`) |
 | CLI OpenClaw/Hermes     | `apps/cli/src/tools/heteroTask.ts` — `runHeteroTask`                                                                 |
-| Desktop Agent dispatch  | `apps/desktop/src/main/controllers/HeterogeneousAgentImpl.ts` — `spawnLhHeteroExec`                                  |
-| Desktop OpenClaw/Hermes | `apps/desktop/src/main/controllers/GatewayConnectionCtr.ts` — `runHeteroTask`                                        |
+| Desktop Agent dispatch  | `electron/main/controllers/HeterogeneousAgentCtr.ts` — `spawnLhHeteroExec`                                           |
+| Desktop OpenClaw/Hermes | `electron/main/controllers/GatewayConnectionCtr.ts` — `runHeteroTask`                                                |
 
 Regression coverage must include a clean environment, conflicting ancestor identity, and missing current Agent/optional context. Check both OpenClaw and Hermes on CLI and Desktop, plus task comments after JWT fallback. Mocked spawn assertions verify environment construction, not end-to-end propagation through an external runtime.
 
@@ -105,8 +116,3 @@ Regression coverage must include a clean environment, conflicting ancestor ident
 ## References
 
 - For commands, trace capture, invariants, and focused test commands, read [references/debug-workflow.md](./references/debug-workflow.md).
-- Live official-model compatibility checks are available only through explicit
-  user invocation of `/testing-heterogeneous-agents` in Claude Code or
-  `$testing-heterogeneous-agents` in Codex. Do not automatically load or run that
-  skill during diagnosis. Its failed-cell evidence can be used here for diagnosis
-  or a code fix.

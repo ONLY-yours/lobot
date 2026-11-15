@@ -293,16 +293,6 @@ stale standalone install: a recently added workspace package fails to resolve â€
   and other launchers that run several checkouts import it, so change the
   rules there rather than in the shell script.
 
-### Heterogeneous-agent compatibility (project skill)
-
-The live official-provider model matrix belongs to the
-`testing-heterogeneous-agents` project skill
-(`.agents/skills/testing-heterogeneous-agents/`). It extends Acceptance with the
-matrix semantics and harness while reusing the Electron environment, auth, and
-CDP commands above. It is manual-only: the user must explicitly invoke
-`/testing-heterogeneous-agents` in Claude Code or `$testing-heterogeneous-agents`
-in Codex. Do not automatically load or run it during other acceptance tasks.
-
 ### Bot channels (project skill)
 
 Bot-channel surfaces (Discord / Slack / Telegram / WeChat / Lark / QQ / iMessage)
