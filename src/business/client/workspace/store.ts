@@ -100,7 +100,7 @@ export const useFetchWorkspaces = (
     {
       onSuccess: (data) => {
         const workspaces = enterable(data ?? []);
-        const { activeWorkspaceId } = useWorkspaceStore.getState();
+        const { activeWorkspaceId, isWorkspaceAvailable } = useWorkspaceStore.getState();
         // `null` in the preference is an explicit pick of the personal space.
         const remembered =
           lastWorkspaceId !== undefined
@@ -108,7 +108,12 @@ export const useFetchWorkspaces = (
             : userId
               ? readLastWorkspaceId(userId)
               : null;
-        const candidate = activeWorkspaceId ?? remembered;
+        // The remembered scope only restores the first load. Afterwards the pick made
+        // this session stands, personal included: a switch refetches the user state,
+        // and one read before the preference write lands still names the old scope.
+        const candidate = isWorkspaceAvailable
+          ? activeWorkspaceId
+          : (activeWorkspaceId ?? remembered);
         // A workspace the user lost access to falls back to the personal space.
         const active = candidate && workspaces.some((ws) => ws.id === candidate) ? candidate : null;
         useWorkspaceStore.setState({

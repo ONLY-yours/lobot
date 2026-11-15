@@ -76,6 +76,42 @@ describe('workspace store', () => {
     expect(useWorkspaceStore.getState().activeWorkspaceId).toBeNull();
   });
 
+  // Regression: switching to the personal space refetches the user state and the
+  // list together. A user state read before the preference write landed handed
+  // back the old workspace, and the list refetch restored it over the pick.
+  it('keeps a personal pick when the list revalidates under a stale preference', async () => {
+    mocks.list.mockResolvedValue([ws('ws-a')]);
+
+    const { result, rerender } = renderHook(
+      ({ last }: { last: string | null }) => useFetchWorkspaces(true, 'user-1', last),
+      { initialProps: { last: 'ws-a' }, wrapper },
+    );
+    await waitFor(() => expect(useWorkspaceStore.getState().activeWorkspaceId).toBe('ws-a'));
+
+    act(() => useWorkspaceStore.getState().switchToPersonal());
+    rerender({ last: 'ws-a' });
+    await act(async () => {
+      await result.current.mutate();
+    });
+
+    expect(mocks.list).toHaveBeenCalledTimes(2);
+    expect(useWorkspaceStore.getState().activeWorkspaceId).toBeNull();
+  });
+
+  it('still drops a workspace the user lost access to on revalidation', async () => {
+    mocks.list.mockResolvedValue([ws('ws-a')]);
+
+    const { result } = renderHook(() => useFetchWorkspaces(true, 'user-1', 'ws-a'), { wrapper });
+    await waitFor(() => expect(useWorkspaceStore.getState().activeWorkspaceId).toBe('ws-a'));
+
+    mocks.list.mockResolvedValue([]);
+    await act(async () => {
+      await result.current.mutate();
+    });
+
+    expect(useWorkspaceStore.getState().activeWorkspaceId).toBeNull();
+  });
+
   it('falls back to the personal space when the last workspace is gone or locked out', async () => {
     mocks.list.mockResolvedValue([ws('ws-a'), ws('ws-locked', { lockedOut: true })]);
     writeLastWorkspaceId('user-1', 'ws-locked');
