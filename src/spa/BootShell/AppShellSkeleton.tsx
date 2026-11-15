@@ -18,6 +18,7 @@ import { styles as containerStyles } from '@/features/DesktopLayoutContainer/sty
 import { LIST_COLUMN_BACKGROUND } from '@/features/NavRail/const';
 import { readImLayoutHint } from '@/features/NavRail/layoutHint';
 import { wrapStyles as layoutStyles } from '@/features/NavRail/wrapStyle';
+import { RAIL_WIDTH, readWorkspaceRailHint } from '@/features/WorkspaceRail/railHint';
 import { electronStylish } from '@/styles/electron';
 import { sx } from '@/styles/sx';
 
@@ -117,6 +118,7 @@ const AppShellSkeleton = memo<AppShellSkeletonProps>(({ id }) => {
   const { isDark, navPanelBackground, navPanelWidth, showLeftPanel } = readBootShellGeometry();
   const hint = useLoadingHint();
   const imLayout = readImLayoutHint();
+  const showRail = imLayout && readWorkspaceRailHint();
 
   useLayoutEffect(retainSkeleton, []);
 
@@ -129,7 +131,7 @@ const AppShellSkeleton = memo<AppShellSkeletonProps>(({ id }) => {
     </div>
   );
 
-  // `im_layout`: one rounded wrap (list column + content).
+  // `im_layout`: the workspace rail's empty column, then one rounded wrap (list column + content).
   if (imLayout)
     return (
       <div aria-hidden id={id} {...sx(styles.root, CSS_VAR_CLASS)}>
@@ -143,6 +145,7 @@ const AppShellSkeleton = memo<AppShellSkeletonProps>(({ id }) => {
           height={isDesktop ? `calc(100% - ${TITLE_BAR_HEIGHT}px)` : '100%'}
           width={'100%'}
         >
+          {showRail && <div style={{ flexShrink: 0, width: RAIL_WIDTH }} />}
           <Flexbox
             horizontal
             style={getInnerCssVariables({ isDark })}

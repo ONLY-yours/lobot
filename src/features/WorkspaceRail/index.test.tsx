@@ -2,10 +2,12 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import WorkspaceRail from './index';
+import { readWorkspaceRailHint, WORKSPACE_RAIL_HINT_KEY, writeWorkspaceRailHint } from './railHint';
 
 const mocks = vi.hoisted(() => ({
   activeId: null as string | null,
   available: true,
+  loading: false,
   openCreate: vi.fn(),
   navigate: vi.fn(),
   switchToPersonal: vi.fn(async () => {}),
@@ -21,8 +23,9 @@ vi.mock('./style', () => ({
 }));
 vi.mock('./CreateWorkspace', () => ({ useOpenCreateWorkspace: () => mocks.openCreate }));
 vi.mock('@/business/client/workspace/store', () => ({
-  useWorkspaceStore: (selector: (s: { isWorkspaceAvailable: boolean }) => unknown) =>
-    selector({ isWorkspaceAvailable: mocks.available }),
+  useWorkspaceStore: (
+    selector: (s: { isWorkspaceAvailable: boolean; isWorkspaceLoading: boolean }) => unknown,
+  ) => selector({ isWorkspaceAvailable: mocks.available, isWorkspaceLoading: mocks.loading }),
 }));
 vi.mock('@/business/client/hooks/useWorkspaces', () => ({ useWorkspaces: () => mocks.workspaces }));
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
@@ -45,6 +48,7 @@ describe('WorkspaceRail', () => {
   beforeEach(() => {
     mocks.activeId = null;
     mocks.available = true;
+    mocks.loading = false;
     mocks.workspaces = [
       { avatar: null, id: 'ws-1', name: 'LobeHub', slug: 'lobehub' },
       { avatar: null, id: 'ws-2', name: 'Acme', slug: 'acme' },
@@ -53,6 +57,7 @@ describe('WorkspaceRail', () => {
 
   afterEach(() => {
     cleanup();
+    localStorage.removeItem(WORKSPACE_RAIL_HINT_KEY);
     vi.clearAllMocks();
   });
 
@@ -60,6 +65,34 @@ describe('WorkspaceRail', () => {
     mocks.available = false;
     const { container } = render(<WorkspaceRail />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('holds the column it had last time while the list is still loading', () => {
+    writeWorkspaceRailHint(true);
+    mocks.available = false;
+    mocks.loading = true;
+    const { container } = render(<WorkspaceRail />);
+
+    expect(container.firstElementChild).toBeEmptyDOMElement();
+    expect(container.firstElementChild).not.toBeNull();
+  });
+
+  it('reserves nothing while loading when it did not show last time', () => {
+    mocks.available = false;
+    mocks.loading = true;
+    const { container } = render(<WorkspaceRail />);
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('remembers whether it showed once the list settles', () => {
+    render(<WorkspaceRail />);
+    expect(readWorkspaceRailHint()).toBe(true);
+
+    cleanup();
+    mocks.available = false;
+    render(<WorkspaceRail />);
+    expect(readWorkspaceRailHint()).toBe(false);
   });
 
   // With no workspace yet the rail still shows, so one can be created from it.

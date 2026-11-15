@@ -80,6 +80,7 @@ export const styles = stylex.create({
     overflowY: 'auto',
     flex: 'none',
     alignItems: 'center',
+    // Keep in sync with RAIL_WIDTH (./railHint), which the boot skeleton reserves.
     width: '48px',
     // The wrap keeps an 8px inset on every side; beside the rail that inset is the rail's own
     // right gap, so pull it in or the tiles sit 8px from the window edge but 16px from the wrap.

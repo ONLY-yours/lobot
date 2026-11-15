@@ -3,7 +3,7 @@
 import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import * as stylex from '@stylexjs/stylex';
 import { PlusIcon } from 'lucide-react';
-import { memo, type ReactNode, useCallback } from 'react';
+import { memo, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -17,6 +17,7 @@ import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
 import { useOpenCreateWorkspace } from './CreateWorkspace';
+import { readWorkspaceRailHint, writeWorkspaceRailHint } from './railHint';
 import { RAIL_AVATAR_SIZE, RAIL_TILE_RADIUS, styles } from './style';
 
 interface RailItemProps {
@@ -56,7 +57,12 @@ RailItem.displayName = 'WorkspaceRailItem';
  */
 const WorkspaceRail = memo(() => {
   const { t } = useTranslation('common');
-  const available = useWorkspaceStore((s) => s.isWorkspaceAvailable);
+  const [available, loading] = useWorkspaceStore((s) => [
+    s.isWorkspaceAvailable,
+    s.isWorkspaceLoading,
+  ]);
+  // Read once: the hint only bridges the first load.
+  const [shownLastTime] = useState(readWorkspaceRailHint);
   const workspaces = useWorkspaces();
   const activeId = useActiveWorkspaceId();
   const { switchToPersonal, switchWorkspace } = useSwitchWorkspace();
@@ -84,7 +90,14 @@ const WorkspaceRail = memo(() => {
     [activeId, openHome, switchWorkspace],
   );
 
-  if (!available) return null;
+  // Remember the outcome once the list settles, for the next boot skeleton.
+  useEffect(() => {
+    if (!loading) writeWorkspaceRailHint(available);
+  }, [available, loading]);
+
+  // Hold the column the rail had last time while the list loads, so the wrap stays put.
+  if (!available)
+    return loading && shownLastTime ? <div aria-hidden {...stylex.props(styles.rail)} /> : null;
 
   return (
     <Flexbox
