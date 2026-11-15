@@ -323,7 +323,7 @@ sleep 3
 
 # 2. Start Electron
 echo "[setup] Starting Electron..."
-cd "$PROJECT_ROOT/apps/desktop"
+cd "$PROJECT_ROOT"
 ELECTRON_ENABLE_LOGGING=1 pnpm dev -- --remote-debugging-port="$CDP_PORT" > "$ELECTRON_LOG" 2>&1 &
 
 wait_for_electron

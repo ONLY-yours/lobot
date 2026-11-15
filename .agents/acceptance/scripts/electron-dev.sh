@@ -22,7 +22,7 @@
 #   IPC id     = lobehub-desktop-dev-<cdp port> → needs LOBE_IPC_ID support
 #   label      = checkout name + #<id>, shown on every window (dev builds only)
 # Ports, profile env, renderer readiness and login state come from the shared
-# module apps/desktop/scripts/devInstance.mts (via devInstanceCli.mts), which
+# module scripts/devInstance.mts (via devInstanceCli.mts), which
 # other multi-checkout launchers import too — fix them there, not here.
 # Drive each with a DISTINCT agent-browser session, else the daemon reuses one
 # connection across ports:  agent-browser --session s<port> --cdp <port> ...
@@ -71,7 +71,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 POOL_DIR="${POOL_DIR:-/tmp/lobe-electron-pool}"
 # Persistent across runs AND across /tmp cleanup — the pool dir is not.
 LOGIN_STATE_DIR="${LOBE_LOGIN_STATE_DIR:-$HOME/.lobehub/agent-testing/electron-login}"
-DEV_INSTANCE_CLI="$PROJECT_ROOT/apps/desktop/scripts/devInstanceCli.mts"
+DEV_INSTANCE_CLI="$PROJECT_ROOT/scripts/devInstanceCli.mts"
 
 dev_instance() {
   node "$DEV_INSTANCE_CLI" "$@"
@@ -80,7 +80,7 @@ dev_instance() {
 # Project-scoped electron path prefix used for pgrep matching in LEGACY mode only
 # (pool mode never uses it — it would cross instances). Any Electron binary from
 # this project starts with this string in its argv[0].
-PROJECT_ELECTRON_PATH="${PROJECT_ROOT}/apps/desktop/node_modules/.pnpm/electron@"
+PROJECT_ELECTRON_PATH="${PROJECT_ROOT}/node_modules/.pnpm/electron@"
 
 # Per-instance vars, filled by derive_instance.
 POOL_MODE=0
@@ -390,10 +390,10 @@ do_start() {
   # shellcheck disable=SC2016 # expanded by the inner bash, not here
   local launch_cmd='cd "$1" && shift && exec env "$@" pnpm dev'
   if command -v setsid >/dev/null 2>&1; then
-    setsid bash -c "$launch_cmd" electron-dev "$PROJECT_ROOT/apps/desktop" "${env_assignments[@]}" \
+    setsid bash -c "$launch_cmd" electron-dev "$PROJECT_ROOT" "${env_assignments[@]}" \
       >>"$ELECTRON_LOG" 2>&1 </dev/null &
   else
-    bash -c "$launch_cmd" electron-dev "$PROJECT_ROOT/apps/desktop" "${env_assignments[@]}" \
+    bash -c "$launch_cmd" electron-dev "$PROJECT_ROOT" "${env_assignments[@]}" \
       >>"$ELECTRON_LOG" 2>&1 </dev/null &
   fi
   local launcher_pid=$!
