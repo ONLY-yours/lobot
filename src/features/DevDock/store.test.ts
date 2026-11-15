@@ -34,8 +34,8 @@ describe('DevDock store', () => {
 
   it('switches between panels directly', () => {
     useDevDockStore.getState().togglePanel('feature-flags');
-    useDevDockStore.getState().togglePanel('agent-mock');
-    expect(useDevDockStore.getState().activePanelId).toBe('agent-mock');
+    useDevDockStore.getState().togglePanel('local-database');
+    expect(useDevDockStore.getState().activePanelId).toBe('local-database');
   });
 
   it('clamps panel height to the minimum', () => {

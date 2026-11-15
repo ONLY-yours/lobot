@@ -2,7 +2,6 @@ import {
   Activity,
   AppWindow,
   ArrowUpDown,
-  Bot,
   Cpu,
   Database,
   Flag,
@@ -11,7 +10,6 @@ import {
   GraduationCap,
   Languages,
   Layers3,
-  LayoutGrid,
   MemoryStick,
   RotateCw,
   Route,
@@ -37,28 +35,12 @@ const subscribeGlobal = (listener: () => void) => useGlobalStore.subscribe(liste
 export const registerBuiltinDevDockItems = () => {
   const items: DevDockItem[] = [
     {
-      defaultPinned: true,
-      icon: Bot,
-      id: 'agent-mock',
-      label: 'Agent Mock',
-      load: () => import('@/features/AgentMockDevtools'),
-      type: 'panel',
-    },
-    {
       badge: FlagOverrideBadge,
       defaultPinned: true,
       icon: Flag,
       id: 'feature-flags',
       label: 'Feature Flags',
       load: () => import('@/features/DevFeatureFlagPanel'),
-      type: 'panel',
-    },
-    {
-      defaultPinned: true,
-      icon: LayoutGrid,
-      id: 'render-gallery',
-      label: 'Render Gallery',
-      load: () => import('@/features/DevPanel/RenderGallery'),
       type: 'panel',
     },
     {
