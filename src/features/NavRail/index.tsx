@@ -47,7 +47,7 @@ const NavTabBar = memo(() => {
   // Messages returns to the active Channel, or home where the conversation list lives.
   const { activeChannelId, url: messagesUrl } = useMessagesUrl(pathname, activeWorkspaceSlug);
 
-  // Lobot's IA is two tabs: Contacts and Messages (Channels), in Telegram's order.
+  // Lobot's IA is two tabs: Messages (Channels) first, then Contacts.
   const tabs = useMemo(
     () => [
       {
@@ -62,6 +62,7 @@ const NavTabBar = memo(() => {
         title: t('tab.messages'),
         url: messagesUrl,
       },
+      { icon: UsersIcon, key: 'contacts' as const, title: t('tab.contacts'), url: '/agents' },
     ],
     [messagesUrl, t],
   );
