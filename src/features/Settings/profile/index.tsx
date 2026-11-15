@@ -8,8 +8,8 @@ import SettingHeader from '@/features/Settings/features/SettingHeader';
 import { useUserStore } from '@/store/user';
 import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
 
+import InsetGroup from '../features/inset/InsetGroup';
 import EmailRow from './features/EmailRow';
-import InsetGroup from './features/InsetGroup';
 import InterestsRow from './features/InterestsRow';
 import ProfileHero from './features/ProfileHero';
 import SignOutRow from './features/SignOutRow';

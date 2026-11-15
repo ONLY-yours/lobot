@@ -5,7 +5,7 @@ import { cssVar } from '@lobehub/ui/stylex/cssVar.stylex';
 import * as stylex from '@stylexjs/stylex';
 import { type ReactNode } from 'react';
 
-import InsetGroup from '@/features/Settings/profile/features/InsetGroup';
+import InsetGroup from '@/features/Settings/features/inset/InsetGroup';
 import { useUserStore } from '@/store/user';
 import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
 

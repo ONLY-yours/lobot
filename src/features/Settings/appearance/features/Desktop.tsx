@@ -2,18 +2,16 @@
 
 import { isDesktop } from '@lobechat/const';
 import { Switch } from '@lobehub/ui';
-import { Form, type FormGroupItem, useForm } from '@lobehub/ui/form';
-import { memo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { FORM_STYLE } from '@/const/layoutTokens';
-import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
+import InsetRow from '@/features/Settings/features/inset/InsetRow';
 import { useElectronStore } from '@/store/electron';
 
-const Desktop = memo(() => {
+/** The tray / menu-bar icon switch; desktop only. */
+const AppTrayRow = () => {
   const { t } = useTranslation('setting');
   const [loading, setLoading] = useState(false);
-  const form = useForm();
   const [appTrayVisible, setAppTrayVisible, useGetAppTrayVisible] = useElectronStore((s) => [
     s.appTrayVisible,
     s.setAppTrayVisible,
@@ -22,46 +20,23 @@ const Desktop = memo(() => {
 
   useGetAppTrayVisible(isDesktop);
 
-  if (!isDesktop) return null;
-
-  const desktop: FormGroupItem = {
-    children: [
-      {
-        children: (
-          <Switch
-            checked={appTrayVisible}
-            loading={loading}
-            onChange={async (checked: boolean) => {
-              setLoading(true);
-              try {
-                await setAppTrayVisible(checked);
-              } finally {
-                setLoading(false);
-              }
-            }}
-          />
-        ),
-        label: (
-          <SettingsSearchAnchor id={'appearance-app-tray'}>
-            {t('settingAppearance.appTray.title')}
-          </SettingsSearchAnchor>
-        ),
-        minWidth: undefined,
-      },
-    ],
-    title: t('settingAppearance.desktop.title'),
-  };
-
   return (
-    <Form
-      collapsible={false}
-      form={form}
-      items={[desktop]}
-      itemsType={'group'}
-      variant={'filled'}
-      {...FORM_STYLE}
-    />
+    <InsetRow anchor={'appearance-app-tray'} label={t('settingAppearance.appTray.title')}>
+      <Switch
+        aria-label={t('settingAppearance.appTray.title')}
+        checked={appTrayVisible}
+        loading={loading}
+        onChange={async (checked: boolean) => {
+          setLoading(true);
+          try {
+            await setAppTrayVisible(checked);
+          } finally {
+            setLoading(false);
+          }
+        }}
+      />
+    </InsetRow>
   );
-});
+};
 
-export default Desktop;
+export default AppTrayRow;

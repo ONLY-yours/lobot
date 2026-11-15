@@ -5,9 +5,9 @@ import { useTranslation } from 'react-i18next';
 
 import { SETTINGS_ANCHOR_ROW_ATTR, SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
 
+import InsetGroup from '../../features/inset/InsetGroup';
 import AvatarUpload from './AvatarUpload';
 import FullNameInput from './FullNameInput';
-import InsetGroup from './InsetGroup';
 
 const styles = stylex.create({
   name: { flex: '1', minWidth: '0' },

@@ -4,7 +4,10 @@ import { isDesktop } from '@lobechat/const';
 import { Flexbox } from '@lobehub/ui';
 import { Form } from '@lobehub/ui/form';
 
+import InsetGroup from '@/features/Settings/features/inset/InsetGroup';
+
 import SkeletonBar from '../../Bar';
+import { SettingsProfileRowSkeleton } from '../Profile';
 import { SettingsFormSkeleton, SWITCH_CONTROL } from '../Section';
 import { useSkeletonText } from '../useSkeletonText';
 import type { SettingsTabSkeleton } from './types';
@@ -12,111 +15,6 @@ import type { SettingsTabSkeleton } from './types';
 /** The idle auto-save hint ("loaded the latest version") on the right of a group head. */
 const SAVE_HINT = <SkeletonBar height={20} width={102} />;
 
-/** A `Select` at 50% of the 335px control column, right-aligned as the loaded one. */
-const HALF_SELECT = (
-  <Flexbox horizontal justify={'flex-end'} width={'100%'}>
-    <SkeletonBar height={32} width={'50%'} />
-  </Flexbox>
-);
-
-/** General: theme picker, language, motion, context menu and reply language. */
-export const CommonSectionSkeleton = () => {
-  const text = useSkeletonText('setting');
-
-  return (
-    <SettingsFormSkeleton
-      groups={[
-        {
-          extra: SAVE_HINT,
-          items: [
-            {
-              control: { height: 86, radius: 8, width: 332 },
-              label: text('settingCommon.themeMode.title', 32, 14),
-              minWidth: undefined,
-            },
-            { control: HALF_SELECT, label: text('settingCommon.lang.title', 32, 14) },
-            {
-              control: { height: 38, radius: 8, width: 230 },
-              label: text('settingAppearance.animationMode.title', 64, 14),
-              minWidth: undefined,
-            },
-            {
-              control: { height: 38, radius: 8, width: 165 },
-              label: text('settingAppearance.contextMenuMode.title', 84, 14),
-              minWidth: undefined,
-            },
-            {
-              control: HALF_SELECT,
-              label: text('settingCommon.responseLanguage.title', 64, 14),
-            },
-          ],
-          title: text('settingCommon.title', 72),
-        },
-      ]}
-    />
-  );
-};
-
-/** Theme: the 332x200 preview, then the primary and neutral swatch rows. */
-export const AppearanceSectionSkeleton = () => {
-  const text = useSkeletonText('setting');
-
-  return (
-    <SettingsFormSkeleton
-      groups={[
-        {
-          extra: SAVE_HINT,
-          items: [
-            {
-              control: { height: 200, radius: 8, width: 332 },
-              label: text('settingAppearance.preview.title', 48, 14),
-              minWidth: undefined,
-            },
-            {
-              control: { height: 24, radius: 12, width: 425 },
-              label: text('settingAppearance.primaryColor.title', 48, 14),
-              minWidth: undefined,
-            },
-            {
-              control: { height: 24, radius: 12, width: 174 },
-              label: text('settingAppearance.neutralColor.title', 48, 14),
-              minWidth: undefined,
-            },
-          ],
-          title: text('settingAppearance.title', 72),
-        },
-      ]}
-    />
-  );
-};
-
-/** Electron only: the tray-icon switch. */
-const DesktopSectionSkeleton = () => {
-  const text = useSkeletonText('setting');
-  if (!isDesktop) return null;
-
-  return (
-    <SettingsFormSkeleton
-      groups={[
-        {
-          items: [
-            {
-              control: SWITCH_CONTROL,
-              label: text('settingAppearance.appTray.title', 96, 14),
-              minWidth: undefined,
-            },
-          ],
-          title: text('settingAppearance.desktop.title', 48),
-        },
-      ]}
-    />
-  );
-};
-
-/**
- * Fonts: the four font-stack rows (Electron only), antialiasing, and the
- * vertical font-size slider with its preview line.
- */
 export const FontSectionSkeleton = () => {
   const text = useSkeletonText('setting');
   const fontRow = (key: string) => ({
@@ -140,27 +38,6 @@ export const FontSectionSkeleton = () => {
               desc: text('settingAppearance.font.antialiasing.desc', 360, 12),
               label: text('settingAppearance.font.antialiasing.title', 72, 14),
               minWidth: undefined,
-            },
-            {
-              control: (
-                <Flexbox gap={16} width={'100%'}>
-                  <Flexbox gap={24}>
-                    <SkeletonBar height={4} />
-                    <Flexbox horizontal align={'center'} justify={'space-between'}>
-                      <SkeletonBar height={14} width={12} />
-                      <SkeletonBar height={14} width={40} />
-                      <SkeletonBar height={14} width={12} />
-                    </Flexbox>
-                  </Flexbox>
-                  <Flexbox justify={'center'} style={{ height: 30 }}>
-                    <SkeletonBar height={16} width={340} />
-                  </Flexbox>
-                </Flexbox>
-              ),
-              desc: text('settingChatAppearance.fontSize.desc', 72, 12),
-              label: text('settingChatAppearance.fontSize.title', 56, 14),
-              layout: 'vertical',
-              minWidth: '100%',
             },
           ],
           title: text('settingAppearance.font.title', 32),
@@ -243,16 +120,62 @@ export const ChatAppearanceSectionSkeleton = () => {
   );
 };
 
-/** The five appearance sections, as direct children of the 36px-gap settings container. */
-const Body = () => (
-  <>
-    <CommonSectionSkeleton />
-    <AppearanceSectionSkeleton />
-    <DesktopSectionSkeleton />
-    <FontSectionSkeleton />
-    <ChatAppearanceSectionSkeleton />
-  </>
-);
+/**
+ * The appearance tab's inset groups: color theme (preview, theme cards, accent
+ * dots), text size, then the rows that open the font and chat pages.
+ */
+const Body = () => {
+  const text = useSkeletonText('setting');
+
+  return (
+    <Flexbox aria-busy gap={24}>
+      <InsetGroup title={text('settingAppearance.colorTheme.title', 56, 18)}>
+        <SkeletonBar height={176} radius={0} />
+        <Flexbox horizontal gap={16} padding={16}>
+          {[0, 1, 2].map((key) => (
+            <Flexbox align={'center'} gap={8} key={key}>
+              <SkeletonBar height={64} radius={12} width={96} />
+              <SkeletonBar height={14} width={40} />
+            </Flexbox>
+          ))}
+        </Flexbox>
+        <Flexbox horizontal gap={8} padding={16}>
+          {Array.from({ length: 13 }, (_, key) => (
+            <SkeletonBar height={24} key={key} radius={'50%'} width={24} />
+          ))}
+        </Flexbox>
+      </InsetGroup>
+      <InsetGroup
+        footer={text('settingChatAppearance.fontSize.desc', 96, 12)}
+        title={text('settingChatAppearance.fontSize.title', 56, 18)}
+      >
+        <Flexbox gap={24} paddingBlock={20} paddingInline={16}>
+          <SkeletonBar height={4} />
+        </Flexbox>
+      </InsetGroup>
+      <InsetGroup>
+        <SettingsProfileRowSkeleton
+          label={text('settingAppearance.font.title', 32, 22)}
+          valueWidth={16}
+        />
+        <SettingsProfileRowSkeleton
+          label={text('settingAppearance.chatDisplay.title', 64, 22)}
+          valueWidth={16}
+        />
+        <SettingsProfileRowSkeleton
+          label={text('settingAppearance.animationMode.title', 64, 22)}
+          valueWidth={200}
+        />
+        {isDesktop && (
+          <SettingsProfileRowSkeleton
+            label={text('settingAppearance.appTray.title', 96, 22)}
+            valueWidth={44}
+          />
+        )}
+      </InsetGroup>
+    </Flexbox>
+  );
+};
 
 const AppearanceSkeleton: SettingsTabSkeleton = { Body };
 

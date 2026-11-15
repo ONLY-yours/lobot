@@ -16,7 +16,6 @@ import { preferenceSelectors, userGeneralSettingsSelectors } from '@/store/user/
 
 import { APPLICATION_DEFAULT_FONT, useSystemFontOptions } from '../useSystemFontOptions';
 import FallbackFontList from './FallbackFontList';
-import { FontSizeControl } from './FontSize';
 import { joinFontStack, parseFontStack } from './fontStack';
 
 const FontSettings = memo(() => {
@@ -25,7 +24,6 @@ const FontSettings = memo(() => {
     preferenceSelectors.fontFamily(s),
     preferenceSelectors.terminalFontFamily(s),
   ]);
-  const fontSize = useUserStore(userGeneralSettingsSelectors.fontSize);
   const fontAntialiasing = useUserStore(userGeneralSettingsSelectors.fontAntialiasing);
   const updatePreference = useUserStore((s) => s.updatePreference);
   const setSettings = useUserStore((s) => s.setSettings);
@@ -170,25 +168,10 @@ const FontSettings = memo(() => {
         ),
         minWidth: undefined,
       },
-      {
-        children: (
-          <FontSizeControl
-            value={fontSize}
-            onChange={(value) => save(() => setSettings({ general: { fontSize: value } }))}
-          />
-        ),
-        desc: t('settingChatAppearance.fontSize.desc'),
-        label: (
-          <SettingsSearchAnchor id={'appearance-font-size'}>
-            {t('settingChatAppearance.fontSize.title')}
-          </SettingsSearchAnchor>
-        ),
-        layout: 'vertical',
-        minWidth: '100%',
-      },
     ],
     extra: <AutoSaveHint lastUpdatedTime={lastSavedAt} saveStatus={saveStatus} onRetry={retry} />,
-    title: t('settingAppearance.font.title'),
+    // The sub page header already reads "Font".
+    title: null,
   };
 
   return (

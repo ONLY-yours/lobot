@@ -11,7 +11,7 @@ import { SETTINGS_ANCHOR_ROW_ATTR, SettingsSearchAnchor } from '@/features/Setti
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { isModifierClick } from '@/utils/navigation';
 
-interface ProfileRowProps {
+interface InsetRowProps {
   action?: ReactNode;
   /** Settings-search anchor id; when set, the row becomes a scroll/highlight target */
   anchor?: string;
@@ -49,7 +49,7 @@ const styles = stylex.create({
 });
 
 /** One row of an inset group: label on the left, value and action on the right. */
-const ProfileRow = ({ anchor, label, children, action, to }: ProfileRowProps) => {
+const InsetRow = ({ anchor, label, children, action, to }: InsetRowProps) => {
   const navigate = useWorkspaceAwareNavigate();
   const labelNode = label && <Text>{label}</Text>;
   const anchorAttr = anchor ? { [SETTINGS_ANCHOR_ROW_ATTR]: '' } : undefined;
@@ -90,4 +90,4 @@ const ProfileRow = ({ anchor, label, children, action, to }: ProfileRowProps) =>
   );
 };
 
-export default ProfileRow;
+export default InsetRow;

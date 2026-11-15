@@ -222,7 +222,7 @@ export const useSettingsSearch = (
         label,
         pinyinBase: [label.toLowerCase(), ...keywordTexts],
         tab: def.tab,
-        url: `${tabInfo.url}#${def.anchor}`,
+        url: `${tabInfo.url}${def.subPage ? `/${def.subPage}` : ''}#${def.anchor}`,
       });
     }
 

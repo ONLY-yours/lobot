@@ -87,6 +87,7 @@ export enum SettingsTabs {
   Integrations = 'integrations',
   Labels = 'labels',
   Labs = 'labs',
+  Language = 'language',
   LLM = 'llm',
   Memory = 'memory',
   Messenger = 'messenger',

@@ -17,6 +17,9 @@ export const componentMap = {
   [SettingsTabs.Appearance]: dynamic(() => import('../appearance'), {
     loading: loading('Settings > Appearance'),
   }),
+  [SettingsTabs.Language]: dynamic(() => import('../language'), {
+    loading: loading('Settings > Language'),
+  }),
   [SettingsTabs.Notification]: dynamic(
     () => import('../notification').then((m) => ({ default: m.DesktopNotificationSettings })),
     { loading: loading('Settings > Notification') },
@@ -26,12 +29,6 @@ export const componentMap = {
   }),
   [SettingsTabs.Proxy]: dynamic(() => import('../proxy'), {
     loading: loading('Settings > Proxy'),
-  }),
-  [SettingsTabs.Labs]: dynamic(() => import('../labs'), {
-    loading: loading('Settings > Labs'),
-  }),
-  [SettingsTabs.Advanced]: dynamic(() => import('../advanced'), {
-    loading: loading('Settings > Advanced'),
   }),
   [SettingsTabs.About]: dynamic(() => import('../about'), {
     loading: loading('Settings > About'),

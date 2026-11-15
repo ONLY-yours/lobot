@@ -5,11 +5,12 @@ import { type ChangeEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { SettingsTabs } from '@/store/global/initialState';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
-import InsetGroup from '../features/InsetGroup';
-import SubPageFrame, { PROFILE_URL } from '../features/SubPageFrame';
+import InsetGroup from '../../features/inset/InsetGroup';
+import SubPageFrame, { settingsTabUrl } from '../../features/inset/SubPageFrame';
 import { validateUsername } from './validate';
 
 /**
@@ -28,7 +29,7 @@ const UsernamePage = () => {
   const trimmed = value.trim();
   const dirty = trimmed !== username;
 
-  const goBack = () => navigate(PROFILE_URL, { escape: true });
+  const goBack = () => navigate(settingsTabUrl(SettingsTabs.Profile), { escape: true });
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setValue(e.target.value);
@@ -63,6 +64,7 @@ const UsernamePage = () => {
 
   return (
     <SubPageFrame
+      tab={SettingsTabs.Profile}
       title={t('profile.username')}
       right={
         <Button disabled={!!error} loading={saving} size={'small'} onClick={handleDone}>

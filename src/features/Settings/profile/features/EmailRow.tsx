@@ -14,7 +14,7 @@ import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 import { saveToast } from '@/store/utils/saveToast';
 
-import ProfileRow from './ProfileRow';
+import InsetRow from '../../features/inset/InsetRow';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
@@ -66,7 +66,7 @@ const EmailRow = () => {
   // be completed on the web app.
   if (isDesktop)
     return (
-      <ProfileRow
+      <InsetRow
         anchor={'profile-email'}
         label={t('profile.email')}
         action={
@@ -87,11 +87,11 @@ const EmailRow = () => {
         <Text ellipsis type={'secondary'}>
           {email || '--'}
         </Text>
-      </ProfileRow>
+      </InsetRow>
     );
 
   return (
-    <ProfileRow
+    <InsetRow
       anchor={'profile-email'}
       label={t('profile.email')}
       action={
@@ -130,7 +130,7 @@ const EmailRow = () => {
           {email || '--'}
         </Text>
       )}
-    </ProfileRow>
+    </InsetRow>
   );
 };
 

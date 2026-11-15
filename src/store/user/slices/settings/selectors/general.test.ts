@@ -150,7 +150,8 @@ describe('settingsSelectors', () => {
       expect(result).toBeUndefined();
     });
 
-    it('should return the neutralColor', () => {
+    // Lobot has no neutral-color picker, so a value saved from LobeHub must not stick.
+    it('ignores a neutralColor saved from LobeHub', () => {
       const s: UserState = merge(initialState, {
         settings: {
           general: { neutralColor: '#000000' },
@@ -159,7 +160,20 @@ describe('settingsSelectors', () => {
 
       const result = userGeneralSettingsSelectors.neutralColor(s as UserStore);
 
-      expect(result).toBe('#000000');
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('contextMenuMode', () => {
+    it('keeps the platform default even when another value was saved', () => {
+      const s: UserState = merge(initialState, {
+        settings: {
+          general: { contextMenuMode: 'default' },
+        },
+      });
+
+      // Tests run outside Electron, where the default is no context menu.
+      expect(userGeneralSettingsSelectors.contextMenuMode(s as UserStore)).toBe('disabled');
     });
   });
 

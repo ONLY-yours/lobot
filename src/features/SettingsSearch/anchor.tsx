@@ -8,7 +8,7 @@ import { useLocation } from 'react-router';
 export const SETTINGS_ANCHOR_ATTR = 'data-settings-anchor';
 /**
  * Marks the row container to flash-highlight for anchors inside non-antd rows
- * (e.g. profile ProfileRow) — the highlight lookup falls back to this attribute
+ * (e.g. a settings InsetRow) — the highlight lookup falls back to this attribute
  * when no `.ant-form-item` ancestor exists.
  */
 export const SETTINGS_ANCHOR_ROW_ATTR = 'data-settings-anchor-row';

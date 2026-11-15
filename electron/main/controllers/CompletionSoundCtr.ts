@@ -144,7 +144,8 @@ export default class CompletionSoundCtr extends ControllerModule {
       builtin: settings?.builtin ?? 'lobehub',
       enabled: settings?.enabled ?? false,
       name: settings?.name,
-      notificationSound: settings?.notificationSound ?? 'system',
+      // Lobot's banners ring with its own chime unless the user picks the system sound.
+      notificationSound: settings?.notificationSound ?? 'lobehub',
       volume: settings?.volume ?? 0.7,
     };
   }

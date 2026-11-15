@@ -1,12 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import DiscreteSlider from '@/components/DiscreteSlider';
-
-import ChatPreview from './ChatPreview';
 
 interface FontSizeControlProps {
   onChange: (value: number) => void;
@@ -38,10 +35,5 @@ export const FontSizeControl = memo<FontSizeControlProps>(({ onChange, value }) 
     });
   }, [t]);
 
-  return (
-    <Flexbox gap={16} width={'100%'}>
-      <DiscreteSlider options={options} value={value} onChange={onChange} />
-      <ChatPreview fontSize={value} />
-    </Flexbox>
-  );
+  return <DiscreteSlider options={options} value={value} onChange={onChange} />;
 });

@@ -41,14 +41,10 @@ describe('settings useCategory', () => {
       SettingsGroupKey.General,
       SettingsGroupKey.System,
     ]);
-    expect(groups[1].items.map((item) => item.key)).toEqual([
-      SettingsTabs.Labs,
-      SettingsTabs.Advanced,
-      SettingsTabs.About,
-    ]);
+    expect(groups[1].items.map((item) => item.key)).toEqual([SettingsTabs.About]);
   });
 
-  it('never offers configuration surfaces such as providers, skills or OAuth apps', () => {
+  it('never offers configuration surfaces such as providers, skills, OAuth apps or labs', () => {
     const keys = renderCategory({ showApiKeyManage: true, showProvider: true }).flatMap((group) =>
       group.items.map((item) => item.key),
     );
@@ -59,6 +55,8 @@ describe('settings useCategory', () => {
       SettingsTabs.OAuthApps,
       SettingsTabs.APIKey,
       SettingsTabs.Plans,
+      SettingsTabs.Labs,
+      SettingsTabs.Advanced,
     ])
       expect(keys).not.toContain(hidden);
   });

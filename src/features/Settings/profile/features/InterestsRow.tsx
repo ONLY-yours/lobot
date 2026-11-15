@@ -9,7 +9,7 @@ import { SettingsTabs } from '@/store/global/initialState';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
-import ProfileRow from './ProfileRow';
+import InsetRow from '../../features/inset/InsetRow';
 
 /** One row with the selection count; the picker opens on its own page. */
 const InterestsRow = () => {
@@ -18,7 +18,7 @@ const InterestsRow = () => {
   const count = normalizeInterestsForStorage(interests).length;
 
   return (
-    <ProfileRow
+    <InsetRow
       anchor={'profile-interests'}
       label={t('profile.interests')}
       to={getSettingsSubPageUrl(SettingsTabs.Profile, 'interests')}
@@ -26,7 +26,7 @@ const InterestsRow = () => {
       <Text ellipsis type={'secondary'}>
         {count > 0 ? t('profile.interestsCount', { count }) : t('profile.interestsNone')}
       </Text>
-    </ProfileRow>
+    </InsetRow>
   );
 };
 

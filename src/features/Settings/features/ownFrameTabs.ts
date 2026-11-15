@@ -21,7 +21,11 @@ export const FULL_WIDTH_TABS = new Set<string>([SettingsTabs.Devices]);
  * in a narrower column so label and value stay within one glance. Other tabs
  * keep a white page, drawn as a card by the settings layout.
  */
-export const INSET_TABS = new Set<string>([SettingsTabs.Profile]);
+export const INSET_TABS = new Set<string>([
+  SettingsTabs.Appearance,
+  SettingsTabs.Language,
+  SettingsTabs.Profile,
+]);
 
 export const getSettingsContainerMaxWidth = (tab: string | undefined) => {
   if (tab && FULL_WIDTH_TABS.has(tab)) return '100%';

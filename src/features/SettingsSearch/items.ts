@@ -34,6 +34,8 @@ export interface SettingsSearchItem {
   labelKey: string;
   /** i18n namespace of `labelKey` / `descKey`, defaults to `setting` */
   ns?: 'auth' | 'electron' | 'labs' | 'setting' | 'spend' | 'subscription';
+  /** Second-level page under `tab` that holds the item, e.g. `font` for `/settings/appearance/font` */
+  subPage?: string;
   tab: SettingsSearchTab;
   /**
    * Extra visibility gate mirroring the target item's own render condition
@@ -63,7 +65,6 @@ export const TAB_SEARCH_EN_KEYWORDS: Partial<Record<string, string[]>> = {
     'dark mode',
     'light mode',
     'font',
-    'language',
     'color',
     'background',
   ],
@@ -74,6 +75,7 @@ export const TAB_SEARCH_EN_KEYWORDS: Partial<Record<string, string[]>> = {
   [SettingsTabs.Devices]: ['devices', 'sessions', 'logged in devices'],
   [SettingsTabs.Hotkey]: ['hotkey', 'shortcut', 'keyboard'],
   [SettingsTabs.Labs]: ['labs', 'experiment', 'beta', 'preview', 'developer'],
+  [SettingsTabs.Language]: ['language', 'locale', 'i18n', 'translation'],
   [SettingsTabs.Memory]: ['memory', 'memories', 'personalization'],
   [SettingsTabs.Environments]: [
     'sandbox',
@@ -291,6 +293,20 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     // tab switch.
     visible: (ctx) => ctx.enableComposio,
   },
+  // Language
+  {
+    anchor: 'language-interface',
+    keywords: ['language', 'locale', 'i18n'],
+    labelKey: 'settingCommon.lang.interfaceTitle',
+    tab: SettingsTabs.Language,
+  },
+  {
+    anchor: 'language-response-language',
+    descKey: 'settingCommon.responseLanguage.desc',
+    keywords: ['response language', 'reply'],
+    labelKey: 'settingCommon.responseLanguage.title',
+    tab: SettingsTabs.Language,
+  },
   // Appearance
   {
     anchor: 'appearance-theme-mode',
@@ -298,12 +314,7 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     labelKey: 'settingCommon.themeMode.title',
     tab: SettingsTabs.Appearance,
   },
-  {
-    anchor: 'appearance-language',
-    keywords: ['language', 'locale', 'i18n'],
-    labelKey: 'settingCommon.lang.title',
-    tab: SettingsTabs.Appearance,
-  },
+
   {
     anchor: 'appearance-animation',
     descKey: 'settingAppearance.animationMode.desc',
@@ -311,32 +322,14 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     labelKey: 'settingAppearance.animationMode.title',
     tab: SettingsTabs.Appearance,
   },
-  {
-    anchor: 'appearance-context-menu',
-    descKey: 'settingAppearance.contextMenuMode.desc',
-    keywords: ['context menu', 'right click'],
-    labelKey: 'settingAppearance.contextMenuMode.title',
-    tab: SettingsTabs.Appearance,
-  },
-  {
-    anchor: 'appearance-response-language',
-    descKey: 'settingCommon.responseLanguage.desc',
-    keywords: ['response language', 'reply'],
-    labelKey: 'settingCommon.responseLanguage.title',
-    tab: SettingsTabs.Appearance,
-  },
+
   {
     anchor: 'appearance-primary-color',
     keywords: ['color', 'accent'],
     labelKey: 'settingAppearance.primaryColor.title',
     tab: SettingsTabs.Appearance,
   },
-  {
-    anchor: 'appearance-neutral-color',
-    keywords: ['color', 'gray', 'grey'],
-    labelKey: 'settingAppearance.neutralColor.title',
-    tab: SettingsTabs.Appearance,
-  },
+
   {
     anchor: 'appearance-app-tray',
     keywords: ['tray', 'menu bar', 'menubar'],
@@ -364,6 +357,7 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     descKey: 'settingAppearance.font.fontFamily.desc',
     keywords: ['font', 'font family', 'typeface', 'interface font'],
     labelKey: 'settingAppearance.font.fontFamily.title',
+    subPage: 'font',
     tab: SettingsTabs.Appearance,
     visible: (ctx) => ctx.isDesktop,
   },
@@ -372,6 +366,7 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     descKey: 'settingAppearance.font.fallback.desc',
     keywords: ['fallback font', 'font stack', 'cjk font', 'chinese font', 'font family'],
     labelKey: 'settingAppearance.font.fallback.title',
+    subPage: 'font',
     tab: SettingsTabs.Appearance,
     visible: (ctx) => ctx.isDesktop,
   },
@@ -380,6 +375,7 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     descKey: 'settingAppearance.font.monospace.desc',
     keywords: ['terminal font', 'monospace', 'code font', 'font family'],
     labelKey: 'settingAppearance.font.monospace.title',
+    subPage: 'font',
     tab: SettingsTabs.Appearance,
     visible: (ctx) => ctx.isDesktop,
   },
@@ -388,6 +384,7 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     descKey: 'settingAppearance.font.monospaceFallback.desc',
     keywords: ['fallback font', 'monospace', 'code font', 'terminal font'],
     labelKey: 'settingAppearance.font.monospaceFallback.title',
+    subPage: 'font',
     tab: SettingsTabs.Appearance,
     visible: (ctx) => ctx.isDesktop,
   },
@@ -403,6 +400,7 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     descKey: 'settingAppearance.font.antialiasing.desc',
     keywords: ['font', 'antialiasing', 'smoothing', 'text', 'rendering'],
     labelKey: 'settingAppearance.font.antialiasing.title',
+    subPage: 'font',
     tab: SettingsTabs.Appearance,
   },
   // System Tools
@@ -442,11 +440,11 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     visible: (ctx) => ctx.enableGatewayMode,
   },
   {
-    anchor: 'advanced-update-channel',
+    anchor: 'about-update-channel',
     descKey: 'tab.advanced.updateChannel.desc',
     keywords: ['update', 'version', 'canary', 'stable'],
     labelKey: 'tab.advanced.updateChannel.title',
-    tab: SettingsTabs.Advanced,
+    tab: SettingsTabs.About,
     visible: (ctx) => ctx.isDesktop,
   },
   // Labs — derived from the LAB_FEATURES catalog the page renders, so a new

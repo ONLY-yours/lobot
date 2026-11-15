@@ -84,7 +84,7 @@ describe('local completion sound settings', () => {
       builtin: 'glassBell',
       enabled: true,
       name: undefined,
-      notificationSound: 'system',
+      notificationSound: 'lobehub',
       systemSoundDisabled: false,
       volume: 0.3,
     });
@@ -144,14 +144,18 @@ describe('local completion sound settings', () => {
     expect(await controller.getPlayback()).toMatchObject({ play: true });
   });
 
-  it('installs the banner sound into the user Sounds folder only when our chime is picked', async () => {
+  it('rings banners with the Lobot chime by default', async () => {
     const target = path.join(directory, 'Library', 'Sounds', 'lobehub-complete.aiff');
-    expect(await controller.getNotificationSoundFile()).toBeUndefined();
-    await expect(readFile(target)).rejects.toThrow();
-
-    await controller.setSettings({ notificationSound: 'lobehub' });
+    expect((await controller.getSettings()).notificationSound).toBe('lobehub');
     expect(await controller.getNotificationSoundFile()).toBe('lobehub-complete.aiff');
     expect(await readFile(target, 'utf8')).toBe('FORM');
+  });
+
+  it('leaves the banner on the macOS sound once the user picks the system sound', async () => {
+    const target = path.join(directory, 'Library', 'Sounds', 'lobehub-complete.aiff');
+    await controller.setSettings({ notificationSound: 'system' });
+    expect(await controller.getNotificationSoundFile()).toBeUndefined();
+    await expect(readFile(target)).rejects.toThrow();
   });
 
   it('falls back to the system sound when the bundled file is missing', async () => {
