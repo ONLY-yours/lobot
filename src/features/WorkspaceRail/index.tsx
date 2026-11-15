@@ -42,7 +42,7 @@ RailItem.displayName = 'WorkspaceRailItem';
 
 /**
  * Discord-style scope switcher: the personal space on top, then one avatar per
- * workspace. Picking one lands on that scope's home. Renders nothing when the
+ * workspace. Picking one scopes every request to it and lands on the Messages home. Renders nothing when the
  * user belongs to no workspace, since there is nothing to switch between.
  */
 const WorkspaceRail = memo(() => {
@@ -54,7 +54,8 @@ const WorkspaceRail = memo(() => {
   const userAvatar = useUserStore(userProfileSelectors.userAvatar);
   const userName = useUserStore(userProfileSelectors.displayUserName);
 
-  // The URL is the source of truth; the explicit switch only adds user-intent side effects.
+  // Lobot has no workspace routes: switching changes the request scope, then lands on the
+  // Messages home, since the open conversation belongs to the scope just left.
   const openPersonal = useCallback(async () => {
     if (activeId === null) return;
     await switchToPersonal();
@@ -62,10 +63,10 @@ const WorkspaceRail = memo(() => {
   }, [activeId, navigate, switchToPersonal]);
 
   const openWorkspace = useCallback(
-    async (id: string, slug: string) => {
+    async (id: string) => {
       if (activeId === id) return;
       await switchWorkspace(id);
-      navigate(`/${slug}`, { escape: true });
+      navigate('/', { escape: true });
     },
     [activeId, navigate, switchWorkspace],
   );
@@ -92,7 +93,7 @@ const WorkspaceRail = memo(() => {
           active={activeId === workspace.id}
           key={workspace.id}
           title={workspace.name}
-          onClick={() => openWorkspace(workspace.id, workspace.slug)}
+          onClick={() => openWorkspace(workspace.id)}
         >
           <WorkspaceAvatar
             avatar={workspace.avatar}

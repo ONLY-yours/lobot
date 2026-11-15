@@ -2,27 +2,40 @@
 
 import { CHANNEL_URL } from '@lobechat/const';
 import { Flexbox, Text } from '@lobehub/ui';
+import { useMemo } from 'react';
 import { Navigate } from 'react-router';
 
+import { channelActivity } from '@/features/MessageList/conversations';
 import { channelActions, channelSelectors, useChannelStore } from '@/store/channel';
 
 /**
- * Lobot has no dashboard: the Messages tab opens the first Channel, and the
- * Channel list stays beside it. Without any Channel it shows the empty state.
+ * Lobot has no dashboard: the Messages tab opens the Channel with the latest
+ * message, and the Channel list stays beside it. Without any Channel it shows
+ * the empty state.
  */
 const DesktopHomeRoute = () => {
   const sync = channelActions.useFetchList();
   const channels = useChannelStore(channelSelectors.list);
+  // Land where the conversation is: the latest message, not the server's order (its first row
+  // can be a direct chat opened once and never used). Without any message, the latest activity.
+  const latest = useMemo(() => {
+    const live = channels?.filter((channel) => channel.status !== 'archived') ?? [];
+    const withMessages = live.filter((channel) => channel.lastMessage);
+    return (withMessages.length > 0 ? withMessages : live).reduce<
+      (typeof live)[number] | undefined
+    >(
+      (top, channel) => (!top || channelActivity(channel) > channelActivity(top) ? channel : top),
+      undefined,
+    );
+  }, [channels]);
 
-  if (channels && channels.length > 0) {
-    return <Navigate replace to={CHANNEL_URL(channels[0].id)} />;
+  if (latest) {
+    return <Navigate replace to={CHANNEL_URL(latest.id)} />;
   }
 
   return (
     <Flexbox align={'center'} gap={8} height={'100%'} justify={'center'}>
-      <Text type={'secondary'}>
-        {sync.error ? 'Channel 列表加载失败' : '还没有 Channel'}
-      </Text>
+      <Text type={'secondary'}>{sync.error ? 'Channel 列表加载失败' : '还没有 Channel'}</Text>
     </Flexbox>
   );
 };

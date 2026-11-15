@@ -48,6 +48,8 @@ const User = memo<{ lite?: boolean }>(({ lite }) => {
         style={{
           minWidth: 32,
           overflow: 'hidden',
+          // The tab bar shows a round avatar like Telegram's last tab, so its hover fill is round too.
+          ...(lite && { borderRadius: '50%' }),
           paddingInlineEnd: lite ? 2 : 8,
           paddingInlineStart: 2,
         }}
@@ -55,7 +57,7 @@ const User = memo<{ lite?: boolean }>(({ lite }) => {
         <UserAvatar
           avatarOverride={displayAvatar}
           nameOverride={activeIdentity?.name ?? undefined}
-          shape={'square'}
+          shape={lite ? 'circle' : 'square'}
           size={28}
         />
         {!lite && (

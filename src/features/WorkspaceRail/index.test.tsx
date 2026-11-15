@@ -75,7 +75,7 @@ describe('WorkspaceRail', () => {
     });
 
     expect(mocks.switchWorkspace).toHaveBeenCalledWith('ws-2');
-    expect(mocks.navigate).toHaveBeenCalledWith('/acme', { escape: true });
+    expect(mocks.navigate).toHaveBeenCalledWith('/', { escape: true });
   });
 
   it('switches back to the personal space', async () => {

@@ -1,5 +1,7 @@
 import type { WorkspaceItem } from '@lobechat/database/schemas';
 
+import { useWorkspaceStore } from '../workspace/store';
+
 export type WorkspaceListItem = WorkspaceItem & {
   /**
    * True when the caller is a non-primary member of a workspace whose paid
@@ -11,4 +13,7 @@ export type WorkspaceListItem = WorkspaceItem & {
   role?: string;
 };
 
-export const useActiveWorkspace = (): WorkspaceListItem | null => null;
+export const useActiveWorkspace = (): WorkspaceListItem | null =>
+  useWorkspaceStore(
+    (s) => s.workspaces.find((workspace) => workspace.id === s.activeWorkspaceId) ?? null,
+  );
