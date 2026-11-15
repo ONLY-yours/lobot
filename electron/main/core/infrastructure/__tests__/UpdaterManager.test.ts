@@ -41,6 +41,12 @@ vi.mock('electron-log', () => ({
   },
 }));
 
+vi.mock('@/utils/logger', () => ({
+  createLogger: () => ({ debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() }),
+}));
+
+vi.mock('@/utils/structuredLog', () => ({ writeStructuredLog: vi.fn() }));
+
 // Mock electron-updater
 vi.mock('electron-updater', () => {
   let channel = 'stable';
@@ -317,16 +323,17 @@ describe('UpdaterManager', () => {
       expect(updaterManager.getUpdaterState().stage).toBe('latest');
     });
 
-    it('reports a missing Sparkle bridge without falling back to electron-updater', async () => {
+    it('falls back to electron-updater when the build ships without Sparkle', async () => {
       mockLoadSparkleBridge.mockReturnValue(null);
       await updaterManager.initialize();
       await updaterManager.checkForUpdates();
-      expect(updaterManager.getUpdaterState()).toEqual({
-        stage: 'error',
-        errorMessage: 'Sparkle bridge unavailable',
+
+      expect(updaterManager.getUpdaterState().stage).not.toBe('error');
+      expect(autoUpdater.setFeedURL).toHaveBeenCalledWith({
+        provider: 'generic',
+        url: 'https://mock.update.server/stable',
       });
-      expect(autoUpdater.setFeedURL).not.toHaveBeenCalled();
-      expect(autoUpdater.checkForUpdates).not.toHaveBeenCalled();
+      expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
     });
 
     it('defers install-later to Sparkle on canary', async () => {

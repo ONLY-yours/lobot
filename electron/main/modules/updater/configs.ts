@@ -13,10 +13,23 @@ export const BUILD_CHANNEL: string = rawChannel;
 export const UPDATE_CHANNEL: UpdateChannel =
   rawChannel === 'canary' || rawChannel === 'beta' ? 'canary' : 'stable';
 
+/**
+ * Reduce a configured update server to its base URL: tolerate a missing scheme
+ * (`releases.example.com` → `https://releases.example.com`), a legacy channel
+ * suffix and a trailing slash. Empty input stays `undefined`.
+ */
+export const normalizeUpdateServerUrl = (url?: string | null): string | undefined => {
+  const trimmed = url?.trim();
+  if (!trimmed) return undefined;
+
+  const withScheme = /^[a-z][\d+.a-z-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  return withScheme.replace(/\/+$/, '').replace(/\/(stable|nightly|canary|beta)$/, '');
+};
+
 // S3 base URL for all channels
 // e.g., https://releases.lobehub.com
 // Each channel resolves to {base}/{channel}/
-export const UPDATE_SERVER_URL = getDesktopEnv().UPDATE_SERVER_URL;
+export const UPDATE_SERVER_URL = normalizeUpdateServerUrl(getDesktopEnv().UPDATE_SERVER_URL);
 
 export const updaterConfig = {
   app: {

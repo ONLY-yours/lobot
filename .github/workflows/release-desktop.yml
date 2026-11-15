@@ -125,6 +125,10 @@ jobs:
 
       - name: Build app bundle
         shell: bash
+        env:
+          # vite.main.config.ts 把这两个值编译进主进程；缺失时客户端不知道去哪检查更新。
+          UPDATE_CHANNEL: ${{ needs.prepare.outputs.channel }}
+          UPDATE_SERVER_URL: ${{ secrets.UPDATE_SERVER_URL }}
         run: pnpm build:main
 
       - name: Package
@@ -261,13 +265,28 @@ jobs:
           AWS_ARGS=(--region "$S3_REGION")
           if [ -n "${S3_ENDPOINT:-}" ]; then AWS_ARGS+=(--endpoint-url "$S3_ENDPOINT"); fi
 
+          # 客户端只认 stable / canary（beta 并入 canary，见 modules/updater/configs.ts）。
+          case "$CHANNEL" in
+            canary | beta) FEED_CHANNEL=canary ;;
+            *) FEED_CHANNEL=stable ;;
+          esac
+
+          upload() {
+            aws s3 cp "$1" "s3://${S3_BUCKET}/${FEED_CHANNEL}/$2" "${AWS_ARGS[@]}" \
+              --cache-control 'public, max-age=300'
+            echo "⬆️  ${FEED_CHANNEL}/$2"
+            count=$((count + 1))
+          }
+
           count=0
           while IFS= read -r -d '' file; do
             name="$(basename "$file")"
-            aws s3 cp "$file" "s3://${S3_BUCKET}/${CHANNEL}/${name}" "${AWS_ARGS[@]}" \
-              --cache-control 'public, max-age=300'
-            echo "⬆️  ${CHANNEL}/${name}"
-            count=$((count + 1))
+            upload "$file" "$name"
+            # electron-updater 设置 channel 后读取 {channel}*.yml（如 stable-mac.yml），
+            # 而 GitHub provider 生成的是 latest*.yml，两份都传。
+            case "$name" in
+              latest*.yml) upload "$file" "${FEED_CHANNEL}${name#latest}" ;;
+            esac
           done < <(find dist -type f \( -name '*.dmg' -o -name '*.zip' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.tar.gz' -o -name 'latest*.yml' \) -print0)
 
-          echo "✅ 已同步 ${count} 个文件到 s3://${S3_BUCKET}/${CHANNEL}/"
+          echo "✅ 已同步 ${count} 个文件到 s3://${S3_BUCKET}/${FEED_CHANNEL}/"

@@ -34,17 +34,15 @@ export const electronUpdaterEngine: UpdateEngine = {
     autoUpdater.autoDownload = false;
     autoUpdater.forceDevUpdateConfig = isDev || getDesktopEnv().FORCE_DEV_UPDATE_CONFIG;
     autoUpdater.allowPrerelease = channel !== 'stable';
-    if (!autoUpdater.forceDevUpdateConfig) {
-      const baseUrl = UPDATE_SERVER_URL?.replace(/\/(stable|nightly|canary|beta)\/?$/, '').replace(
-        /\/$/,
-        '',
-      );
+    if (UPDATE_SERVER_URL && !autoUpdater.forceDevUpdateConfig) {
+      // The release workflow publishes `{channel}*.yml` next to `latest*.yml`.
       autoUpdater.channel = channel;
-      autoUpdater.setFeedURL(
-        baseUrl
-          ? { provider: 'generic', url: `${baseUrl}/${channel}` }
-          : { owner: 'lobehub', provider: 'github', repo: 'lobehub' },
-      );
+      autoUpdater.setFeedURL({ provider: 'generic', url: `${UPDATE_SERVER_URL}/${channel}` });
+    } else if (!autoUpdater.forceDevUpdateConfig && channel !== 'stable') {
+      // Without a server, keep the packaged app-update.yml: electron-builder
+      // points it at the repository this build was released from. Its GitHub
+      // releases only carry `latest*.yml`, so stable must not rename the file.
+      autoUpdater.channel = channel;
     }
     // The channel setter mutates this flag. Windows/Linux retain rollback support.
     autoUpdater.allowDowngrade = true;

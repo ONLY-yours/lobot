@@ -14,11 +14,11 @@ export const resolveSparklePackaging = ({
   const sparkleRelease = platform === 'darwin' && isSparkleReleaseChannel(channel);
 
   if (sparkleRelease && hasAppleCertificate && !hasSparkleSettings) {
-    // Lobot ships without a Sparkle appcast host: keep the signed/notarized
-    // build and let electron-updater read GitHub Releases instead. Upstream
-    // requires the pair here, so warn loudly rather than failing the build.
+    // Lobot ships without Sparkle: keep the signed/notarized build and let
+    // electron-updater read latest-mac.yml (engine.mac.ts falls back to it).
+    // Upstream requires the pair here, so warn loudly rather than failing.
     console.warn(
-      '⚠️ 未配置 UPDATE_SERVER_URL / SPARKLE_ED_PUBLIC_KEY，macOS 更新改用 GitHub Releases',
+      '⚠️ 未配置 UPDATE_SERVER_URL / SPARKLE_ED_PUBLIC_KEY，macOS 更新改用 electron-updater',
     );
   }
 

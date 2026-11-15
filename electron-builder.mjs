@@ -4,8 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import YAML from 'yaml';
 import dotenv from 'dotenv';
+import YAML from 'yaml';
 
 import { copyExternalRuntimeModulesToSource } from './external-runtime-deps.config.mjs';
 import { getModuleFilesConfig } from './module-deps.config.mjs';
@@ -95,8 +95,15 @@ if (macCommunicationEntitlements) {
   console.info('🔔 Communication notification entitlements + provisioning profile enabled');
 }
 
+// 更新服务器地址允许省略协议（如 `releases.example.com`），统一补成 https。
+const withUrlScheme = (url) => {
+  const trimmed = url?.trim();
+  if (!trimmed) return undefined;
+  return /^[a-z][\d+.a-z-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+};
+
 // 自定义更新服务器 URL (用于 stable 频道)
-const updateServerUrl = process.env.UPDATE_SERVER_URL;
+const updateServerUrl = withUrlScheme(process.env.UPDATE_SERVER_URL);
 
 console.info(`🚄 Build Version ${packageJSON.version}, Channel: ${channel}`);
 console.info(`🏗️ Building for architecture: ${arch}`);
@@ -283,11 +290,16 @@ const config = {
     // electron-builder 在 `--publish never` + generic provider 下不会产出 latest*.yml，
     // 而 latest*.yml 本身不含 base URL，下载地址完全由 app-update.yml 决定。
     // afterPack 早于签名，改写后的 app-update.yml 仍会被正确签名。
-    const appUpdateServerUrl = process.env.APP_UPDATE_SERVER_URL;
+    const appUpdateServerUrl = withUrlScheme(process.env.APP_UPDATE_SERVER_URL);
     if (appUpdateServerUrl) {
       const resourcesDir = context.packager.getResourcesDir(context.appOutDir);
       const appUpdatePath = path.join(resourcesDir, 'app-update.yml');
-      if (await fs.stat(appUpdatePath).then(() => true).catch(() => false)) {
+      if (
+        await fs
+          .stat(appUpdatePath)
+          .then(() => true)
+          .catch(() => false)
+      ) {
         const channelPath = isStable ? 'stable' : isNightly ? 'nightly' : channel || 'stable';
         const baseUrl = stripChannelSuffix(appUpdateServerUrl).replace(/\/$/, '');
         const existing = YAML.parse(await fs.readFile(appUpdatePath, 'utf8')) ?? {};
