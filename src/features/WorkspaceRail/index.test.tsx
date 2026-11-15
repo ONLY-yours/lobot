@@ -17,7 +17,7 @@ vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => k
 vi.mock('./style', () => ({
   RAIL_AVATAR_SIZE: 32,
   RAIL_TILE_RADIUS: 10,
-  styles: { add: {}, divider: {}, item: {}, pill: {}, pillActive: {}, rail: {} },
+  styles: { add: {}, divider: {}, dot: {}, item: {}, pill: {}, pillActive: {}, rail: {} },
 }));
 vi.mock('./CreateWorkspace', () => ({ useOpenCreateWorkspace: () => mocks.openCreate }));
 vi.mock('@/business/client/workspace/store', () => ({

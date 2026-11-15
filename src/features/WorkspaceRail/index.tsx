@@ -35,7 +35,12 @@ const RailItem = memo<RailItemProps>(({ active, children, onClick, title }) => (
       {...stylex.props(styles.item, stylex.defaultMarker())}
       onClick={onClick}
     >
-      {active !== undefined && <span {...stylex.props(styles.pill, active && styles.pillActive)} />}
+      {active !== undefined && (
+        <>
+          {!active && <span {...stylex.props(styles.dot)} />}
+          <span {...stylex.props(styles.pill, active && styles.pillActive)} />
+        </>
+      )}
       {children}
     </div>
   </Tooltip>

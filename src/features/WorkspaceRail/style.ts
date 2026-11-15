@@ -43,7 +43,22 @@ export const styles = stylex.create({
     width: '100%',
     height: `${RAIL_AVATAR_SIZE}px`,
   },
-  // Hover grows a short pill, the active scope gets a tall one — Discord's cue.
+  // Discord's cue: a dot on hover, a tall pill on the active scope. Two marks rather than one
+  // squashed with scaleY, which flattened the rounded end; at rest neither is scaled.
+  dot: {
+    pointerEvents: 'none',
+    position: 'absolute',
+    insetInlineStart: 0,
+    width: '4px',
+    height: '8px',
+    borderStartEndRadius: '4px',
+    borderEndEndRadius: '4px',
+    backgroundColor: cssVar.colorText,
+    opacity: { default: 0, [stylex.when.ancestor(':hover')]: 1 },
+    transform: { default: 'scale(0)', [stylex.when.ancestor(':hover')]: 'scale(1)' },
+    transformOrigin: 'left center',
+    transition: 'opacity 0.15s, transform 0.15s',
+  },
   pill: {
     pointerEvents: 'none',
     position: 'absolute',
@@ -53,11 +68,11 @@ export const styles = stylex.create({
     borderStartEndRadius: '4px',
     borderEndEndRadius: '4px',
     backgroundColor: cssVar.colorText,
-    transform: { default: 'scaleY(0)', [stylex.when.ancestor(':hover')]: 'scaleY(0.4)' },
+    transform: 'scaleY(0)',
     transition: 'transform 0.15s',
   },
   pillActive: {
-    transform: { default: 'scaleY(1)', [stylex.when.ancestor(':hover')]: 'scaleY(1)' },
+    transform: 'scaleY(1)',
   },
   rail: {
     userSelect: 'none',
