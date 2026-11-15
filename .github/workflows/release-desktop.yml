@@ -232,7 +232,18 @@ jobs:
     needs: [prepare, build]
     runs-on: ubuntu-latest
     steps:
-      # gh release resolves the target repo from the git remote.
+      # Releases are created with the org's LobeHub bot GitHub App token, the same chain the
+      # lobehub repo uses: the workflow GITHUB_TOKEN started getting HTTP 403 on
+      # `POST /releases` (2026-11-15) even with `contents: write`.
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.LOBEHUB_BOT_APP_ID }}
+          private-key: ${{ secrets.LOBEHUB_BOT_APP_PRIVATE_KEY }}
+
+      # gh release resolves the target repo from the git remote. The checkout keeps the default
+      # GITHUB_TOKEN on purpose: a tag it pushes then does not re-trigger this workflow's
+      # `push: tags` run, which an App-token push would.
       - uses: actions/checkout@v7
 
       - name: Download artifacts
@@ -243,7 +254,7 @@ jobs:
       - name: Create / update release
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
           # Resolve from job outputs, then the dispatch input, then the tag ref.
