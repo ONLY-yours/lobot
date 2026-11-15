@@ -9,7 +9,6 @@ const service = vi.hoisted(() => ({
   getDeviceInfo: vi.fn(),
   getStableDeviceId: vi.fn(),
   connect: vi.fn(),
-  disconnect: vi.fn(),
   getConnectionStatus: vi.fn(),
 }));
 

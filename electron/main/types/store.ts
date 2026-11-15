@@ -37,7 +37,6 @@ export interface ElectronMainStore {
     refreshToken?: string;
   };
   gatewayDeviceId: string;
-  gatewayEnabled: boolean;
   /**
    * Keep the computer from idle-sleeping while the device gateway connection
    * is enabled, so the device stays reachable from other clients. The display

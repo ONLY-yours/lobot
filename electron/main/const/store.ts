@@ -31,7 +31,6 @@ export const STORE_DEFAULTS: ElectronMainStore = {
   debugLoggingEnabled: false,
   encryptedTokens: {},
   gatewayDeviceId: '',
-  gatewayEnabled: true,
   gatewayKeepAwake: true,
   gatewayWorkspaceEnrollmentsByAccount: {},
   heteroSessionDirPrefs: {},

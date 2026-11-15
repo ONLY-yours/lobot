@@ -61,15 +61,6 @@ export class ElectronGatewayActionImpl {
     }
   };
 
-  disconnectGateway = async (): Promise<void> => {
-    try {
-      await gatewayConnectionService.disconnect();
-      this.#set({ gatewayConnectionError: undefined, gatewayConnectionStatus: 'disconnected' });
-    } catch (error) {
-      console.error('Gateway disconnect failed:', error);
-    }
-  };
-
   setGatewayConnectionState = ({ error, status }: GatewayConnectionState): void => {
     this.#set(
       { gatewayConnectionError: error, gatewayConnectionStatus: status },

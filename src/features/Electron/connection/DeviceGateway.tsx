@@ -1,18 +1,21 @@
 import { type GatewayConnectionErrorCode, useWatchBroadcast } from '@lobechat/electron-client-ipc';
-import { ActionIcon, Button, createStaticStyles, Flexbox, Popover, Switch } from '@lobehub/ui';
+import { ActionIcon, Button, Flexbox, Popover } from '@lobehub/ui';
+import { cssVar } from '@lobehub/ui/stylex/cssVar.stylex';
+import * as stylex from '@stylexjs/stylex';
 import { HardDrive, SettingsIcon } from 'lucide-react';
-import { memo, useCallback, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
-import {
-  getScopedConnectionCount,
-  getWorkspaceConnectionState,
-} from '@/features/DeviceManager/connectionCount';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
-import { useDeviceList } from '@/store/device';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
+
+/**
+ * How long the device must stay off the gateway before the titlebar says so.
+ * Launch starts disconnected and the main process reconnects on its own, so a
+ * shorter outage resolves before anyone needs to know.
+ */
+export const OFFLINE_HINT_DELAY_MS = 8000;
 
 /** Why the last attempt ended, phrased with the next step. */
 const ERROR_MESSAGE_KEYS = {
@@ -22,167 +25,106 @@ const ERROR_MESSAGE_KEYS = {
   not_signed_in: 'gateway.error.notSignedIn',
 } as const satisfies Record<GatewayConnectionErrorCode, string>;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  errorDot: css`
-    position: absolute;
-    inset-block-end: 0;
-    inset-inline-end: 0;
+const styles = stylex.create({
+  errorDot: {
+    position: 'absolute',
+    insetBlockEnd: 0,
+    insetInlineEnd: 0,
+    width: '8px',
+    height: '8px',
+    borderWidth: '1.5px',
+    borderStyle: 'solid',
+    borderColor: cssVar.colorBgContainer,
+    borderRadius: '50%',
+    backgroundColor: cssVar.colorError,
+  },
+  errorHint: {
+    fontSize: '12px',
+    lineHeight: 1.5,
+    color: cssVar.colorError,
+  },
+  hint: {
+    fontSize: '11px',
+    lineHeight: 1.4,
+    color: cssVar.colorTextDescription,
+  },
+  popover: {
+    width: '250px',
+  },
+  title: {
+    fontSize: '13px',
+    fontWeight: 500,
+    color: cssVar.colorText,
+  },
+});
 
-    width: 8px;
-    height: 8px;
-    border: 1.5px solid ${cssVar.colorBgContainer};
-    border-radius: 50%;
-
-    background: ${cssVar.colorError};
-  `,
-  errorHint: css`
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorError};
-  `,
-  greenDot: css`
-    position: absolute;
-    inset-block-end: 0;
-    inset-inline-end: 0;
-
-    width: 8px;
-    height: 8px;
-    border: 1.5px solid ${cssVar.colorBgContainer};
-    border-radius: 50%;
-
-    background: #52c41a;
-  `,
-  popoverContent: css`
-    width: 250px;
-  `,
-  scopeHint: css`
-    font-size: 11px;
-    line-height: 1.4;
-    color: ${cssVar.colorTextDescription};
-    white-space: nowrap;
-  `,
-  statusTitle: css`
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-  `,
-}));
-
-interface DeviceGatewayProps {
-  workspaceScoped: boolean;
-}
-
-const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
+/**
+ * Lobot keeps this device on the gateway by itself, so the titlebar stays
+ * silent while it is online and only shows an offline mark once a drop lasts,
+ * with the reason and a manual retry.
+ */
+const DeviceGatewayOffline = memo(() => {
   const { t } = useTranslation('electron');
   const navigate = useWorkspaceAwareNavigate();
-  const [
-    gatewayStatus,
-    gatewayError,
-    connectGateway,
-    disconnectGateway,
-    setGatewayConnectionState,
-    useFetchGatewayStatus,
-  ] = useElectronStore((s) => [
-    s.gatewayConnectionStatus,
-    s.gatewayConnectionError,
-    s.connectGateway,
-    s.disconnectGateway,
-    s.setGatewayConnectionState,
-    s.useFetchGatewayStatus,
-  ]);
+  const status = useElectronStore((s) => s.gatewayConnectionStatus);
+  const error = useElectronStore((s) => s.gatewayConnectionError);
+  const connectGateway = useElectronStore((s) => s.connectGateway);
+  const setGatewayConnectionState = useElectronStore((s) => s.setGatewayConnectionState);
 
-  useFetchGatewayStatus();
-  useElectronStore((s) => s.useFetchGatewayDeviceInfo)();
-  const gatewayDeviceInfo = useElectronStore((s) => s.gatewayDeviceInfo);
-  const deviceList = useDeviceList();
-  const devices = deviceList.data;
-
+  useElectronStore((s) => s.useFetchGatewayStatus)();
   useWatchBroadcast('gatewayConnectionStatusChanged', setGatewayConnectionState);
 
-  const isConnected = gatewayStatus === 'connected';
-  const isConnecting =
-    gatewayStatus === 'authenticating' ||
-    gatewayStatus === 'connecting' ||
-    gatewayStatus === 'reconnecting';
-
-  // Only the personal connection is toggled from here; workspace rows have their own status.
-  const failure = !workspaceScoped && !isConnected && !isConnecting ? gatewayError : undefined;
-
+  // Keyed on "connected" alone: the automatic retries pass through `connecting`,
+  // and the mark must not blink with every attempt while the device stays offline.
+  const connected = status === 'connected';
+  const [offlineLasted, setOfflineLasted] = useState(false);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (connected) return;
+    const timer = setTimeout(() => setOfflineLasted(true), OFFLINE_HINT_DELAY_MS);
+    return () => {
+      clearTimeout(timer);
+      setOfflineLasted(false);
+      setOpen(false);
+    };
+  }, [connected]);
+
+  if (connected || !offlineLasted) return null;
+
+  const failure = status === 'disconnected' ? error : undefined;
+  const canRetry = failure?.code !== 'not_signed_in' && failure?.code !== 'invalid_gateway_url';
 
   const openDeviceSettings = () => {
     setOpen(false);
     navigate('/settings/devices');
   };
 
-  const handleSwitchChange = useCallback(
-    async (checked: boolean) => {
-      if (checked) {
-        await connectGateway();
-      } else {
-        await disconnectGateway();
-      }
-    },
-    [connectGateway, disconnectGateway],
-  );
-
-  const connectionCount = getScopedConnectionCount(
-    devices,
-    workspaceScoped ? 'workspace' : 'personal',
-    workspaceScoped ? undefined : gatewayDeviceInfo?.deviceId,
-  );
-  const workspaceConnectionState = getWorkspaceConnectionState(deviceList);
-  const scopeConnected = workspaceScoped ? workspaceConnectionState === 'connected' : isConnected;
-  const connectionHint = workspaceScoped
-    ? workspaceConnectionState === 'unavailable'
-      ? t('gateway.workspaceStatusUnavailable')
-      : workspaceConnectionState === 'connecting'
-        ? t('gateway.statusConnecting')
-        : workspaceConnectionState === 'connected'
-          ? t('gateway.workspaceStatusConnections', { count: connectionCount })
-          : t('gateway.workspaceStatusDisconnected')
-    : isConnecting
-      ? t('gateway.statusConnecting')
-      : isConnected && connectionCount
-        ? t('gateway.statusConnectedConnections', { count: connectionCount })
-        : t(isConnected ? 'gateway.statusConnected' : 'gateway.statusDisconnected');
-
-  const popoverContent = (
-    <Flexbox className={styles.popoverContent} gap={4}>
-      <Flexbox horizontal align="center" justify="space-between">
-        <span className={styles.statusTitle}>{t('gateway.title')}</span>
-        <Flexbox horizontal align="center" gap={6}>
-          <ActionIcon
-            aria-label={t('gateway.manageDevices')}
-            icon={SettingsIcon}
-            size="small"
-            title={t('gateway.manageDevices')}
-            onClick={openDeviceSettings}
-          />
-          {!workspaceScoped && (
-            <Switch
-              aria-label={t('gateway.enableConnection')}
-              checked={isConnected || isConnecting}
-              loading={isConnecting}
-              size="small"
-              onChange={handleSwitchChange}
-            />
-          )}
-        </Flexbox>
+  const content = (
+    <Flexbox gap={4} {...stylex.props(styles.popover)}>
+      <Flexbox horizontal align={'center'} justify={'space-between'}>
+        <span {...stylex.props(styles.title)}>{t('gateway.title')}</span>
+        <ActionIcon
+          aria-label={t('gateway.manageDevices')}
+          icon={SettingsIcon}
+          size={'small'}
+          title={t('gateway.manageDevices')}
+          onClick={openDeviceSettings}
+        />
       </Flexbox>
-      <span className={styles.scopeHint}>{connectionHint}</span>
+      <span {...stylex.props(styles.hint)}>
+        {t(status === 'disconnected' ? 'gateway.statusDisconnected' : 'gateway.statusConnecting')}
+      </span>
       {failure && (
-        <Flexbox align="flex-start" gap={4}>
-          <span className={styles.errorHint} title={failure.detail}>
-            {t(ERROR_MESSAGE_KEYS[failure.code])}
-          </span>
-          <Flexbox horizontal gap={4}>
-            {failure.code !== 'not_signed_in' && failure.code !== 'invalid_gateway_url' && (
-              <Button outdent size="small" type="text" onClick={() => void connectGateway()}>
-                {t('gateway.retry')}
-              </Button>
-            )}
-          </Flexbox>
+        <span title={failure.detail} {...stylex.props(styles.errorHint)}>
+          {t(ERROR_MESSAGE_KEYS[failure.code])}
+        </span>
+      )}
+      {status === 'disconnected' && canRetry && (
+        <Flexbox horizontal>
+          <Button outdent size={'small'} type={'text'} onClick={() => void connectGateway()}>
+            {t('gateway.retry')}
+          </Button>
         </Flexbox>
       )}
     </Flexbox>
@@ -191,38 +133,37 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
   return (
     <Popover
       arrow={false}
-      content={popoverContent}
+      content={content}
       open={open}
-      placement="bottomRight"
+      placement={'bottomRight'}
       styles={{ content: { padding: 8 } }}
-      trigger="click"
+      trigger={'click'}
       onOpenChange={setOpen}
     >
       <div style={{ position: 'relative' }}>
         <ActionIcon
+          aria-label={t('gateway.statusDisconnected')}
           icon={HardDrive}
-          loading={isConnecting}
-          size="small"
-          title={t('gateway.title')}
+          size={'small'}
+          title={t('gateway.statusDisconnected')}
           tooltipProps={{ placement: 'bottomRight' }}
         />
-        {scopeConnected ? (
-          <div className={styles.greenDot} />
-        ) : (
-          failure && <div className={styles.errorDot} />
-        )}
+        <span {...stylex.props(styles.errorDot)} />
       </div>
     </Popover>
   );
 });
 
-const DeviceGatewayWithAuth = memo(() => {
+DeviceGatewayOffline.displayName = 'DeviceGatewayOffline';
+
+const DeviceGateway = memo(() => {
   const isSyncActive = useElectronStore(electronSyncSelectors.isSyncActive);
-  const activeWorkspaceSlug = useActiveWorkspaceSlug();
 
   if (!isSyncActive) return null;
 
-  return <DeviceGateway workspaceScoped={!!activeWorkspaceSlug} />;
+  return <DeviceGatewayOffline />;
 });
 
-export default DeviceGatewayWithAuth;
+DeviceGateway.displayName = 'DeviceGateway';
+
+export default DeviceGateway;

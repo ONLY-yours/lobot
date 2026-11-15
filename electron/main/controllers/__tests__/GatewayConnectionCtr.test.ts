@@ -13,6 +13,7 @@ import GatewayConnectionService from '@/services/gatewayConnectionSrv';
 import ImessageBridgeService from '@/services/imessageBridgeSrv';
 
 import GatewayConnectionCtr from '../GatewayConnectionCtr';
+import { KEEP_CONNECTED_INTERVAL_MS } from '../gatewayKeepConnected';
 import HeterogeneousAgentCtr from '../HeterogeneousAgentCtr';
 import LocalFileCtr from '../LocalFileCtr';
 import McpCtr from '../McpCtr';
@@ -21,7 +22,7 @@ import ShellCommandCtr from '../ShellCommandCtr';
 
 // ─── Mocks ───
 
-const { ipcMainHandleMock, MockGatewayClient } = vi.hoisted(() => {
+const { ipcMainHandleMock, MockGatewayClient, powerMonitorMock } = vi.hoisted(() => {
   const { EventEmitter } = require('node:events');
 
   // Must be defined inside vi.hoisted so it's available when vi.mock factories run
@@ -158,6 +159,7 @@ const { ipcMainHandleMock, MockGatewayClient } = vi.hoisted(() => {
   return {
     MockGatewayClient: _MockGatewayClient,
     ipcMainHandleMock: vi.fn(),
+    powerMonitorMock: new EventEmitter(),
   };
 });
 
@@ -168,6 +170,7 @@ vi.mock('electron', () => ({
     getVersion: vi.fn(() => '1.2.3'),
   },
   ipcMain: { handle: ipcMainHandleMock },
+  powerMonitor: powerMonitorMock,
   powerSaveBlocker: {
     start: vi.fn(() => 1),
     stop: vi.fn(),
@@ -408,6 +411,7 @@ describe('GatewayConnectionCtr', () => {
     executeRemotePlatformMock.mockResolvedValue({ stderr: '', stdout: '' });
     MockGatewayClient.instances = [];
     MockGatewayClient.lastInstance = null;
+    powerMonitorMock.removeAllListeners();
     MockGatewayClient.lastOptions = null;
     netFetchMock.mockImplementation(async () =>
       globalConfigResponse({ deviceGatewayUrl: SERVER_GATEWAY_URL }),
@@ -415,10 +419,7 @@ describe('GatewayConnectionCtr', () => {
     vi.mocked(mockRemoteServerConfigCtr.getRemoteServerUrl).mockResolvedValue(SERVER_URL);
     vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValue('mock-access-token');
     vi.mocked(mockRemoteServerConfigCtr.refreshAccessToken).mockResolvedValue({ success: true });
-    mockStoreGet.mockImplementation((key: string) => {
-      if (key === 'gatewayEnabled') return true;
-      return undefined;
-    });
+    mockStoreGet.mockImplementation(() => undefined);
 
     mockGatewayConnectionSrv = new GatewayConnectionService(mockApp);
     ctr = new GatewayConnectionCtr(mockApp);
@@ -436,7 +437,6 @@ describe('GatewayConnectionCtr', () => {
   describe('connect', () => {
     it('should create GatewayClient with correct options', async () => {
       mockStoreGet.mockImplementation((key: string) => {
-        if (key === 'gatewayEnabled') return true;
         if (key === 'gatewayDeviceId') return 'stored-device-id';
         if (key === 'gatewayUrl') return undefined;
         return undefined;
@@ -458,7 +458,6 @@ describe('GatewayConnectionCtr', () => {
 
     it('uses the address the server advertises over the official gateway older installs saved', async () => {
       mockStoreGet.mockImplementation((key: string) => {
-        if (key === 'gatewayEnabled') return true;
         // Older installs persisted the default itself; it is not a choice.
         if (key === 'gatewayUrl') return 'https://device-gateway.lobehub.com';
         return undefined;
@@ -496,16 +495,6 @@ describe('GatewayConnectionCtr', () => {
       expect(MockGatewayClient.lastInstance).toBeNull();
     });
 
-    it('should persist gatewayEnabled=true on connect', async () => {
-      vi.mocked(mockRemoteServerConfigCtr.isRemoteServerConfigured).mockResolvedValueOnce(false);
-      ctr.afterFirstFrame();
-      await vi.advanceTimersByTimeAsync(0);
-      mockStoreSet.mockClear();
-
-      await ctr.connect();
-      expect(mockStoreSet).toHaveBeenCalledWith('gatewayEnabled', true);
-    });
-
     it('should reconnect the matching device from a protocol link', async () => {
       vi.mocked(mockRemoteServerConfigCtr.isRemoteServerConfigured).mockResolvedValueOnce(false);
       ctr.afterFirstFrame();
@@ -516,7 +505,7 @@ describe('GatewayConnectionCtr', () => {
       const result = await ctr.reconnectFromProtocol({ deviceId });
 
       expect(result).toBe(true);
-      expect(mockStoreSet).toHaveBeenCalledWith('gatewayEnabled', true);
+      expect(MockGatewayClient.lastInstance!.connect).toHaveBeenCalled();
     });
 
     it('should wait for gateway initialization on a cold-start protocol reconnect', async () => {
@@ -524,11 +513,11 @@ describe('GatewayConnectionCtr', () => {
 
       const reconnect = ctr.reconnectFromProtocol({ deviceId: 'mock-device-uuid' });
       await vi.advanceTimersByTimeAsync(0);
-      expect(mockStoreSet).not.toHaveBeenCalledWith('gatewayEnabled', true);
+      expect(MockGatewayClient.lastInstance).toBeNull();
 
       ctr.afterFirstFrame();
       await expect(reconnect).resolves.toBe(true);
-      expect(mockStoreSet).toHaveBeenCalledWith('gatewayEnabled', true);
+      expect(MockGatewayClient.lastInstance!.connect).toHaveBeenCalled();
     });
 
     it('should reject a protocol reconnect intended for another device', async () => {
@@ -540,14 +529,13 @@ describe('GatewayConnectionCtr', () => {
       const result = await ctr.reconnectFromProtocol({ deviceId: 'another-device' });
 
       expect(result).toBe(false);
-      expect(mockStoreSet).not.toHaveBeenCalled();
+      expect(MockGatewayClient.lastInstance).toBeNull();
     });
 
     it('should reconnect a persisted workspace identity for this machine', async () => {
       const workspaceId = 'workspace-1';
       const fallbackId = 'mock-device-uuid';
       mockStoreGet.mockImplementation((key: string) => {
-        if (key === 'gatewayEnabled') return true;
         if (key === 'gatewayDeviceId') return fallbackId;
         if (key === 'gatewayWorkspaceEnrollments') return [workspaceId];
         return undefined;
@@ -563,7 +551,7 @@ describe('GatewayConnectionCtr', () => {
       const result = await ctr.reconnectFromProtocol({ deviceId: workspaceDevice.deviceId });
 
       expect(result).toBe(true);
-      expect(mockStoreSet).toHaveBeenCalledWith('gatewayEnabled', true);
+      expect(MockGatewayClient.lastInstance!.connect).toHaveBeenCalled();
     });
 
     it('should no-op when already connected', async () => {
@@ -610,7 +598,7 @@ describe('GatewayConnectionCtr', () => {
 
     /** A store that remembers writes, seeded with `initial`. */
     const useStore = (initial: Record<string, unknown>) => {
-      store = { gatewayDeviceId: 'mock-device-uuid', gatewayEnabled: true, ...initial };
+      store = { gatewayDeviceId: 'mock-device-uuid', ...initial };
       mockStoreGet.mockImplementation((key: string) => store[key]);
       mockStoreSet.mockImplementation((key: string, value: unknown) => {
         store[key] = value;
@@ -1105,16 +1093,6 @@ describe('GatewayConnectionCtr', () => {
       });
     });
 
-    it('should persist gatewayEnabled=false on disconnect', async () => {
-      ctr.afterFirstFrame();
-      await vi.advanceTimersByTimeAsync(0);
-      MockGatewayClient.lastInstance!.simulateConnected();
-      mockStoreSet.mockClear();
-
-      await ctr.disconnect();
-      expect(mockStoreSet).toHaveBeenCalledWith('gatewayEnabled', false);
-    });
-
     it('should not trigger reconnect after intentional disconnect', async () => {
       ctr.afterFirstFrame();
       await vi.advanceTimersByTimeAsync(0);
@@ -1143,7 +1121,8 @@ describe('GatewayConnectionCtr', () => {
       expect(MockGatewayClient.lastInstance!.connect).toHaveBeenCalled();
     });
 
-    it('should skip auto-connect when gatewayEnabled is false', async () => {
+    // Lobot keeps the device online; a toggle an older version saved off no longer applies.
+    it('should auto-connect even when an older version saved the toggle off', async () => {
       mockStoreGet.mockImplementation((key: string) => {
         if (key === 'gatewayEnabled') return false;
         return undefined;
@@ -1153,7 +1132,7 @@ describe('GatewayConnectionCtr', () => {
       ctr.afterFirstFrame();
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(MockGatewayClient.lastInstance).toBeNull();
+      expect(MockGatewayClient.lastInstance!.connect).toHaveBeenCalled();
     });
 
     it('should skip auto-connect when remote server not configured', async () => {
@@ -1183,7 +1162,6 @@ describe('GatewayConnectionCtr', () => {
 
     it('should reuse persisted device ID', () => {
       mockStoreGet.mockImplementation((key: string) => {
-        if (key === 'gatewayEnabled') return true;
         if (key === 'gatewayDeviceId') return 'existing-id';
         return undefined;
       });
@@ -1192,6 +1170,25 @@ describe('GatewayConnectionCtr', () => {
 
       expect(mockStoreSet).not.toHaveBeenCalledWith('gatewayDeviceId', expect.anything());
     });
+  });
+
+  // ─── Keep Connected ───
+
+  // Timer, wake and pause are covered in gatewayKeepConnected.test.ts; this
+  // needs the real service to see the takeover.
+  it('never reclaims a connection another client took over', async () => {
+    ctr.afterFirstFrame();
+    await vi.advanceTimersByTimeAsync(0);
+    const client = MockGatewayClient.lastInstance!;
+    client.simulateConnected();
+    client.emit('replaced');
+    client.simulateStatusChanged('disconnected');
+
+    await vi.advanceTimersByTimeAsync(KEEP_CONNECTED_INTERVAL_MS * 3);
+    powerMonitorMock.emit('resume');
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(MockGatewayClient.instances).toHaveLength(1);
   });
 
   // ─── Reconnection ───

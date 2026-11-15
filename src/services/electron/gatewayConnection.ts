@@ -5,10 +5,6 @@ class GatewayConnectionService {
     return ensureElectronIpc().gatewayConnection.connect();
   };
 
-  disconnect = async () => {
-    return ensureElectronIpc().gatewayConnection.disconnect();
-  };
-
   getConnectionStatus = async () => {
     return ensureElectronIpc().gatewayConnection.getConnectionStatus();
   };

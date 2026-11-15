@@ -42,6 +42,7 @@ import { setDesktopUserAgentHeader } from '@/utils/user-agent';
 
 import BrowserControlCtr from './BrowserControlCtr';
 import { executeGatewayAgentRun, type PlatformTaskEntry } from './gatewayAgentRun';
+import { GatewayKeepConnected } from './gatewayKeepConnected';
 import HeterogeneousAgentCtr from './HeterogeneousAgentCtr';
 import { ControllerModule, createProtocolHandler, IpcMethod } from './index';
 import LocalFileCtr from './LocalFileCtr';
@@ -152,6 +153,14 @@ export default class GatewayConnectionCtr extends ControllerModule {
   private readonly gatewayReady = new Promise<void>((resolve) => {
     this.resolveGatewayReady = resolve;
   });
+  /** Lobot keeps this device online for as long as it runs signed in. */
+  private readonly keepConnected = new GatewayKeepConnected({
+    canAutoReconnect: () => this.service.canAutoReconnect(),
+    connect: () => this.service.connect(),
+    isSignedIn: async () =>
+      (await this.remoteServerConfigCtr.isRemoteServerConfigured()) &&
+      !!(await this.remoteServerConfigCtr.getAccessToken()),
+  });
 
   // ─── Service Accessor ───
 
@@ -240,21 +249,20 @@ export default class GatewayConnectionCtr extends ControllerModule {
 
     this.resolveGatewayReady?.();
 
-    // Auto-connect if already logged in
-    this.tryAutoConnect();
+    this.keepConnected.start();
   }
 
   // ─── IPC Methods (Renderer → Main) ───
 
   @IpcMethod()
   async connect(): Promise<GatewayConnectResult> {
-    this.app.storeManager.set('gatewayEnabled', true);
+    this.keepConnected.resume();
     return this.service.connect();
   }
 
   @IpcMethod()
   async disconnect(): Promise<{ success: boolean }> {
-    this.app.storeManager.set('gatewayEnabled', false);
+    this.keepConnected.pause();
     return this.service.disconnect();
   }
 
@@ -338,7 +346,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
     await this.gatewayReady;
     if (!(await this.service.matchesDeviceId(deviceId))) return false;
 
-    this.app.storeManager.set('gatewayEnabled', true);
+    this.keepConnected.resume();
     const result = await this.service.connect();
     return result.success;
   }
@@ -348,21 +356,6 @@ export default class GatewayConnectionCtr extends ControllerModule {
     const config = await this.remoteServerConfigCtr.getRemoteServerConfig();
     if (!(await this.remoteServerConfigCtr.isRemoteServerConfigured(config))) return undefined;
     return this.remoteServerConfigCtr.getRemoteServerUrl(config);
-  }
-
-  // ─── Auto Connect ───
-
-  private async tryAutoConnect() {
-    const gatewayEnabled = this.app.storeManager.get('gatewayEnabled');
-    if (!gatewayEnabled) return;
-
-    const isConfigured = await this.remoteServerConfigCtr.isRemoteServerConfigured();
-    if (!isConfigured) return;
-
-    const token = await this.remoteServerConfigCtr.getAccessToken();
-    if (!token) return;
-
-    await this.service.connect();
   }
 
   // ─── Agent Run Routing ───

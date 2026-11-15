@@ -44,6 +44,11 @@ import { createLogger } from '@/utils/logger';
 import { getDesktopUserAgent } from '@/utils/user-agent';
 import { safeGetPath } from '@/utils/user-path';
 
+import {
+  canAutoRetryAfter,
+  describeResolutionFailure,
+  serializeWireError,
+} from './gatewayConnectionErrors';
 import { discoverDeviceGateway } from './gatewayDiscovery';
 import { collectBundledCliAgentRuntimes, collectGatewaySystemInfo } from './gatewaySystemInfo';
 import { ServiceModule } from './index';
@@ -92,25 +97,6 @@ interface McpCallHandler {
     params: GatewayMcpParams;
   }): Promise<ToolCallResult>;
 }
-
-/**
- * Coerce a runtime error (which may be an Error, string, or `{ message }`
- * object) into the string shape the wire protocol expects. Returns undefined
- * when there's no error to transmit.
- */
-const serializeWireError = (err: unknown): string | undefined => {
-  if (err === undefined || err === null) return undefined;
-  if (typeof err === 'string') return err;
-  if (err instanceof Error) return err.message;
-  if (typeof err === 'object' && 'message' in err && typeof err.message === 'string') {
-    return err.message;
-  }
-  try {
-    return JSON.stringify(err);
-  } catch {
-    return String(err);
-  }
-};
 
 interface AgentRunHandler {
   (request: AgentRunRequestMessage): Promise<{ reason?: string; status: 'accepted' | 'rejected' }>;
@@ -197,21 +183,6 @@ const CANCELLED: GatewayConnectResult = {
   success: false,
 };
 
-const describeResolutionFailure = (
-  resolution: Extract<DeviceGatewayResolutionWithDefault, { ok: false }>,
-): GatewayConnectionError => {
-  switch (resolution.reason) {
-    case 'discovery_failed': {
-      return { code: 'config_unavailable', detail: resolution.detail };
-    }
-    case 'invalid_advertised_url':
-    case 'invalid_manual':
-    case 'invalid_override': {
-      return { code: 'invalid_gateway_url', detail: resolution.detail };
-    }
-  }
-};
-
 /**
  * GatewayConnectionService
  *
@@ -229,6 +200,12 @@ export default class GatewayConnectionService extends ServiceModule {
   private statusBroadcastTimer: ReturnType<typeof setTimeout> | null = null;
   /** Why the last attempt ended; cleared by the next attempt or a disconnect. */
   private connectionError: GatewayConnectionError | null = null;
+  /**
+   * Another client took the personal connection id over (e.g. a second copy of
+   * the app). Cleared by an explicit connect; until then no automatic retry may
+   * reconnect, or the two would keep evicting each other.
+   */
+  private replaced = false;
 
   /**
    * Bumped by every new connection attempt and every disconnect (sign-out,
@@ -453,6 +430,16 @@ export default class GatewayConnectionService extends ServiceModule {
     return this.status;
   }
 
+  /**
+   * Whether an automatic retry can bring the personal connection back: it is
+   * down, not taken over by another client, and the last failure was not one
+   * only a new sign-in or settings change can fix.
+   */
+  canAutoReconnect(): boolean {
+    if (this.status !== 'disconnected' || this.pendingConnect || this.replaced) return false;
+    return canAutoRetryAfter(this.connectionError);
+  }
+
   /** Status as shown in the UI — hides reconnects that recover quickly. */
   getDisplayedStatus(): GatewayConnectionStatus {
     return this.displayedStatus;
@@ -523,6 +510,7 @@ export default class GatewayConnectionService extends ServiceModule {
     // A user-initiated connect always gets a fresh retry budget — only the
     // automatic recoveries are rationed by the guard.
     this.authRecoveryAttempted = false;
+    this.replaced = false;
     return this.startConnect();
   }
 
@@ -534,6 +522,7 @@ export default class GatewayConnectionService extends ServiceModule {
     await this.disconnect();
     // A sign-in is a user-initiated connect: it gets a fresh auth_failed budget.
     this.authRecoveryAttempted = false;
+    this.replaced = false;
     return this.startConnect();
   }
 
@@ -805,6 +794,7 @@ export default class GatewayConnectionService extends ServiceModule {
     });
 
     client.on('replaced', () => {
+      if (!scope && this.client === client) this.replaced = true;
       logger.warn(
         `Gateway connection${scope ? ` for workspace ${scope.workspaceId}` : ''} was taken over by another client with the same connection id; not reconnecting`,
       );
