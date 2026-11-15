@@ -3,7 +3,13 @@ name: Release Desktop
 # ============================================
 # Lobot 桌面端发布
 # ============================================
-# 用本仓源码构建三端安装包，发到本仓 Release，并同步到 S3 更新源。
+# v* tag（Auto Release 打的或手动推的）触发。先比较 HEAD 与 <channel>/shell.json
+# 的 shellAbi：
+#   - 外壳未变 → 只发 core 增量包（OTA，调用 release-desktop-core-ota.yml），
+#     版本为 <上次整包版本>-core.<seq>，不建 GitHub Release
+#   - 外壳有变 / 还没有整包 / 未配置 OTA 密钥或更新源 → 构建三端安装包，发到本仓
+#     Release，并同步到 S3 更新源
+# 手动 dispatch 选 mode=full 可强制发整包。
 #
 # 可选配置（缺失时对应步骤降级而不失败）：
 #   - APPLE_*：macOS 签名与公证，缺失则产物未签名
@@ -29,6 +35,12 @@ on:
         type: choice
         options: [stable, beta, canary]
         default: stable
+      mode:
+        description: 'auto：外壳未变时只发 core（OTA），否则发整包；full：强制发整包'
+        required: false
+        type: choice
+        options: [auto, full]
+        default: auto
       draft:
         description: '发布为 draft release（gh 对 draft 的 tag 绑定不稳定，默认直接发布）'
         required: false
@@ -38,8 +50,10 @@ on:
 permissions:
   contents: write
 
+# 同一频道的发布排队执行：OTA 判断读的是上一次整包写入的 shell.json，并行会读到旧值。
+# 排队中的旧 tag 会被更新的 tag 取代，它的改动随新 tag 一起发出。
 concurrency:
-  group: release-desktop-${{ github.ref }}
+  group: release-desktop-${{ inputs.channel || 'stable' }}
   cancel-in-progress: false
 
 env:
@@ -47,14 +61,15 @@ env:
   npm_config_registry: https://registry.npmjs.org
 
 jobs:
-  # ---------- 1. 解析版本 ----------
+  # ---------- 1. 解析版本，决定发整包还是 OTA ----------
   prepare:
-    name: Resolve version
+    name: Resolve version and mode
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.resolve.outputs.version }}
       tag: ${{ steps.resolve.outputs.tag }}
       channel: ${{ steps.resolve.outputs.channel }}
+      mode: ${{ steps.mode.outputs.mode }}
     steps:
       - name: Resolve
         id: resolve
@@ -73,10 +88,55 @@ jobs:
           echo "channel=${CHANNEL}" >> "$GITHUB_OUTPUT"
           echo "Building Lobot ${VERSION} (${CHANNEL})"
 
+      - uses: actions/checkout@v7
+
+      - name: Gate on shellAbi
+        id: gate
+        if: inputs.mode != 'full'
+        uses: ./.github/actions/desktop-shell-gate
+        with:
+          channel: ${{ steps.resolve.outputs.channel }}
+          update-server-url: ${{ secrets.UPDATE_SERVER_URL }}
+          public-key: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
+
+      - name: Decide mode
+        id: mode
+        shell: bash
+        env:
+          FORCE_FULL: ${{ inputs.mode == 'full' }}
+          REQUIRES_FULL: ${{ steps.gate.outputs.requires-full-release }}
+          HAS_PRIVATE_KEY: ${{ secrets.RENDERER_OTA_PRIVATE_KEY != '' }}
+          SHIPPED_VERSION: ${{ steps.gate.outputs.app-version }}
+        run: |
+          set -euo pipefail
+          if [ "$FORCE_FULL" = "true" ]; then
+            MODE=full REASON="手动指定 mode=full"
+          elif [ "$HAS_PRIVATE_KEY" != "true" ]; then
+            MODE=full REASON="未配置 RENDERER_OTA_PRIVATE_KEY，无法签名 core"
+          elif [ "$REQUIRES_FULL" != "false" ]; then
+            MODE=full REASON="外壳自上次整包后有变化（或还没有整包）"
+          else
+            MODE=ota REASON="外壳与 ${SHIPPED_VERSION} 一致，只发 core"
+          fi
+          echo "mode=${MODE}" >> "$GITHUB_OUTPUT"
+          echo "Mode: ${MODE}（${REASON}）"
+          echo "### Release mode: \`${MODE}\`（${REASON}）" >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------- 1b. OTA：外壳未变，只发 core ----------
+  core-ota:
+    name: Core OTA
+    needs: prepare
+    if: needs.prepare.outputs.mode == 'ota'
+    uses: ./.github/workflows/release-desktop-core-ota.yml
+    with:
+      channel: ${{ needs.prepare.outputs.channel }}
+    secrets: inherit
+
   # ---------- 2. 构建 ----------
   build:
     name: Build ${{ matrix.name }}
     needs: prepare
+    if: needs.prepare.outputs.mode == 'full'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 75
     strategy:
@@ -265,7 +325,8 @@ jobs:
           REPO="${{ github.repository }}"
           DRAFT="${{ inputs.draft }}"
           DRAFT_FLAG=""
-          if [ "$DRAFT" = "true" ] || [ -z "$DRAFT" ]; then DRAFT_FLAG="--draft"; fi
+          # tag push 没有 inputs，和 dispatch 的默认值一样直接发布。
+          if [ "$DRAFT" = "true" ]; then DRAFT_FLAG="--draft"; fi
 
           echo "Publishing ${TAG} to ${REPO}"
 

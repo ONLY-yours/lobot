@@ -1,16 +1,16 @@
 name: Auto Release
 
 # ============================================
-# main 上有面向用户的改动时自动发一个 patch 版本（+0.0.1）
+# main 上有面向用户的改动时自动打一个 patch 版本 tag（+0.0.1）
 # ============================================
 # CI 在 main 上跑通后：若上一个 v* tag 之后有 feat / fix / style / perf 提交
 # （规则见 scripts/electronWorkflow/planAutoRelease.sh），就给这次 CI 验过的
-# 提交打 vX.Y.Z tag，再以该 tag 触发 Release Desktop 构建并发布 stable。
+# 提交打 vX.Y.Z tag。这里只负责打 tag；tag push 触发 Release Desktop，由它判断
+# 发整包还是只发 core（OTA）。
 #
 # - 只发 CI 通过的提交；被后续 push 取消的 CI 不发，它的改动会随下一次发出
 # - head 提交的标题（首行）写 [skip release] 可跳过本次
-# - 用 GITHUB_TOKEN 推的 tag 不会再触发 Release Desktop 的 tag push，
-#   所以这里显式 dispatch，避免重复构建
+# - tag 用 LobeHub bot App token 推：GITHUB_TOKEN 推的 tag 不会触发其他 workflow
 # ============================================
 
 on:
@@ -20,10 +20,7 @@ on:
     branches: [main]
 
 permissions:
-  # push the tag
-  contents: write
-  # dispatch Release Desktop
-  actions: write
+  contents: read
 
 # One at a time, so two runs never claim the same version.
 concurrency:
@@ -32,13 +29,22 @@ concurrency:
 
 jobs:
   release:
-    name: Tag and dispatch
+    name: Tag
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.LOBEHUB_BOT_APP_ID }}
+          private-key: ${{ secrets.LOBEHUB_BOT_APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+          # The tag push below uses these credentials; an App-token push triggers
+          # Release Desktop's `push: tags`, a GITHUB_TOKEN push would not.
+          token: ${{ steps.app-token.outputs.token }}
           # Full history and tags: the plan reads the commits since the last tag.
           fetch-depth: 0
 
@@ -57,19 +63,4 @@ jobs:
           TAG="${{ steps.plan.outputs.tag }}"
           git tag "$TAG" "${{ github.event.workflow_run.head_sha }}"
           git push origin "refs/tags/${TAG}"
-
-      - name: Dispatch Release Desktop
-        if: steps.plan.outputs.release == 'true'
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          # Run on the tag so the build checks out exactly the commit CI passed.
-          gh workflow run release-desktop.yml \
-            --repo "${{ github.repository }}" \
-            --ref "${{ steps.plan.outputs.tag }}" \
-            -f version="${{ steps.plan.outputs.version }}" \
-            -f channel=stable \
-            -f draft=false
-          echo "🚀 Dispatched Lobot ${{ steps.plan.outputs.version }} (${{ steps.plan.outputs.reason }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "🏷️ Tagged ${TAG} (${{ steps.plan.outputs.reason }})，Release Desktop 将由 tag push 触发" >> "$GITHUB_STEP_SUMMARY"

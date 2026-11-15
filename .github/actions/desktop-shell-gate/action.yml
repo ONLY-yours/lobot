@@ -1,0 +1,105 @@
+name: Desktop Shell ABI Gate
+description: Compare HEAD's shellAbi with the shell last shipped to <channel>/shell.json to decide whether a core-only (OTA) release is possible
+
+inputs:
+  channel:
+    description: 'Update channel (stable, beta, canary)'
+    required: true
+  update-server-url:
+    description: 'UPDATE_SERVER_URL secret; empty means no update feed, so a full release is required'
+    required: false
+    default: ''
+  public-key:
+    description: 'RENDERER_OTA_PUBLIC_KEY secret; part of shellAbi'
+    required: false
+    default: ''
+
+outputs:
+  feed-base-url:
+    description: 'Update feed base URL (derived from a secret: use it inside this job only, never as a job output)'
+    value: ${{ steps.server.outputs.feed_base_url }}
+  found:
+    description: 'Whether <channel>/shell.json exists'
+    value: ${{ steps.base.outputs.found }}
+  app-version:
+    description: 'shellVersion of the shipped shell, the namespace a core-only release goes to'
+    value: ${{ steps.base.outputs.app_version }}
+  shell-abi:
+    description: "HEAD's shellAbi"
+    value: ${{ steps.gate.outputs.shell_abi }}
+  requires-full-release:
+    description: "'true' when the shell changed since the last full release (or none exists), 'false' when a core-only release is allowed"
+    value: ${{ steps.gate.outputs.requires_full_release }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve update server base URL
+      id: server
+      shell: bash
+      env:
+        UPDATE_SERVER_URL: ${{ inputs.update-server-url }}
+      run: |
+        set -euo pipefail
+        if [ -z "${UPDATE_SERVER_URL:-}" ]; then
+          echo "::warning::UPDATE_SERVER_URL 未配置，没有更新源，只能发整包"
+          echo "feed_base_url=" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        BASE="${UPDATE_SERVER_URL%/}"
+        case "$BASE" in */stable|*/nightly|*/canary|*/beta) BASE="${BASE%/*}" ;; esac
+        case "$BASE" in http://*|https://*) ;; *) BASE="https://$BASE" ;; esac
+        echo "feed_base_url=$BASE" >> "$GITHUB_OUTPUT"
+
+    - name: Load shipped shell
+      id: base
+      shell: bash
+      env:
+        CHANNEL: ${{ inputs.channel }}
+        FEED_BASE_URL: ${{ steps.server.outputs.feed_base_url }}
+      run: |
+        set -euo pipefail
+        if [ -z "$FEED_BASE_URL" ]; then
+          echo "found=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        HTTP_STATUS=$(curl -sS --connect-timeout 10 --max-time 30 \
+          -o "$RUNNER_TEMP/shell.json" -w '%{http_code}' "$FEED_BASE_URL/$CHANNEL/shell.json")
+        echo "shell.json HTTP status: $HTTP_STATUS"
+        if [ "$HTTP_STATUS" = "404" ]; then
+          echo "::warning::$CHANNEL 还没有 shell.json，需要先发一次整包"
+          echo "found=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        if [ "$HTTP_STATUS" != "200" ]; then
+          echo "::error::shell.json fetch failed: HTTP $HTTP_STATUS"
+          exit 1
+        fi
+        SHELL_ABI=$(jq -er '.shellAbi | select(type == "string" and test("^[0-9a-f]{64}$"))' "$RUNNER_TEMP/shell.json")
+        APP_VERSION=$(jq -er '.shellVersion | select(type == "string" and test("^[0-9A-Za-z.+-]+$"))' "$RUNNER_TEMP/shell.json")
+        {
+          echo "found=true"
+          echo "shell_abi=$SHELL_ABI"
+          echo "app_version=$APP_VERSION"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Gate on shellAbi
+      id: gate
+      shell: bash
+      env:
+        BASE_SHELL_ABI: ${{ steps.base.outputs.shell_abi }}
+        FOUND: ${{ steps.base.outputs.found }}
+        RENDERER_OTA_PUBLIC_KEY: ${{ inputs.public-key }}
+      run: |
+        set -euo pipefail
+        SHELL_ABI=$(node scripts/shellAbi.mjs)
+        echo "shell_abi=$SHELL_ABI" >> "$GITHUB_OUTPUT"
+        echo "HEAD shellAbi:    $SHELL_ABI"
+        echo "Shipped shellAbi: ${BASE_SHELL_ABI:-<none>}"
+        if [ "$FOUND" != "true" ] || [ "$SHELL_ABI" != "$BASE_SHELL_ABI" ]; then
+          echo "外壳自上次整包后有变化（或还没有整包），需要发整包"
+          echo "requires_full_release=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "外壳未变，可以只发 core"
+          echo "requires_full_release=false" >> "$GITHUB_OUTPUT"
+        fi
