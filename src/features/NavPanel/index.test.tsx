@@ -299,6 +299,12 @@ describe('SideBarLayout scroll restoration', () => {
     const second = render(<SideBarLayout body={<div>body</div>} />);
     expect(getViewport(second.container).scrollTop).toBe(0);
   });
+
+  it('does not fade the list edges under the header', () => {
+    pathname = '/';
+    const { container } = render(<SideBarLayout body={<div>body</div>} />);
+    expect(getViewport(container).className).not.toContain('lobe-scroll-area-fade');
+  });
 });
 
 describe('NavPanel under the im_layout trial', () => {
