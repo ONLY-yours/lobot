@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox, SearchBar } from '@lobehub/ui';
+import { SearchBar } from '@lobehub/ui';
 import { memo, type PropsWithChildren } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -25,14 +25,13 @@ const SearchSection = memo<PropsWithChildren<{ scope: SettingsSearchScope }>>(
 
     return (
       <>
-        <Flexbox paddingInline={4}>
-          <SearchBar
-            allowClear
-            placeholder={t('settingsSearch.placeholder')}
-            variant={'filled'}
-            {...inputProps}
-          />
-        </Flexbox>
+        {/* Flush with the account card and rows below, which share the list's inset. */}
+        <SearchBar
+          allowClear
+          placeholder={t('settingsSearch.placeholder')}
+          variant={'filled'}
+          {...inputProps}
+        />
         {showResults ? (
           <SearchResults isIndexing={isIndexing} query={query} results={results} />
         ) : (
