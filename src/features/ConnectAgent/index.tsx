@@ -59,6 +59,7 @@ import type {
   ConnectAgentRuntimeConfig,
 } from './providers';
 import { buildConnectAgentConfig, CONNECTABLE_PROVIDERS } from './providers';
+import { connectStepLabelKeys } from './stepLabels';
 import type { ScanTarget } from './useAgentScan';
 import { useAgentScan } from './useAgentScan';
 
@@ -705,7 +706,7 @@ export const ConnectAgentContent = memo<ConnectAgentContentProps>(
 
       return (
         <Flexbox gap={16} paddingBlock={'16px 8px'}>
-          <SectionLabel>{t('connectAgent.create.stepDevice')}</SectionLabel>
+          <SectionLabel>{t(connectStepLabelKeys(!!onPick).device)}</SectionLabel>
           {showEmpty ? (
             <div className={styles.emptyCard}>
               <Flexbox align={'center'} className={styles.emptyHero} gap={10}>
@@ -861,7 +862,7 @@ export const ConnectAgentContent = memo<ConnectAgentContentProps>(
               its height — no jump when the scan settles */}
           <Flexbox horizontal align={'center'} justify={'space-between'} style={{ minHeight: 28 }}>
             <SectionLabel>
-              {t('connectAgent.create.stepAgents', { device: targetLabel })}
+              {t(connectStepLabelKeys(!!onPick).agents, { device: targetLabel })}
             </SectionLabel>
             {!(scanState.status === 'success' && detectedCount === 0) &&
               scanState.status !== 'error' && (

@@ -1529,6 +1529,10 @@ export default {
   'connectAgent.create.stepDevice':
     'Step 1 of 3 · Pick the machine your agents run on — it will be scanned automatically.',
   'connectAgent.create.stepAgents': 'Step 2 of 3 · {{device}}',
+  // Picker mode inside Create Agent: the identity form is step 1
+  'connectAgent.create.stepAgentsPick': 'Step 3 of 3 · {{device}}',
+  'connectAgent.create.stepDevicePick':
+    'Step 2 of 3 · Pick the machine the agent runs on — it will be scanned automatically.',
   'connectAgent.create.stepConfirm': 'Step 3 of 3 · Name it for your agent list',
   'connectAgent.create.thisDevice': 'This device',
   'connectAgent.create.connectedDevices': 'Connected devices',
