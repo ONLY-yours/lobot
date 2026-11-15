@@ -23,7 +23,7 @@
 #   - Electron app already running with CDP enabled
 #
 # Environment variables:
-#   CDP_PORT              — Chrome DevTools Protocol port (default: 9222)
+#   CDP_PORT              — Chrome DevTools Protocol port (default: 9223, electron-dev.sh instance 1)
 #   SCREENSHOT_INTERVAL   — Seconds between gallery screenshots (default: 3)
 #   VIDEO_FRAME_INTERVAL  — Seconds between video frames (default: 0.5)
 #
@@ -38,7 +38,7 @@ RECORDS_DIR="$(pwd)/.records"
 PID_FILE="/tmp/record-app-screen.pids"
 STATE_FILE="/tmp/record-app-screen.state"
 
-CDP_PORT="${CDP_PORT:-9222}"
+CDP_PORT="${CDP_PORT:-9223}"
 SCREENSHOT_INTERVAL="${SCREENSHOT_INTERVAL:-3}"
 VIDEO_FRAME_INTERVAL="${VIDEO_FRAME_INTERVAL:-0.5}"
 

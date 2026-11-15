@@ -86,7 +86,7 @@ export function createDevOrchestrator({
   }
 
   function startElectron() {
-    // Automation scripts (e.g. record-electron-demo.sh) grep the log for
+    // Automation scripts grep the log for
     // "starting electron" as the readiness signal — keep this line stable.
     log('[desktop-dev] starting electron');
     electron = spawn(electronBin, ['.', ...electronArgs], {

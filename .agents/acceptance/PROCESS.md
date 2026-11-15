@@ -112,12 +112,11 @@ them and a gates-only round fails to publish.
 Concrete commands come from [`PROJECT.md`](./PROJECT.md); the rules below hold
 regardless.
 
-1. **Resolve the environment first** (§2). Read ports and base URLs from the
-   project's own env resolver — never a hard-coded port table. If the resolved
-   values do not match a running dev server, fix the env before continuing.
-2. **Dependencies** (§2, §6). A root install does not cover `apps/desktop` or
-   `apps/cli`; install in each standalone app the run will touch. A stale
-   standalone install fails at launch with an unresolved workspace import.
+1. **Resolve the environment first** (§2). Ports come from the instance id
+   (`electron-dev.sh`), never a hard-coded table. If a probe answers from a
+   different instance than the one this run started, fix that before continuing.
+2. **Dependencies** (§2). The root `pnpm install` covers `electron/main` and
+   `apps/cli`. A stale install fails at launch with an unresolved workspace import.
 3. **Run long-lived scripts from the repo root.** Background commands inherit the
    cwd, and every path here is repo-root-relative.
 4. **Start the environment** (§2), including every service the feature depends on
@@ -125,7 +124,8 @@ regardless.
    prerequisite, not a nicety. Prefer the user's already-running config; never
    clobber it.
 5. **Auth, scoped to the selected surface** (§3). Inject login state directly
-   (seeded session, cookie/state restore, CLI-minted token). **Never drive an
+   (restore the saved Electron login snapshot). Then enter the test workspace
+   (`app-probe.sh workspace`) before creating anything: the account is real. **Never drive an
    interactive login/OAuth flow** — it hijacks the user's browser session. With no
    injectable state, report ❌ Blocked and name the exact blocking step.
 6. **Screen-recording preflight, only for OS-capture surfaces.** macOS
@@ -165,11 +165,13 @@ user.
 
 ### Step 3 — Pick the surface
 
-| Change scope                                   | Surface      | Why                                                 |
-| ---------------------------------------------- | ------------ | --------------------------------------------------- |
-| Backend (router / service / model / migration) | **CLI**      | Fastest loop, text-assertable, no UI flakiness      |
-| Pure frontend (components, store, styles, UX)  | **Electron** | The primary product shape; live state introspection |
-| Full-stack (new API + the UI consuming it)     | **Web**      | Network and UI observable together                  |
+| Change scope                                     | Surface               | Why                                                 |
+| ------------------------------------------------ | --------------------- | --------------------------------------------------- |
+| Frontend (components, store, styles, UX), main   | **Electron**          | The product shape; live state introspection         |
+| Reading back Cloud state a UI action produced    | **CLI** (read-back)   | Text-assertable, no UI flakiness                    |
+| Backend (router / service / model / migration)   | — (in `../lobehub`)   | Lobot has no server; accept it in the lobehub repo  |
+
+There is no Web surface in this repository (`PROJECT.md` §4).
 
 Launch commands per surface are in `PROJECT.md` §4; the operating manual for each
 is in the skill's `surfaces/`. Escalate, don't duplicate: verify a backend change
@@ -178,8 +180,7 @@ with the CLI first, and add a UI pass only when the change reaches the UI.
 Every check runs in an environment that runs the delivered branch. A
 production-hosted surface (e.g. the `_dangerous_local_dev_proxy`) serves local
 frontend code over someone else's backend and data — it is a development
-convenience, not a surface, and never replaces the local full-stack server or
-Electron.
+convenience, not a surface, and never replaces the local Electron instance.
 
 **Separate the driver from the evidence surface.** Producing the state under test
 and capturing the evidence are independent choices. Drive with the cheapest
@@ -223,12 +224,9 @@ export ACCEPTANCE_RUN_TAG="acceptance-<subject>-$(date +%Y%m%d-%H%M%S)-$$"
 
 bash "$GUARD" start                                    # before the first heavy command
 
-SESSION="app-$ACCEPTANCE_RUN_TAG"
-agent-browser --session "$SESSION" open "http://localhost:3000/"
-bash "$GUARD" claim-browser "$SESSION"                 # the browser this run opened
-
-bun run dev >"$DIR/devserver.log" 2>&1 &
-bash "$GUARD" claim "$!"                               # the dev server this run started
+.agents/acceptance/scripts/electron-dev.sh start 1    # the instance this run starts
+bash "$GUARD" claim "$(cat /tmp/lobe-electron-pool/instance-1.pid)"
+bash "$GUARD" claim-browser s9223                      # its agent-browser session
 ```
 
 `stop-owned` stops only what this run tagged or claimed, so a sibling run's browser
@@ -314,7 +312,8 @@ What is specific to this repository:
 - **The publish target is not the verification surface.** `app.lobehub.com` is
   where the acceptance is stored, not where the product was verified. Reaching
   production to publish must never decide which environment ran the delivery; name
-  the actual verification environment (local full-stack / Electron) in the report.
+  the actual verification environment (the local Electron instance and its backend)
+  in the report.
 
 - **Choose the subject by business continuity**, not by what is easiest to create:
   an explicit instruction first; else the current conversation's `topic:<id>` (the

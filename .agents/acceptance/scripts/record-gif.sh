@@ -10,7 +10,7 @@
 # Usage:
 #   record-gif.sh <output.gif> <duration_seconds> [fps]
 #
-#   AB_TARGET="--cdp 9222"             # Electron (default; CDP_PORT honored)
+#   AB_TARGET="--cdp 9223"             # electron-dev.sh instance 1 (default; CDP_PORT honored)
 #   AB_TARGET="--session your-session" # web agent-browser session
 #   GIF_WIDTH=1280                     # optional output width; default keeps source resolution
 #
@@ -28,7 +28,7 @@ set -euo pipefail
 OUT="${1:?Usage: record-gif.sh <output.gif> <duration_seconds> [fps]}"
 DUR="${2:?Usage: record-gif.sh <output.gif> <duration_seconds> [fps]}"
 FPS="${3:-2}"
-AB_TARGET="${AB_TARGET:---cdp ${CDP_PORT:-9222}}"
+AB_TARGET="${AB_TARGET:---cdp ${CDP_PORT:-9223}}"
 GIF_WIDTH="${GIF_WIDTH:-}"
 
 command -v ffmpeg > /dev/null || {

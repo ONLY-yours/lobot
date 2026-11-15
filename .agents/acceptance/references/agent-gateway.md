@@ -1,5 +1,9 @@
 # LobeHub gateway streaming + tab-switch test harness
 
+> **Lobot:** the local-gateway closed loop below needs a local lobehub server
+> (`../lobehub`), whose JWKS signs the app's JWT. Against LobeHub Cloud, only the
+> probe / dump / analyze tooling applies; the instance discovers Cloud's gateway.
+
 Captures store + DOM state at 200ms intervals so we can prove or disprove
 claims like "切回 tab 后消息回到了很早以前". Built for gateway-mode chat but
 works for any LobeHub streaming session.

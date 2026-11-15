@@ -6,6 +6,7 @@ import { shallow } from 'zustand/shallow';
 import { createWithEqualityFn } from 'zustand/traditional';
 
 import { mutate } from '@/libs/swr/mutate';
+import { expose } from '@/store/middleware/expose';
 
 import type { WorkspaceListItem } from '../hooks/useActiveWorkspace';
 import { workspaceService } from './service';
@@ -71,6 +72,9 @@ export const useWorkspaceStore = createWithEqualityFn<WorkspaceStore>()(
   }),
   shallow,
 );
+
+// Acceptance runs (`app-probe.sh workspace`) enter their test workspace through it.
+expose('workspace', useWorkspaceStore);
 
 export const getWorkspaceStoreState = () => useWorkspaceStore.getState();
 

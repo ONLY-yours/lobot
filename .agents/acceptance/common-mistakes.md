@@ -1,5 +1,11 @@
 # LobeHub Acceptance Mistakes
 
+> **Lobot note:** written in the lobehub monorepo. `apps/desktop/src/main` is now
+> `electron/main`, `apps/desktop/scripts` is `scripts`, and server paths
+> (`apps/server`, `src/server`, `packages/database`) live in `../lobehub`. Recipes that
+> need a local server, `init-dev-env.sh`, `setup-auth.sh` or a Web session do not
+> apply here; see `PROJECT.md`.
+
 Project-specific mistakes only. Read this with the acceptance skill's generic
 `references/common-mistakes.md`; stable ids use the `L-` prefix so they cannot be
 confused with the generic `M` catalogue. The generic file's "How this file is

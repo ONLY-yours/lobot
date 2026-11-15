@@ -1,5 +1,11 @@
 # LobeHub Probe & Mock Guide
 
+> **Lobot note:** written in the lobehub monorepo. `apps/desktop/src/main` is now
+> `electron/main`, `apps/desktop/scripts` is `scripts`, and server paths
+> (`apps/server`, `src/server`, `packages/database`) live in `../lobehub`. Recipes that
+> need a local server, `init-dev-env.sh`, `setup-auth.sh` or a Web session do not
+> apply here; see `PROJECT.md`.
+
 This is the project-layer entry point for LobeHub acceptance probes. Read it
 together with the agent-testing skill's generic `references/probe-mock-patterns.md`.
 Product-independent rules belong upstream; LobeHub routes, stores, services, env
@@ -2548,7 +2554,6 @@ stub's answer-mode off the NAME of the last `function_call` instead.
 - [Probe field notes](./references/probe-field-notes.md) — all historical
   LobeHub findings, original identifiers, commands, and failure analysis.
 - [Auth](./references/auth.md) — per-surface auth injection and recovery.
-- [Dev server](./references/dev-server.md) — local stack and restart behavior.
 - [Multi-instance Electron](./references/multi-instance.md) — pool, ports, CDP
   sessions, and user-data isolation.
 - [Agent gateway](./references/agent-gateway.md) — closed-loop gateway probes.

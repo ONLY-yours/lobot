@@ -227,6 +227,21 @@ describe('login state', () => {
     expect(settings).toEqual({ ...signedIn, locale: 'en' });
   });
 
+  it('drops a hand-set gateway and points the storage folder at the copy, not the source', async () => {
+    const source = path.join(root, 'source');
+    const target = path.join(root, 'target');
+    await writeProfile(source, {
+      ...signedIn,
+      gatewayUrl: 'http://localhost:8788',
+      storagePath: path.join(source, 'lobehub-storage'),
+    });
+
+    await copyLoginItems(source, target);
+
+    const settings = JSON.parse(await readFile(path.join(target, 'lobehub-settings.json'), 'utf8'));
+    expect(settings).toEqual({ ...signedIn, storagePath: path.join(target, 'lobehub-storage') });
+  });
+
   it('seeds from the first available source', async () => {
     const snapshot = path.join(root, 'snapshot');
     const golden = path.join(root, 'golden');

@@ -1,8 +1,8 @@
-# PROJECT.md — acceptance adapter for LobeHub
+# PROJECT.md — acceptance adapter for Lobot
 
-This file is the **commands** layer of LobeHub's acceptance setup: every
-LobeHub-specific command, port, service, surface, and probe. The `acceptance`
-skill reads it — it never guesses LobeHub's commands.
+This file is the **commands** layer of Lobot's acceptance setup: every
+Lobot-specific command, port, service, surface, and probe. The `acceptance`
+skill reads it — it never guesses Lobot's commands.
 
 Its two siblings:
 
@@ -27,322 +27,166 @@ into the project layer.
 
 ## 1. Project summary
 
-LobeHub is a chat/agent product with a Next.js server, a Vite + React SPA, an
-Electron desktop shell, and a CLI (`lh`). Repo layout that matters for testing:
+Lobot is LobeHub's IM-style desktop client: an Electron shell (`electron/`) around
+the React SPA (`src/`), plus the `lh` CLI (`apps/cli`). It was split out of the
+lobehub monorepo **without the server**: there is no `apps/server`, no Next.js
+backend, no database and no migrations here. The backend is **LobeHub Cloud**
+(`app.lobehub.com`); `@/server/*` types resolve to `any`, which is why
+`bun run type-check` carries a baseline of ~190 errors.
 
-- `apps/server/` — the Next.js backend (TRPC routers, services, modules, auth).
-- `apps/desktop/` — the Electron shell. **Standalone install** (see §6).
-- `apps/cli/` — the `lh` CLI; runs from source (`bun src/index.ts`), no rebuild.
-  **Standalone install** (see §6).
-- `packages/**`, `e2e`, `apps/server` — covered by the root pnpm workspace.
-- `src/` — the SPA and shared web app; `apps/server/src/router-hono/` holds the
-  Hono endpoint routers and standalone runtime.
+What that means for acceptance:
 
-**The root pnpm workspace does NOT cover `apps/desktop` or `apps/cli`.**
-`pnpm-workspace.yaml` lists `packages/**`, `e2e`, `apps/server`, and only
-`apps/desktop/src/main`. Those two apps keep their own `node_modules` with their
-own links into `packages/`; a root install does not refresh them. Symptom of a
-stale standalone install: a recently added workspace package fails to resolve —
-`Rolldown failed to resolve import "@lobechat/<pkg>"` (Electron) or
-`Cannot find module '@lobechat/<pkg>'` (CLI).
+- **Electron against Cloud is the product surface.** Every UI change, including one
+  that also ships on the web app, is verified in a local Electron dev instance
+  running this checkout.
+- **There is no Web surface.** Nothing here serves the SPA in a browser with a
+  backend behind it.
+- **Runs use a real Cloud account.** Everything a run creates lands in that account,
+  so it goes into the dedicated test workspace (§3) and is cleaned up afterwards.
+- A backend change belongs to the lobehub repository (`../lobehub`) and is accepted
+  there with its own adapter.
+
+Repo layout that matters for testing:
+
+- `electron/main/` — Electron main process (`pre-app-init.ts`, `core/App.ts`).
+- `scripts/dev.mjs` → `scripts/devOrchestrator.mjs` — `pnpm dev`: Vite + Electron.
+- `scripts/devInstance.mts` — dev-instance rules (ports, profile env, login seeding),
+  driven by `.agents/acceptance/scripts/electron-dev.sh` through `devInstanceCli.mts`.
+- `src/` — the SPA. `apps/cli/` — the `lh` CLI, run from source.
+- The root `pnpm install` covers `packages/**`, `electron/main` and `apps/cli`.
 
 ## 2. Environment
 
-- **Start dev server:**
-
-  - With repo-root `.env` present: use the existing local config — `bun run dev`
-    (full-stack, needed for Web smoke) or `AGENT_RUNTIME_MODE=queue pnpm run dev:next`
-    (backend only). Do NOT call any `init-dev-env.sh` subcommand when `.env` exists.
-    If that `.env` config does not boot (expired credentials, schema behind
-    the checkout, `setup-auth.sh` refusing to seed), do not repair it in place —
-    open a clean `git worktree` with no root `.env` and use the bootstrap below
-    ([dev-server.md](./references/dev-server.md#root-env-exists-but-does-not-boot)).
-  - Without `.env`: use the skill-owned bootstrap `.agents/acceptance/scripts/init-dev-env.sh`
-    (Postgres, Redis, migrations, auth/key-vault/S3 test env, seed user, then the
-    repo's own dev server — not `e2e/scripts/setup.ts`). It hard-blocks when
-    root `.env` exists, so it can never override a user's local config.
-
-  ```bash
-  if [[ -f .env ]]; then
-    bun run dev
-  else
-    .agents/acceptance/scripts/init-dev-env.sh setup-db
-    .agents/acceptance/scripts/init-dev-env.sh s3 # terminal B — keep running
-    .agents/acceptance/scripts/init-dev-env.sh seed-user
-    .agents/acceptance/scripts/init-dev-env.sh dev
-  fi
-  ```
-
-  `dev-next` starts the Next.js backend only; Web smoke needs the full-stack
-  `dev` so Next proxies the SPA HTML from Vite. `bun run dev:spa` runs the Vite
-  SPA alone, proxying the API to `PORT`.
-
-- **Stop dev server (must stop only what THIS run started):**
-
-  ```bash
-  .agents/acceptance/scripts/init-dev-env.sh clean    # stop the recorded dev-server PID tree; keep DB/Redis
-  .agents/acceptance/scripts/init-dev-env.sh stop-dev # just the server, no note
-  ```
-
-  `clean` stops only the recorded dev-server PID tree after verifying its PID
-  start time, command, and working directory; it never matches by process name
-  and never kills a listener merely because it owns a persisted port. It leaves
-  the managed Postgres/Redis containers running (reused across runs — `setup-db`
-  is a no-op when they are up). `clean-db` removes the managed DB container;
-  `clean-s3` removes persisted local S3 objects. If the user started their own
-  `.env` dev server, leave it — you did not start it.
-
-- **Required services:**
-  - **Postgres + Redis** — `init-dev-env.sh setup-db` (managed Docker containers
-    `lobehub-agent-testing-postgres` / `lobehub-agent-testing-redis`; requires
-    Docker Desktop). To use an existing DB instead, set `DATABASE_URL` /
-    `REDIS_URL` and skip `setup-db` (run `migrate` + `seed-user` with those env).
-  - **s3rver (local S3)** — `init-dev-env.sh s3` (terminal B). A hard prerequisite
-    for browser uploads, presigned URLs, attachments, and generated files: the
-    no-`.env` bootstrap points the app at local `s3rver` so those exercise a real
-    S3 HTTP round trip. Creates `agent-testing-bucket`, configures CORS for the
-    allocated local origins, persists objects under
-    `.records/data/agent-testing-s3`. Fixed `S3RVER` credentials are required by
-    the emulator's presigned-URL validation. `preflight` does HeadBucket + a real
-    Put/Get/Delete round trip; a listening port alone is not "ready".
-  - **QStash** — `init-dev-env.sh qstash` (terminal B). A hard prerequisite for
-    ANY agent-runtime test (see §6).
-
-- **Already-running detection:**
-
-  ```bash
-  curl -s -o /dev/null -w '%{http_code}' "$SERVER_URL/"
-  ```
-
-- **Env / port resolution:** `.agents/acceptance/scripts/test-env.sh` is the source
-  of truth for local test ports — do NOT hard-code a port table. It reads the
-  current shell plus `.env` files with the same precedence as
-  `scripts/runWithEnv.mts` and prints `APP_URL`, `PORT`, `SERVER_URL`,
-  `AUTH_TRUSTED_ORIGINS`, `SPA_PORT`, `MOBILE_SPA_PORT`, `DESKTOP_PORT`.
-
-  ```bash
-  .agents/acceptance/scripts/test-env.sh                     # print resolved env + ports
-  eval "$(.agents/acceptance/scripts/test-env.sh --exports)" # export them
-  ```
-
-  Default script env (no-`.env` bootstrap): `APP_URL=http://localhost:3010`,
-  `DATABASE_URL=postgresql://postgres:postgres@localhost:5433/postgres`,
-  `DATABASE_DRIVER=node`, `AGENT_RUNTIME_MODE=queue`,
-  `REDIS_URL=redis://localhost:6380`, an empty `FEATURE_FLAGS`,
-  `KEY_VAULTS_SECRET`, `AUTH_SECRET`, auth verification off, a generated
-  `JWKS_KEY` (persisted at `.records/env/agent-testing-jwks.json`, required by every
-  async-task dispatch such as image generation), `SSRF_ALLOW_PRIVATE_IP_ADDRESS=1`
-  (the server fetches reference images from the local s3rver on 127.0.0.1), plus
-  local `s3rver` and local QStash vars. Treat the dev-server terminal output as final when the
-  port is non-standard, then `export SERVER_URL=http://localhost:<port>`.
-
-  In the cloud repo (this repo as the `lobehub/` submodule), worktree names map
-  to fallback `SERVER_URL` defaults only when `.env` and shell env give none:
-  `lobehub`→3010, `lobehub-cloud`→3020, `lobehub-cloud-N`→`3020+N`.
-
-- **Cucumber note:** when running Cucumber against this dev server in the no-`.env`
-  branch, pass the same script env into the test process (`eval "$(.agents/acceptance/scripts/init-dev-env.sh env)"`)
-  — Cucumber's own `BeforeAll` seed path must see `DATABASE_URL` or it silently
-  skips setup.
-
-- **Ports/modes table, the per-path server-restart matrix, and env
-  troubleshooting:** `.agents/acceptance/references/dev-server.md`.
+- **Start:** `.agents/acceptance/scripts/electron-dev.sh start [<id>]` launches an
+  isolated dev instance of this checkout (default id 1): CDP `9222+id`, Vite
+  `5173+id`, its own userData under `/tmp/lobe-electron-pool/ud-<id>`, its own IPC
+  id, and a `#<id>` label on every window. Its login is seeded from the saved
+  snapshot (§3). The user's own `pnpm dev` and profile are never touched.
+- **Stop (only what this run started):** `.agents/acceptance/scripts/electron-dev.sh stop [<id>]`.
+  It stops the instance's own process tree and port holders, snapshots the rotated
+  login, and removes the instance's userData. `KEEP_DATA=1` keeps the userData.
+  Never `pkill -f Electron` — that also closes every other Electron app on the machine.
+- **Status / list:** `electron-dev.sh status [<id>]`, `electron-dev.sh list`.
+- **Required services:** none locally. The instance talks to LobeHub Cloud.
+  - The device gateway is discovered from the server. `DEVICE_GATEWAY_URL` in the
+    calling shell overrides it for a local `wrangler dev` gateway.
+  - The login copy drops the source install's hand-set `gatewayUrl` and its
+    `gatewayDeviceId`, and points `storagePath` at the instance's own folder.
+- **Dependencies:** `pnpm install` at the root. A stale install fails at launch with
+  `Rolldown failed to resolve import "@lobechat/<pkg>"`.
+- **Already-running detection:** `electron-dev.sh status <id>`, or
+  `.agents/acceptance/scripts/app-probe.sh ready`.
+- **Main-process changes:** `electron-dev.sh restart <id>`. Renderer changes hot-reload.
+- **Local backend (manual, rarely needed):** start the server from `../lobehub`
+  with its own adapter, then switch the instance to self-hosted mode
+  (`storageMode: selfHost`, `remoteServerUrl` pointing at it). Nothing here
+  automates this.
+- Multiple instances (several worktrees, parallel runs):
+  `.agents/acceptance/references/multi-instance.md`.
 
 ## 3. Auth
 
-- **Test account:** `agent-testing@lobehub.com` / `TestPassword123!`, onboarding
-  completed. Created by `init-dev-env.sh seed-user`, which also writes a local
-  CLI API key to `.records/env/agent-testing-cli.env`.
-
-- **Seeding command:** `.agents/acceptance/scripts/init-dev-env.sh seed-user`.
-
-- **Setup helper:** `.agents/acceptance/scripts/setup-auth.sh` — `status` (all
-  surfaces), `status --surface <cli|web|electron>`, `cli-seed`, `cli` (interactive
-  device-code, user runs it), `web-seed`, `open-chrome`, `web` (inject a copied
-  Cookie header), `web-verify`. Auth is a surface-scoped gate: pick the intended
-  surface and check only it (do not block a Web test on CLI device-code auth).
-
-- **Per-surface status check:**
-
-  | Surface  | Mechanism                                     | One-key path             | Standard check                            |
-  | -------- | --------------------------------------------- | ------------------------ | ----------------------------------------- |
-  | CLI      | Seeded API key, device-code fallback          | `setup-auth.sh cli-seed` | `setup-auth.sh status --surface cli`      |
-  | Web      | Seeded better-auth login into `agent-browser` | `setup-auth.sh web-seed` | `setup-auth.sh status --surface web`      |
-  | Electron | The app's own persistent login state          | log in once in the app   | `setup-auth.sh status --surface electron` |
-
-- **Chrome-cookie fallback (Web only):** ordinary Chrome is only a source for
-  copying the better-auth session cookie into the `agent-browser` session
-  (`lobehub-dev`) when seed auth is unavailable or `status --surface web` still
-  fails. Copy the `Cookie:` header from the Network tab (NOT `document.cookie` —
-  HttpOnly cookies are invisible there), then `pbpaste | setup-auth.sh web`. Use
-  `localhost`, not `127.0.0.1` (better-auth cookies are stored for `localhost`).
-  Never do this against production. Full decision flow, seeded-login mechanics,
-  and failure modes: `.agents/acceptance/references/auth.md`.
-
-- **Login-state check** is standardized — do NOT hand-roll a `window.__LOBE_STORES`
-  eval; use `.agents/acceptance/scripts/app-probe.sh auth` (returns `{ isSignedIn, userId }`,
-  works for Electron CDP and web sessions via `AB_TARGET`).
+- **Electron:** the saved login snapshot at `~/.lobehub/agent-testing/electron-login`
+  seeds every new instance. `stop` re-snapshots it, because the refresh token
+  rotates on every boot.
+  - **Check:** `electron-dev.sh login-status` (snapshot) and
+    `app-probe.sh auth` (live instance).
+  - **Signed out:** restore the snapshot. With none left, report auth ❌ Blocked and
+    ask the user for one manual sign-in inside the instance, then
+    `electron-dev.sh save-login <id>`.
+  - **Never trigger the OAuth flow** (`requestAuthorization`) from automation: it
+    opens a login page in the user's default browser.
+  - Details and token-rotation traps: `.agents/acceptance/references/auth.md`.
+- **CLI:** `lh` uses the user's own Cloud login. Use it to read state and to publish
+  (PROCESS.md, Publish auth preflight). Never write to the account through it
+  outside the test workspace.
+- **Test workspace (required before creating anything):** after `ready`, run
+  `.agents/acceptance/scripts/app-probe.sh workspace`.
+  - It finds the account's `lobot-acceptance-*` workspace and creates
+    `Lobot Acceptance` on first use.
+  - It switches the instance into it with the silent store switch, then lands on the
+    Messages home through the app's router, as the rail does. The switch does not
+    write the user's `lastWorkspaceId` preference, so their own apps keep opening
+    where they were.
+  - A new workspace comes with Cloud's own welcome conversation (`Lobe AI`). That
+    conversation is not test data.
+  - A page reload drops the switch: run it again after `goto` or a restart.
+  - Create agents, groups and Channels only inside this workspace.
 
 ## 4. Surfaces
 
-### CLI
+### Electron (primary)
 
-- Invocation: from source, no rebuild — `cd apps/cli && bun src/index.ts <cmd>`
-  (referred to as `$CLI`). CLI-side code changes take effect immediately.
+- Launch: §2. Drive it with `agent-browser --session s<port> --cdp <port>`. For
+  instance 1 that is `agent-browser --session s9223 --cdp 9223 snapshot -i`; use a
+  distinct session per instance.
+- Every UI check runs here, including features that also ship on the web app: the
+  SPA is the same code.
+- Order for a run: `start` → `app-probe.sh ready` → `app-probe.sh auth` →
+  `app-probe.sh workspace` → checks → clean up the test data → `stop`.
 
-- Auth: see §3 CLI. Load `.records/env/agent-testing-cli.env` only inside the
-  local-test subshell below. It sets `LOBE_API_KEY` / `LOBEHUB_CLI_API_KEY`,
-  `LOBEHUB_SERVER=http://localhost:3010`, and `LOBEHUB_CLI_HOME=.lobehub-dev`
-  for isolated settings.
+### CLI (driver and read-back)
 
-- **Local-run vs publish env distinction:** seeded credentials are only for the
-  local backend. Load the test profile inside a subshell so it does not overwrite
-  production credentials in the parent shell; remove any inherited production
-  JWT inside that subshell because it would override the seeded API key:
+- Invocation from source: `cd apps/cli && bun src/index.ts <cmd>` (`$CLI`), or the
+  installed `lh`. It runs against Cloud with the user's login.
+- Use it to drive an agent run or to read back server state for a check:
+  `lh agent run -a <agentId> --json -p '<prompt>' [-t <topicId>] [--device local]`.
+  Use the Electron instance only to capture the rendered evidence.
+- Pass the test workspace explicitly when the command scopes by workspace.
 
-  ```bash
-  (
-    unset LOBEHUB_JWT
-    source .records/env/agent-testing-cli.env
-    lh whoami
-    # Run the local CLI test commands here.
-  )
-  ```
+### Web
 
-  For publication or existing-round lookup, follow
-  [Publish auth preflight](PROCESS.md#publish-auth-preflight). Preserve known
-  production credentials; do not blindly clear API keys or assume `~/.lobehub`
-  contains a login. Never change only the server URL while retaining a local
-  test credential.
-
-- Standalone install: `cd apps/cli && pnpm install` (root install does not cover it).
-
-- **CLI as the run driver for conversation features (preferred over browser
-  typing):** for any test whose state is produced by an agent run (tool calls,
-  edited-file cards, works, topic content), drive the run with
-
-  ```bash
-  lh agent run -a <agentId> --json -p '<prompt>' [-t <topicId>] [--device local]
-  ```
-
-  and use the browser only to capture the rendered evidence afterwards. CLI
-  streaming uses the agent gateway WebSocket only. For local runs, configure
-  both the backend and CLI to use the same local `AGENT_GATEWAY_URL`, with
-  matching service-token and local JWT verification configuration (see
-  `references/agent-gateway.md`). The production gateway cannot verify local
-  JWT signatures; there is no SSE fallback. `--json` gives assertable
-  output; reuse `-t` to chain multi-step cases in one topic. This is faster and
-  far more deterministic than typing prompts through agent-browser, and the
-  server-side state it produces is identical.
-
-- Launch: full-stack dev server from §2 (`bun run dev` or `init-dev-env.sh dev`).
-
-- Base URL: `$SERVER_URL` (default `http://localhost:3010`).
-
-- agent-browser session: `lobehub-dev`. Seed it with `setup-auth.sh web-seed`.
-  It is the sole **evidence** source (do not use ordinary Chrome screenshots or
-  Network records as proof) — but not necessarily the driver: prefer the CLI
-  run driver (§4 CLI) or direct endpoint calls to produce the state, and use
-  the browser for what only it can prove (rendering, interaction). Full-stack
-  is the one surface where network requests and rendered UI are observable
-  together — assert both.
-
-- SPA proxying note: Web smoke needs the full-stack `dev` so Next proxies the
-  SPA HTML from Vite; `dev-next` alone will not serve the SPA.
-
-- **Verify against a branch-running environment, not the production proxy:**
-  `bun run dev:spa` prints a `_dangerous_local_dev_proxy` URL that loads your
-  local Vite SPA inside the online environment (HMR against real server config).
-  That is a development convenience: it serves your local frontend over
-  production's backend, origin, and data. Its output is **never acceptance
-  evidence**, and it does not prove the delivered branch. Verify Web changes in
-  the local full-stack dev server (`$SERVER_URL`, default `http://localhost:3010`),
-  or a frontend-only change in Electron (`PROCESS.md` Step 3). If a criterion
-  cannot be exercised in an environment that runs the delivered branch, record
-  that check `blocked` and report the gap — do not substitute the proxy for it.
-
-### Electron
-
-- Launch: `.agents/acceptance/scripts/electron-dev.sh start` — CDP port `9222`
-  (idempotent; `status` / `stop` / `restart`; env `CDP_PORT`, `ELECTRON_LOG`,
-  `ELECTRON_WAIT_S`, `RENDERER_WAIT_S`, `LOBE_LOGIN_STATE_DIR`, `KEEP_DATA`,
-  `SKIP_LOGIN_SAVE`). Connect with `agent-browser --cdp 9222 snapshot -i`.
-- Stop: `.agents/acceptance/scripts/electron-dev.sh stop` — always use this;
-  `pkill -f "Electron"` leaves helper processes (GPU, renderer, network) alive.
-- Login persistence: `stop` snapshots the login to
-  `~/.lobehub/agent-testing/electron-login`; `start` seeds each new instance
-  from it (`login-status` inspects it, `save-login <id>` captures a live one).
-  Sign in once, not once per run — and if an instance comes up signed out,
-  **inject the login state directly** (restore the snapshot, or mint it via
-  CLI/API seeding; recipes and the three token-rotation traps are in
-  `.agents/acceptance/references/auth.md`). **Never trigger the OAuth flow
-  (`requestAuthorization`)** — it opens a login page in the user's default
-  browser, against a per-instance localhost origin that usually can't even
-  complete. If no injectable state exists, report auth as blocked and ask for
-  one manual sign-in instead.
-- Concurrent instances (N worktrees / parallel runs): `electron-dev.sh` drives a
-  pool — `start <id>` gives each its own CDP port, userData dir (with copied
-  login), Vite port, and IPC id, and labels every window with the checkout and
-  `#<id>` (dev builds only, from `LOBE_DESKTOP_INSTANCE_LABEL`) so a screenshot
-  shows which instance it came from. Drive each with a distinct
-  `agent-browser --session s<port> --cdp <port>`. Pool design, the collision
-  matrix, and the login-copy recipe: `.agents/acceptance/references/multi-instance.md`.
-- Instance rules live in `apps/desktop/scripts/devInstance.mts` (ports, profile,
-  IPC and label environment; the CDP check that the UI rendered; login snapshot
-  seeding and saving). `electron-dev.sh` calls it through `devInstanceCli.mts`,
-  and other launchers that run several checkouts import it, so change the
-  rules there rather than in the shell script.
+Not available in this repository. The `_dangerous_local_dev_proxy` (local SPA over
+production) is a development convenience, never acceptance evidence. A criterion
+that only the web app can show is recorded `blocked` and accepted in the lobehub
+repository.
 
 ### Bot channels (project skill)
 
-Bot-channel surfaces (Discord / Slack / Telegram / WeChat / Lark / QQ / iMessage)
-live in a separate LobeHub project skill, `agent-testing-bot`
-(`.agents/skills/agent-testing-bot/`). It extends this same Plan/Execute/Finish
-process and report pipeline for the native-app surfaces (osascript / bridge,
-macOS-only). Route bot tests there.
+Bot-channel surfaces (Discord / Slack / Telegram / WeChat / Lark / QQ / iMessage) live
+in a separate project skill, `agent-testing-bot` (`.agents/skills/agent-testing-bot/`).
+It extends this same process and report pipeline for the native-app surfaces
+(osascript / bridge, macOS-only). Route bot tests there.
 
 ## 5. Project probes & quick navigation
 
-`.agents/acceptance/scripts/app-probe.sh` is the LobeHub fast path into app state —
-use it instead of hand-rolling `window.__LOBE_STORES` eval snippets. Targets
-default to Electron (`--cdp 9222`); set `AB_TARGET="--session <name>"` for web
-sessions.
+`.agents/acceptance/scripts/app-probe.sh` is the fast path into app state. Use it
+instead of hand-rolling `window.__LOBE_STORES` eval snippets. It targets instance 1
+(`--cdp 9223`) by default; set `CDP_PORT` or `AB_TARGET="--cdp <port>"` for
+another instance.
 
 ```bash
 PROBE=.agents/acceptance/scripts/app-probe.sh
-$PROBE auth           # login check → { isSignedIn, userId }
 $PROBE ready          # app root + exposed-store readiness
+$PROBE auth           # login check → { isSignedIn, userId }
 $PROBE server-auth    # authenticated server request → 200 vs 401
+$PROBE workspace      # enter the test workspace, creating it on first use
 $PROBE route          # current SPA route
 $PROBE stores         # exposed store names
 $PROBE ops            # running chat operations (type / startTime)
 $PROBE wait-ops 60    # wait until no chat operation is running
 $PROBE topic          # active topic + metadata from its paged view
-$PROBE goto /settings # jump the SPA straight to a route (full reload)
+$PROBE goto /agents   # jump the SPA straight to a route (full reload)
 $PROBE errors-install # install console.error interceptor
 $PROBE errors         # dump captured errors
 ```
 
 Routes worth jumping to:
 
-| Route                        | Where it lands                    |
-| ---------------------------- | --------------------------------- |
-| `/`                          | Home (has a chat input)           |
-| `/agent/<agentId>`           | Agent conversation (latest topic) |
-| `/agent/<agentId>/<topicId>` | Specific topic in a conversation  |
-| `/tasks`                     | Task list                         |
-| `/task`                      | Task assistant                    |
-| `/task/<taskId>`             | Task detail                       |
-| `/page`                      | Documents (文稿)                  |
-| `/settings`                  | Settings                          |
-| `/community`                 | Discover / community              |
+| Route                     | Where it lands                            |
+| ------------------------- | ----------------------------------------- |
+| `/`                       | Messages: the conversation list           |
+| `/channels/<channelId>`   | A Channel conversation (direct or group)  |
+| `/agents`                 | Contacts: the agents wall                 |
+| `/agents/<id>`            | An agent's or group's contact card        |
+| `/agent/<agentId>`        | The agent's own page                      |
+| `/agent/<agentId>/profile`| The agent's profile editor                |
+| `/settings`               | Settings                                  |
 
-The Zustand store is at `window.__LOBE_STORES` (not `__ZUSTAND_STORES__`); the
-chat input is `contenteditable` (snapshot with `-C`). For deeper one-off state
-inspection, fall back to raw `agent-browser --cdp 9222 eval`. The agent-gateway
-closed-loop probe/dump/analyze tooling lives at
-`.agents/acceptance/scripts/agent-gateway/`; the closed-loop + JWKS setup workflow is
-in `.agents/acceptance/references/agent-gateway.md`.
+The Zustand stores are at `window.__LOBE_STORES` (dev builds, or Desktop with remote
+debugging on); `workspace` is among them. The chat input is `contenteditable`
+(snapshot with `-C`). For a one-off read, fall back to raw
+`agent-browser --cdp <port> eval`.
 
 `.agents/acceptance/scripts/acceptance-guard.sh` bounds a run's memory. It wraps the
 skill's [resource guard](../skills/acceptance/references/resource-guard.md) with this
@@ -387,73 +231,44 @@ support is not implemented. Native Windows is unsupported. See the skill's
 
 ## 6. Known constraints
 
-- **QStash is a hard prerequisite for ANY agent-runtime test.** Any test that
-  runs an agent (`lh agent run`, durable ops, `/api/agent/run`, the server agent
-  runtime) goes through `AGENT_RUNTIME_MODE=queue` (the default here and in
-  production). Creating an agent operation POSTs to local QStash
-  (`127.0.0.1:8080`); if QStash is down the run dies at operation creation with
-  `TypeError: fetch failed` / `ECONNREFUSED 127.0.0.1:8080` **before any LLM
-  call** — no trace is recorded and it reads as unrelated to the env. Start it
-  and gate before the first `agent run`:
-
-  ```bash
-  .agents/acceptance/scripts/init-dev-env.sh qstash    # terminal B — keep running
-  .agents/acceptance/scripts/init-dev-env.sh preflight # non-zero exit if QStash (or Redis) is down
-  ```
-
-  Background self-iteration only runs for users who turned on Labs →
-  Self-evolving (off for new users), so a simple chat does not fan out; that
-  does NOT remove QStash from the agent-runtime dispatch path. Treat QStash as required, not an "only-for-workflow"
-  nicety.
-
-- **Verify which runtime actually ran — do not assume.** Some features have two
-  execution paths and the UI silently picks one. Group orchestration is the
-  concrete example: the chat UI defaults to the **client** runtime, while a fix
-  may live in the **server** runtime / `AGENT_RUNTIME_MODE=queue` durable-op path.
-  A test that exercises the wrong path passes green without touching the code
-  under test. Prove which ran (a server `agent_operations` row, the QStash
-  `/api/agent/run` steps, server-only log lines); if the UI will not take the
-  server path, drive it directly (call the server TRPC mutation / endpoint).
-
-- **`apps/desktop` and `apps/cli` are standalone installs** (see §1) — run
-  `pnpm install` inside each app the test will touch, not only at the root.
-
-- **Server restart picks up server-side code changes.** Next.js hot-reload may
-  miss changes in workspace packages. Restart when changing `apps/server/src/`,
-  `src/server/`, `packages/database/`, `packages/types/`, `packages/prompts/`;
-  `apps/cli/` needs none (runs from source).
-
+- **The account is real, so test data is scoped and removed.**
+  - Create agents, groups and Channels only inside the test workspace (§3).
+  - Delete them before `stop`, and list what was deleted in the report.
+  - Never edit or delete anything the run did not create.
+- **The test workspace changes what some flows offer.** For example, a workspace
+  agent may bind only workspace devices. When a check is about personal-space
+  behavior, say so in the plan and switch back
+  (`window.__LOBE_STORES.workspace().switchToPersonal()`).
+- **No server-side verification here.** There are no server logs, operation rows
+  or queue steps to read. A change whose claim lives on the server is accepted in
+  `../lobehub`. Here, CLI read-back of Cloud state is the server evidence.
+- **Type-check baseline:** `bun run type-check` reports ~190 errors from the missing
+  server modules. Compare the count, not zero. It is a quality gate, not an
+  acceptance check.
 - **OS-capture surfaces are macOS-only** (bot channels, `capture-app-window.sh`,
-  osascript screenshots): they come out black without Screen Recording (TCC)
-  permission or when the display is asleep/locked. CDP-based evidence
-  (`agent-browser screenshot`, `bash .agents/skills/acceptance/scripts/cdp-screenshot.sh`) is
-  unaffected. Electron runs on Linux/cloud only under `xvfb-run`, and there OS
-  capture does not work — prefer CDP evidence for cloud-portable runs.
-
-- **`ENABLE_MOCK_DEV_USER` is not Web auth** — it only affects server-side API
-  context and does not satisfy Better Auth or stop the SPA redirect to `/signin`.
-
-- Marketplace/community endpoints are not part of the local auth gate; do not
-  block local verification on marketplace API auth unless the change targets it.
+  osascript screenshots). They come out black without Screen Recording (TCC)
+  permission, or when the display is asleep or locked. CDP evidence
+  (`agent-browser screenshot`, `bash .agents/skills/acceptance/scripts/cdp-screenshot.sh --port <port>`,
+  `record-app-screen.sh`) is unaffected.
+- **Paths in the field notes are historical.** `common-mistakes.md`,
+  `probe-mock-patterns.md` and `references/*-field-notes.md` were written in the
+  lobehub monorepo. There, `apps/desktop/src/main` is now `electron/main` and
+  `apps/server`/`src/server` live in `../lobehub`. Their recipes that need a local
+  server do not apply here.
 
 ## Project references
 
-Deeper LobeHub-specific notes kept alongside the moved scripts:
-
-- `.agents/acceptance/references/auth.md` — per-surface auth mechanics, the seeded
-  web-login flow, the Electron OAuth+PKCE sign-in recipe and token-rotation traps,
-  and the Chrome cookie-injection fallback + failure modes.
-- `.agents/acceptance/references/agent-gateway.md` — the local agent-gateway
-  closed-loop setup / probe / dump / analyze workflow (scripts under
-  `.agents/acceptance/scripts/agent-gateway/`).
-- `.agents/acceptance/references/multi-instance.md` — the concurrent Electron
-  instance pool (N worktrees / parallel runs): per-instance CDP port, userData,
-  Vite port, IPC id, the collision matrix, and the login-copy recipe.
-- `.agents/acceptance/references/probe-field-notes.md` — historical, detailed
-  LobeHub probe incidents and their original cross-reference ids.
-- `.agents/acceptance/references/common-mistakes-field-notes.md` — original
-  incident narratives retained after the maintained catalogue was normalized.
+- `.agents/acceptance/references/auth.md` — Electron login snapshot mechanics,
+  injection recipes and the token-rotation traps.
+- `.agents/acceptance/references/multi-instance.md` — the Electron instance pool:
+  per-instance CDP port, userData, Vite port, IPC id, the collision matrix, and the
+  login-copy recipe.
+- `.agents/acceptance/references/agent-gateway.md` — closed-loop agent-gateway
+  probing. Its local-gateway setup needs a local lobehub server (`../lobehub`).
+- `.agents/acceptance/references/probe-field-notes.md`,
+  `.agents/acceptance/references/common-mistakes-field-notes.md` — historical
+  incidents from the lobehub monorepo (see §6 on paths).
 
 The living logs (`.agents/acceptance/common-mistakes.md`,
-`.agents/acceptance/probe-mock-patterns.md`) hold the LobeHub-specific probe/mock and
-mistake recipes; the generic layer lives in the installed skill's `references/`.
+`.agents/acceptance/probe-mock-patterns.md`) hold the project-specific probe/mock
+and mistake recipes; the generic layer lives in the installed skill's `references/`.

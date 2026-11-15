@@ -2,14 +2,12 @@
 #
 # electron-dev.sh — Manage Electron dev environment(s) for testing
 #
-# Single instance (legacy, backward compatible):
-#   ./electron-dev.sh start        # CDP 9222, default userData, default Vite port
-#   ./electron-dev.sh stop
-#   ./electron-dev.sh status
-#   ./electron-dev.sh restart
+# Every instance is an isolated pool member; an omitted id means instance 1.
+# (The old single-instance mode ran on the default dev userData — the user's own
+# profile — and its stop swept every Electron of the checkout, including a
+# `pnpm dev` the user started themselves. It is gone.)
 #
-# Instance pool (concurrent isolated instances — e.g. one git worktree each):
-#   ./electron-dev.sh start <id>   # CDP 9222+id, Vite 5173+id, own userData + IPC id
+#   ./electron-dev.sh start [<id>] # CDP 9222+id, Vite 5173+id, own userData + IPC id
 #   ./electron-dev.sh stop <id>    # stop ONLY instance <id> (never touches siblings)
 #   ./electron-dev.sh stop --all   # stop every pool instance
 #   ./electron-dev.sh status <id>
@@ -41,8 +39,6 @@
 #   rotated token dies with it — run `save-login` before anything risky.
 #
 # Environment variables:
-#   CDP_PORT          — (legacy only) CDP port (default: 9222)
-#   ELECTRON_LOG      — (legacy only) log file path (default: /tmp/electron-dev.log)
 #   CDP_BASE          — pool CDP base (default: 9222 → instance id adds on top)
 #   VITE_BASE         — pool Vite base (default: 5173)
 #   POOL_DIR          — pool state dir (default: /tmp/lobe-electron-pool)
@@ -55,12 +51,10 @@
 #
 set -euo pipefail
 
-# Capture legacy env overrides BEFORE we clobber the same-named internals.
-ENV_CDP_PORT="${CDP_PORT:-}"
-ENV_ELECTRON_LOG="${ELECTRON_LOG:-}"
-
 CMD="${1:-help}"
-INSTANCE="${2:-}" # empty = legacy single instance; integer = pool member
+INSTANCE="${2:-}"
+# An omitted id is pool instance 1 (see the header: there is no shared-profile mode).
+case "$CMD" in start | stop | status | restart | save-login) INSTANCE="${INSTANCE:-1}" ;; esac
 
 CDP_BASE="${CDP_BASE:-9222}"
 VITE_BASE="${VITE_BASE:-5173}"
@@ -77,13 +71,7 @@ dev_instance() {
   node "$DEV_INSTANCE_CLI" "$@"
 }
 
-# Project-scoped electron path prefix used for pgrep matching in LEGACY mode only
-# (pool mode never uses it — it would cross instances). Any Electron binary from
-# this project starts with this string in its argv[0].
-PROJECT_ELECTRON_PATH="${PROJECT_ROOT}/node_modules/.pnpm/electron@"
-
 # Per-instance vars, filled by derive_instance.
-POOL_MODE=0
 CDP_PORT=""
 VITE_PORT=""
 USER_DATA_DIR=""
@@ -93,38 +81,26 @@ INSTANCE_ENV=()
 ELECTRON_LOG=""
 PIDFILE=""
 
-# Resolve the target instance's ports/paths from its id (empty id = legacy).
+# Resolve the target instance's ports/paths from its id.
 derive_instance() {
   local id="$1"
-  if [ -z "$id" ]; then
-    POOL_MODE=0
-    CDP_PORT="${ENV_CDP_PORT:-$CDP_BASE}"
-    VITE_PORT="" # legacy: no override, config default applies
-    USER_DATA_DIR="" # legacy: default userData
-    IPC_ID="" # legacy: default IPC id
-    INSTANCE_LABEL="$(dev_instance checkout-label "$PROJECT_ROOT" 2>/dev/null || true)"
-    ELECTRON_LOG="${ENV_ELECTRON_LOG:-/tmp/electron-dev.log}"
-    PIDFILE="/tmp/electron-dev-cdp-${CDP_PORT}.pid"
-  else
-    [[ "$id" =~ ^[0-9]+$ ]] || {
-      echo "[electron-dev] instance id must be a non-negative integer, got: $id" >&2
-      exit 1
-    }
-    POOL_MODE=1
-    CDP_PORT=$((CDP_BASE + id))
-    VITE_PORT=$((VITE_BASE + id))
-    USER_DATA_DIR="$POOL_DIR/ud-$id"
-    INSTANCE_LABEL="$(dev_instance checkout-label "$PROJECT_ROOT" 2>/dev/null || true) #$id"
-    INSTANCE_ENV=()
-    local line
-    while IFS= read -r line; do
-      [ -n "$line" ] && INSTANCE_ENV+=("$line")
-      case "$line" in LOBE_IPC_ID=*) IPC_ID="${line#LOBE_IPC_ID=}" ;; esac
-    done < <(dev_instance env --cdp-port "$CDP_PORT" --renderer-port "$VITE_PORT" \
-      --user-data "$USER_DATA_DIR" --label "$INSTANCE_LABEL")
-    ELECTRON_LOG="$POOL_DIR/instance-$id.log"
-    PIDFILE="$POOL_DIR/instance-$id.pid"
-  fi
+  [[ "$id" =~ ^[0-9]+$ ]] || {
+    echo "[electron-dev] instance id must be a non-negative integer, got: $id" >&2
+    exit 1
+  }
+  CDP_PORT=$((CDP_BASE + id))
+  VITE_PORT=$((VITE_BASE + id))
+  USER_DATA_DIR="$POOL_DIR/ud-$id"
+  INSTANCE_LABEL="$(dev_instance checkout-label "$PROJECT_ROOT" 2>/dev/null || true) #$id"
+  INSTANCE_ENV=()
+  local line
+  while IFS= read -r line; do
+    [ -n "$line" ] && INSTANCE_ENV+=("$line")
+    case "$line" in LOBE_IPC_ID=*) IPC_ID="${line#LOBE_IPC_ID=}" ;; esac
+  done < <(dev_instance env --cdp-port "$CDP_PORT" --renderer-port "$VITE_PORT" \
+    --user-data "$USER_DATA_DIR" --label "$INSTANCE_LABEL")
+  ELECTRON_LOG="$POOL_DIR/instance-$id.log"
+  PIDFILE="$POOL_DIR/instance-$id.pid"
 }
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -140,11 +116,9 @@ expand_descendants() {
   done
 }
 
-# Seed PIDs for the CURRENT instance only. Pool mode scopes strictly to this
-# instance (pidfile session leader + whoever holds this instance's CDP/Vite
-# ports) so stopping one instance never kills a sibling. Legacy mode additionally
-# sweeps the project's Electron + dev orchestrator (to tear down a stray `bun
-# run dev` the user started outside this script).
+# Seed PIDs for the CURRENT instance only: the pidfile session leader plus
+# whoever holds this instance's CDP/Vite ports, so stopping one instance never
+# kills a sibling or a `pnpm dev` the user started outside this script.
 find_instance_pids() {
   local pids=""
 
@@ -167,12 +141,6 @@ find_instance_pids() {
     local vite_pid
     vite_pid=$(lsof -ti tcp:"$VITE_PORT" -sTCP:LISTEN 2>/dev/null || true)
     pids="$pids $vite_pid"
-  fi
-
-  # 4. Legacy only: broad project matching (would cross pool instances)
-  if [ "$POOL_MODE" = "0" ]; then
-    pids="$pids $(pgrep -f "$PROJECT_ELECTRON_PATH" 2>/dev/null || true)"
-    pids="$pids $(pgrep -f "scripts/dev\\.mjs" 2>/dev/null || true)"
   fi
 
   # `|| true` because `grep -v '^$'` exits 1 on all-empty input, which with
@@ -242,14 +210,13 @@ seed_userdata() {
 # ── Commands ─────────────────────────────────────────────────────────
 
 do_stop() {
-  local label="legacy"
-  [ "$POOL_MODE" = "1" ] && label="instance $INSTANCE (cdp $CDP_PORT)"
+  local label="instance $INSTANCE (cdp $CDP_PORT)"
   echo "[electron-dev] Stopping Electron dev ($label)..."
 
   # Ask the still-running app whether it is signed in — after the kill there is
   # nothing left to ask, and the on-disk token alone can't see a cookie session.
   local authed=0
-  if [ "$POOL_MODE" = "1" ] && [ "${SKIP_LOGIN_SAVE:-0}" != "1" ]; then
+  if [ "${SKIP_LOGIN_SAVE:-0}" != "1" ]; then
     authed=$(probe_renderer_authed)
   fi
 
@@ -302,22 +269,12 @@ do_stop() {
     kill -9 $port_pid 2>/dev/null || true
   fi
 
-  # Legacy only: re-sweep stray project electron (pool mode must NOT — sibling-safe).
-  if [ "$POOL_MODE" = "0" ]; then
-    local stragglers
-    stragglers=$(pgrep -f "$PROJECT_ELECTRON_PATH" 2>/dev/null || true)
-    if [ -n "$stragglers" ]; then
-      echo "[electron-dev] Cleaning up stragglers: $stragglers"
-      for pid in $stragglers; do kill -9 "$pid" 2>/dev/null || true; done
-    fi
-  fi
-
   agent-browser --session "edev$CDP_PORT" --cdp "$CDP_PORT" close --all 2>/dev/null || true
   rm -f "$PIDFILE"
 
-  # Pool mode: capture the (freshly rotated) login before touching the userData,
-  # then wipe it unless asked to keep it.
-  if [ "$POOL_MODE" = "1" ] && [ -n "$USER_DATA_DIR" ]; then
+  # Capture the (freshly rotated) login before touching the userData, then wipe
+  # it unless asked to keep it.
+  if [ -n "$USER_DATA_DIR" ]; then
     [ "${SKIP_LOGIN_SAVE:-0}" = "1" ] || save_login_state "$USER_DATA_DIR" "$authed"
     if [ "${KEEP_DATA:-0}" = "1" ]; then
       echo "[electron-dev] Keeping userData: $USER_DATA_DIR"
@@ -363,15 +320,9 @@ do_start() {
   done
 
   # Env prefix + userData seeding for pool instances.
-  local env_assignments=()
-  if [ "$POOL_MODE" = "1" ]; then
-    mkdir -p "$POOL_DIR"
-    seed_userdata "$USER_DATA_DIR"
-    env_assignments=("${INSTANCE_ENV[@]}")
-  else
-    env_assignments=("LOBE_DESKTOP_CDP_PORT=$CDP_PORT")
-    [ -n "$INSTANCE_LABEL" ] && env_assignments+=("LOBE_DESKTOP_INSTANCE_LABEL=$INSTANCE_LABEL")
-  fi
+  mkdir -p "$POOL_DIR"
+  seed_userdata "$USER_DATA_DIR"
+  local env_assignments=("${INSTANCE_ENV[@]}")
 
   echo "[electron-dev] Starting Electron dev..."
   echo "[electron-dev]   Project:   $PROJECT_ROOT"
@@ -409,11 +360,7 @@ do_start() {
   fi
   wait_for_renderer || true
 
-  if [ "$POOL_MODE" = "1" ]; then
-    echo "[electron-dev] Ready! Drive it with: agent-browser --session s$CDP_PORT --cdp $CDP_PORT snapshot -i"
-  else
-    echo "[electron-dev] Ready! Use: agent-browser --cdp $CDP_PORT snapshot -i"
-  fi
+  echo "[electron-dev] Ready! Drive it with: agent-browser --session s$CDP_PORT --cdp $CDP_PORT snapshot -i"
 }
 
 # Quiet stop used at the head of start — never wipes userData, and never
@@ -498,10 +445,6 @@ case "$CMD" in
     ;;
   save-login)
     derive_instance "$INSTANCE"
-    if [ "$POOL_MODE" != "1" ]; then
-      echo "[electron-dev] save-login needs a pool instance id (its userData dir)."
-      exit 1
-    fi
     save_login_state "$USER_DATA_DIR" "$(probe_renderer_authed)"
     ;;
   login-status)
@@ -511,10 +454,9 @@ case "$CMD" in
     echo "Usage: $0 {start|stop|status|restart} [<id>]   |   $0 stop --all   |   $0 list"
     echo "       $0 save-login <id>   |   $0 login-status"
     echo ""
-    echo "  start [<id>]      — Start an instance. No id = legacy single instance (CDP 9222)."
-    echo "                      <id> = pool member: CDP 9222+id, Vite 5173+id, own userData"
-    echo "                      (login seeded from the saved snapshot) + IPC id."
-    echo "  stop [<id>]       — Stop an instance. Pool stop is sibling-safe, and snapshots the"
+    echo "  start [<id>]      — Start instance <id> (default 1): CDP 9222+id, Vite 5173+id, own"
+    echo "                      userData (login seeded from the saved snapshot) + IPC id."
+    echo "  stop [<id>]       — Stop an instance (default 1). Sibling-safe, and snapshots the"
     echo "                      instance's login first. KEEP_DATA=1 preserves the userData;"
     echo "                      SKIP_LOGIN_SAVE=1 skips the snapshot."
     echo "  stop --all        — Stop every pool instance."

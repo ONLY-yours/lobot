@@ -1,5 +1,11 @@
 # Probe Field Notes — LobeHub historical detail
 
+> **Lobot note:** written in the lobehub monorepo. `apps/desktop/src/main` is now
+> `electron/main`, `apps/desktop/scripts` is `scripts`, and server paths
+> (`apps/server`, `src/server`, `packages/database`) live in `../lobehub`. Recipes that
+> need a local server, `init-dev-env.sh`, `setup-auth.sh` or a Web session do not
+> apply here; see `PROJECT.md`.
+
 > Historical, LobeHub-specific field notes preserved for mechanism detail and old
 > cross-references. Start from `../probe-mock-patterns.md`; use
 > `../scripts/app-probe.sh` for supported probes. Add new notes here only when the

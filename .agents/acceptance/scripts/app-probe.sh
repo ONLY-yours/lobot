@@ -13,19 +13,19 @@
 #   app-probe.sh wait-ops [secs]   # wait for running chat operations to settle
 #   app-probe.sh topic             # active topic and metadata from its paged view
 #   app-probe.sh goto <path>       # navigate the SPA to a route (full reload), e.g. goto /agent/agt_xxx
+#   app-probe.sh workspace         # enter the test workspace, creating it on first use
 #   app-probe.sh errors-install    # install a console.error interceptor
 #   app-probe.sh errors            # dump errors captured since errors-install
 #
-# Target selection (default: Electron over CDP 9222):
-#   AB_TARGET="--cdp 9222"             # Electron (default; CDP_PORT also honored)
-#   AB_TARGET="--session lobehub-dev"  # web agent-browser session
+# Target selection (default: electron-dev.sh instance 1, CDP 9223):
+#   AB_TARGET="--cdp 9224"             # another instance (CDP_PORT also honored)
 #
 # Common routes (desktop SPA): /  /agent/<agentId>  /agent/<agentId>/<topicId>
 #   /task  /task/<taskId>  /page  /settings  /community
 
 set -euo pipefail
 
-AB_TARGET="${AB_TARGET:---cdp ${CDP_PORT:-9222}}"
+AB_TARGET="${AB_TARGET:---cdp ${CDP_PORT:-9223}}"
 
 run_eval() {
   # shellcheck disable=SC2086
@@ -160,6 +160,83 @@ EVALEOF
     sleep 2
     bash "${BASH_SOURCE[0]}" route
     ;;
+  workspace)
+    # Acceptance runs against the real cloud account, so everything it creates goes into
+    # one dedicated workspace instead of the user's own spaces. Found by its slug prefix,
+    # created on first use (per user: slugs are global). The switch is the store's silent
+    # one: it does not write the `lastWorkspaceId` preference, so the user's own apps keep
+    # opening where they were. A page reload drops it — run this command again after one.
+    ENSURED="$(run_eval << 'EVALEOF'
+(async function () {
+  var call = async function (path, input, method) {
+    var url = '/trpc/lambda/' + path;
+    var init = { credentials: 'include', method: method || 'GET' };
+    if (method === 'POST') {
+      init.headers = { 'content-type': 'application/json' };
+      init.body = JSON.stringify({ json: input });
+    } else {
+      url += '?input=' + encodeURIComponent(JSON.stringify({ json: input }));
+    }
+    var response = await fetch(url, init);
+    var body = await response.json().catch(function () { return null; });
+    if (!response.ok) throw new Error(path + ' ' + response.status + ' ' + JSON.stringify(body));
+    return body.result.data.json;
+  };
+  try {
+    var stores = window.__LOBE_STORES;
+    var user = stores && stores.user && stores.user().user;
+    if (!user || !user.id) return JSON.stringify({ ok: false, reason: 'not signed in' });
+    var prefix = 'lobot-acceptance';
+    var slug = prefix + '-' + user.id.toLowerCase().replace(/[^a-z0-9]/g, '').slice(-6);
+    var list = await call('workspace.list', {});
+    var found = list.find(function (ws) { return ws.slug && ws.slug.indexOf(prefix) === 0; });
+    if (found) return JSON.stringify({ ok: true, created: false, id: found.id, slug: found.slug });
+    var made = await call('workspace.create', { name: 'Lobot Acceptance', slug: slug }, 'POST');
+    return JSON.stringify({ ok: true, created: true, id: made.id, slug: made.slug });
+  } catch (error) {
+    return JSON.stringify({ ok: false, reason: String(error && error.message || error) });
+  }
+})()
+EVALEOF
+)"
+    WS_ID="$(node -e '
+      const value = JSON.parse(process.argv[1]);
+      const parsed = typeof value === "string" ? JSON.parse(value) : value;
+      if (!parsed.ok) { console.error("workspace: " + parsed.reason); process.exit(1); }
+      process.stdout.write(parsed.id);
+    ' "$ENSURED")" || { printf '%s\n' "$ENSURED"; exit 1; }
+    if [[ "$ENSURED" == *'\"created\":true'* || "$ENSURED" == *'"created":true'* ]]; then
+      # The rail lists workspaces from its own fetch; reload so it knows the new one.
+      # shellcheck disable=SC2086
+      agent-browser $AB_TARGET eval 'location.reload()' > /dev/null || true
+      for _ in $(seq 1 30); do
+        sleep 1
+        READY="$(bash "${BASH_SOURCE[0]}" ready 2>/dev/null || true)"
+        [[ "$READY" == *'"ok":true'* || "$READY" == *'\"ok\":true'* ]] && break
+      done
+    fi
+    WS_ID_JSON="$(node -e 'process.stdout.write(JSON.stringify(process.argv[1]))' "$WS_ID")"
+    # shellcheck disable=SC2086
+    agent-browser $AB_TARGET eval --stdin << EVALEOF
+(async function () {
+  var id = $WS_ID_JSON;
+  var stores = window.__LOBE_STORES;
+  if (!stores || !stores.workspace) return JSON.stringify({ ok: false, reason: 'no workspace store exposed' });
+  for (var i = 0; i < 30 && stores.workspace().isWorkspaceLoading; i++) {
+    await new Promise(function (resolve) { setTimeout(resolve, 500); });
+  }
+  var state = stores.workspace();
+  if (!state.workspaces.some(function (ws) { return ws.id === id; }))
+    return JSON.stringify({ ok: false, reason: 'workspace not in the loaded list', id: id });
+  state.switchWorkspace(id);
+  // Like the rail: land on the Messages home, since the open page belongs to the
+  // scope just left. Through the app's own router — a reload would drop the switch.
+  var navigate = stores.global && stores.global().navigationRef.current;
+  if (navigate) navigate('/');
+  return JSON.stringify({ ok: stores.workspace().activeWorkspaceId === id, activeWorkspaceId: id, ensured: $ENSURED });
+})()
+EVALEOF
+    ;;
   errors-install)
     run_eval << 'EVALEOF'
 (function () {
@@ -183,7 +260,7 @@ JSON.stringify(window.__CAPTURED_ERRORS || 'interceptor not installed — run er
 EVALEOF
     ;;
   *)
-    echo "Usage: $0 {ready|auth|server-auth|route|stores|ops|wait-ops [seconds]|topic|goto <path>|errors-install|errors}" >&2
+    echo "Usage: $0 {ready|auth|server-auth|route|stores|ops|wait-ops [seconds]|topic|goto <path>|workspace|errors-install|errors}" >&2
     exit 2
     ;;
 esac

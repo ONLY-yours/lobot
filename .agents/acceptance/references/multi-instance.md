@@ -24,8 +24,8 @@ sink an `electron-dev.sh start <id>` on a fresh worktree before it will even mou
   crashed at load (`Uncaught SyntaxError: … does not provide an export named
 'FloatingPanel'`) and the app hung on the loading screen (`#root` empty,
   `__LOBE_STORES` undefined) **even though raw-CDP screenshots still showed a painted
-  frame** from before the crash. Fix: real `pnpm install` in the worktree **root** _and_
-  `apps/desktop` (standalone install, per Step 2.1) before `start`. (`type-check` warns
+  frame** from before the crash. Fix: real `pnpm install` in the worktree **root** (it covers
+  `electron/main` and `apps/cli`) before `start`. (`type-check` warns
   of the same skew: cross-root `packages/*` dual-identity errors when `node_modules` is
   symlinked across worktree roots.)
 - **First cold Vite load can `ECONNRESET` under resource contention.** Two full
@@ -40,8 +40,8 @@ http://127.0.0.1:<port>/src/… [read ECONNRESET]`, the SPA hangs on the loading
 > (loading-screen shell), not a target mismatch. Confirm with `eval
 "document.getElementById('root')?.childElementCount"` (0 + a `#loading-screen` = not
 > mounted). And remember `cdp-screenshot.sh` reads **`--port`, not** a `CDP_PORT` env —
-> pass `--port 92xx` for a pool instance or you'll silently shoot the default 9222 (the
-> main app), not your worktree instance.
+> pass `--port 92xx` for a pool instance or you'll silently shoot its default 9222,
+> not your instance.
 
 ## The real bottleneck is NOT "one port"
 
@@ -53,8 +53,8 @@ app sessions are dev-build singletons. Validated verdicts:
 | ---------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | Electron single-instance lock            | `App.ts:227`                                                     | ✅ **keyed by userData** — distinct userData dirs each get their own lock; all instances run. No code change needed.         |
 | Chromium `SingletonLock`                 | per userData dir                                                 | ✅ one per userData dir automatically (observed distinct PIDs per dir).                                                      |
-| userData dir `lobehub-desktop-dev`       | `pre-app-init.ts:12`                                             | ✅ fixed — now env-overridable via `LOBE_DESKTOP_USER_DATA_DIR`.                                                             |
-| Vite dev server `strictPort:true` 5173   | `apps/desktop/vite.shared.ts`                                    | ✅ fixed — now env-overridable via `LOBE_DESKTOP_VITE_PORT` (Model B: one Vite per worktree).                                |
+| userData dir `lobehub-desktop-dev`       | `electron/main/pre-app-init.ts:21`                                             | ✅ fixed — now env-overridable via `LOBE_DESKTOP_USER_DATA_DIR`.                                                             |
+| Vite dev server `strictPort:true` 5173   | `vite.shared.ts`                                    | ✅ fixed — now env-overridable via `LOBE_DESKTOP_VITE_PORT` (Model B: one Vite per worktree).                                |
 | `electron-server-ipc` unix socket        | `App.ts` → `packages/electron-server-ipc/src/ipcServer.ts:23-31` | ✅ fixed — id now env-overridable via `LOBE_IPC_ID`; distinct sockets, no more hijack (was last-writer-wins).                |
 | safeStorage / Chromium cookie encryption | OS keychain, keyed by **app name**                               | 🔑 macOS: an instance with `LOBE_DESKTOP_MOCK_KEYCHAIN=1` uses the mock keychain (fixed key, no prompt per checkout binary). |
 | Global shortcuts / `lobehub://` protocol | OS-global                                                        | first/last wins; harmless for headless automation.                                                                           |
@@ -91,7 +91,7 @@ Naively "give each instance a different app name" (a tempting first instinct)
 Three tiny env-gated knobs — no behavior change unless the env is set. This
 branch ships all three:
 
-1. **`apps/desktop/src/main/pre-app-init.ts`** — per-instance userData, app name
+1. **`electron/main/pre-app-init.ts`** — per-instance userData, app name
    fixed (so copied login state still decrypts):
 
    ```ts
@@ -103,7 +103,7 @@ branch ships all three:
    );
    ```
 
-2. **`apps/desktop/src/main/core/App.ts`** — per-instance IPC id so the
+2. **`electron/main/core/App.ts`** — per-instance IPC id so the
    `electron-server-ipc` socket path stops colliding (no more "last one wins"):
 
    ```ts
@@ -111,7 +111,7 @@ branch ships all three:
    this.ipcServer = new ElectronIPCServer(ipcId, ipcServerEvents);
    ```
 
-3. **`apps/desktop/vite.shared.ts`** — per-instance Vite dev port
+3. **`vite.shared.ts`** — per-instance Vite dev port
    (Model B: one Vite per worktree), kept `strictPort` so HMR clientPort matches:
 
    ```ts
@@ -124,14 +124,14 @@ All three verified live via the `electron-dev.sh` pool (transcript below).
 ## Login-state reuse across userData dirs (validated)
 
 On macOS a pool instance (its own `LOBE_DESKTOP_USER_DATA_DIR` plus
-`LOBE_DESKTOP_MOCK_KEYCHAIN=1`) encrypts tokens and cookies with Chromium's mock keychain (`src/main/pre-app-init.ts`), so the
+`LOBE_DESKTOP_MOCK_KEYCHAIN=1`) encrypts tokens and cookies with Chromium's mock keychain (`electron/main/pre-app-init.ts`), so the
 system keychain never asks for the login password once per checkout. A login
 copies only between profiles with the same key: from one such instance to
 another (the pool snapshot), not from the default `lobehub-desktop-dev` profile,
 which uses the real keychain. A snapshot saved before this switch no longer
 decrypts (the instance log shows `Failed to decrypt access token` and the window
 stays signed out): sign in once in a pool instance, then `stop` it to re-take the
-snapshot. Copy a login with `apps/desktop/scripts/devInstanceCli.mts`: `save-login`
+snapshot. Copy a login with `scripts/devInstanceCli.mts`: `save-login`
 snapshots a signed-in profile and `seed-login` copies it into a new one (both run by
 `electron-dev.sh`). They copy only the login-bearing items below, NOT the multi-GB
 caches, and drop the install-scoped `gatewayDeviceId`:
@@ -186,13 +186,12 @@ Raw `curl http://localhost:<port>/json/list` always shows a port's true target
 
 ### Model A — one Vite, many electron processes (what the validation used)
 
-One dev orchestrator (`pnpm dev` in `apps/desktop`) owns Vite 5173 + the built
+One dev orchestrator (`pnpm dev` at the repo root) owns Vite 5173 + the built
 `dist/main`; extra instances are raw electrons sharing the renderer via
 `ELECTRON_RENDERER_URL`:
 
 ```bash
-# instance 1: owns Vite 5173 + is itself CDP 9223
-cd apps/desktop
+# instance 1: owns Vite 5173 + is itself CDP 9223 (from the repo root)
 LOBE_DESKTOP_USER_DATA_DIR=/tmp/lobe-ud-1 \
   pnpm dev -- --remote-debugging-port=9223
 
@@ -224,7 +223,7 @@ the port/isolation knobs are unchanged).
 
 ## electron-dev.sh instance pool (implemented)
 
-`scripts/electron-dev.sh` now keys lifecycle on an **instance id**, not the
+`.agents/acceptance/scripts/electron-dev.sh` keys lifecycle on an **instance id**, not the
 project path (the old single-instance script matched every project Electron by
 binary path, so a 2nd `start` tore down the 1st):
 
@@ -234,16 +233,17 @@ electron-dev.sh start 2    # CDP 9224, Vite 5175, userData ud-2, IPC id -9224
 electron-dev.sh list       # show running pool instances
 electron-dev.sh stop 1     # sibling-safe: kills ONLY instance 1 (KEEP_DATA=1 to keep ud)
 electron-dev.sh stop --all # stop every instance
-# no id → legacy single-instance behavior (CDP 9222), unchanged
+# no id → instance 1 (the old shared-profile single-instance mode is gone)
 ```
 
 - Derives `CDP=9222+id`, `Vite=5173+id`, `userData=$POOL_DIR/ud-<id>`,
   `IPC id=lobehub-desktop-dev-<cdp port>` (named by port so launchers with
   other id schemes cannot pick the same socket), a window label of the checkout
   plus `#<id>`, per-id log + pidfile. All of it comes from
-  `apps/desktop/scripts/devInstance.mts`.
-- A copied login drops `gatewayDeviceId`, the device-gateway connection id; two
-  instances sharing it replace each other's socket on every reconnect.
+  `scripts/devInstance.mts`.
+- A copied login drops `gatewayDeviceId` (two instances sharing it replace each
+  other's socket on every reconnect) and a hand-set `gatewayUrl`, and points
+  `storagePath` at the instance's own folder (see `auth.md`).
 - `start <id>` seeds a fresh userData with the login-item set from the snapshot
   the last `stop` saved; the first run signs in once inside the app. `stop <id>`
   wipes the userData unless `KEEP_DATA=1`.

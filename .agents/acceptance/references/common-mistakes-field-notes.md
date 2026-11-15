@@ -1,5 +1,11 @@
 # Common Mistakes Field Notes — historical detail
 
+> **Lobot note:** written in the lobehub monorepo. `apps/desktop/src/main` is now
+> `electron/main`, `apps/desktop/scripts` is `scripts`, and server paths
+> (`apps/server`, `src/server`, `packages/database`) live in `../lobehub`. Recipes that
+> need a local server, `init-dev-env.sh`, `setup-auth.sh` or a Web session do not
+> apply here; see `PROJECT.md`.
+
 > Historical project-layer source material. The maintained catalogue is
 > `../common-mistakes.md`. Append there using its stable `L-` identifiers.
 >

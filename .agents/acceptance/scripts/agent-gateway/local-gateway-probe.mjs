@@ -62,7 +62,7 @@ const jwksRaw =
   fromFile(repoFile('.records/env/gateway.env'));
 if (!jwksRaw) {
   console.error(
-    '❌ no JWKS_KEY found — export JWKS_KEY, or set JWKS_SOURCE=<env file | jwks json>, or run `init-dev-env.sh env` to generate .records/env/agent-testing-jwks.json',
+    '❌ no JWKS_KEY found — export JWKS_KEY, or set JWKS_SOURCE=<env file | jwks json>, or run `../lobehub/.agents/acceptance/scripts/init-dev-env.sh env` (a local lobehub server is required) to generate .records/env/agent-testing-jwks.json',
   );
   process.exit(1);
 }

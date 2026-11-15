@@ -339,9 +339,14 @@ const SETTINGS_FILE = 'lobehub-settings.json';
 /**
  * Per-install values that must not follow a login into another profile.
  * `gatewayDeviceId` is the device gateway connection id: two instances sharing
- * it replace each other's socket on every reconnect.
+ * it replace each other's socket on every reconnect. `gatewayUrl` is a gateway
+ * address the source install set by hand (often a local `wrangler dev` that is
+ * not running), so the copy discovers the server's own gateway instead.
  */
-const INSTALL_SCOPED_SETTINGS = ['gatewayDeviceId'];
+const INSTALL_SCOPED_SETTINGS = ['gatewayDeviceId', 'gatewayUrl'];
+
+/** The app's file storage folder inside a profile, copied as a login item. */
+const STORAGE_DIRECTORY = 'lobehub-storage';
 
 const exists = async (target: string) => {
   try {
@@ -389,7 +394,11 @@ export const readTokenState = async (profile: string, now = Date.now()): Promise
 export const profileCanReauth = async (profile: string) =>
   (await readTokenState(profile)).hasRefreshToken;
 
-/** Copies the login items into `target` (created private), dropping install-scoped settings. */
+/**
+ * Copies the login items into `target` (created private), dropping install-scoped settings.
+ * `storagePath` is an absolute path into the source profile; left as is, the copy would read
+ * and write the source's files (the user's own dev profile), so it is pointed at the copy's.
+ */
 export const copyLoginItems = async (source: string, target: string) => {
   await ensurePrivateDirectory(target);
   for (const item of LOGIN_ITEMS) {
@@ -399,8 +408,12 @@ export const copyLoginItems = async (source: string, target: string) => {
   }
 
   const settings = await readSettings(target);
-  if (!settings || !INSTALL_SCOPED_SETTINGS.some((key) => key in settings)) return;
+  if (!settings) return;
+  const storagePath = path.join(target, STORAGE_DIRECTORY);
+  const retarget = 'storagePath' in settings && settings.storagePath !== storagePath;
+  if (!retarget && !INSTALL_SCOPED_SETTINGS.some((key) => key in settings)) return;
   for (const key of INSTALL_SCOPED_SETTINGS) delete settings[key];
+  if (retarget) settings.storagePath = storagePath;
   await writeFile(path.join(target, SETTINGS_FILE), JSON.stringify(settings, null, 2));
 };
 
