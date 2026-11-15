@@ -16,3 +16,6 @@ export const visibleChannelDetail = (cached: ChannelDetail | undefined, error: u
  */
 export const canInviteMembers = (channel: Pick<ChannelListItem, 'canDelete' | 'status'>) =>
   channel.canDelete && channel.status !== 'archived';
+
+/** Changing where an Agent runs follows the same rule as inviting: an admin of an open Channel. */
+export const canManageAgents = canInviteMembers;

@@ -15,8 +15,9 @@ import AsyncError from '@/components/AsyncError';
 import { channelActions } from '@/store/channel';
 
 import { BlockedDevice } from './BlockedDevice';
+import { canManageAgents } from './channelAccess';
 import { ChannelStatus } from './ChannelStatus';
-import { channelJobStatus, channelJobTone, isChannelJobActive } from './jobStatus';
+import { channelJobStatus, channelJobTone, isChannelJobActive, isDeviceFailure } from './jobStatus';
 import { memberAvatar, memberName } from './memberName';
 import { statusStyles, styles } from './styles';
 import { useOpenReplyAgent } from './useOpenReplyAgent';
@@ -62,6 +63,7 @@ export function ReplyDetail({
   const { t } = useTranslation('channel');
   const { close } = usePopoverContext();
   const openAgent = useOpenReplyAgent(agentId, close);
+  const deviceFailure = isDeviceFailure(job);
   const [stopping, setStopping] = useState(false);
   const [error, setError] = useState<unknown>();
   const stop = async () => {
@@ -128,7 +130,13 @@ export function ReplyDetail({
         )}
       </Flexbox>
       {job.status === 'queued' && job.blockedCode === 'device_offline' && (
-        <BlockedDevice channelId={channelId} manageable={manageable} member={member} />
+        <BlockedDevice
+          waiting
+          channelId={channelId}
+          deviceId={job.deviceId}
+          manageable={manageable}
+          member={member}
+        />
       )}
       {job.worktreeBranch && (
         <Text ellipsis fontSize={12} title={job.worktreeBranch} type="secondary">
@@ -139,9 +147,20 @@ export function ReplyDetail({
         <Flexbox gap={4}>
           <Text weight={500}>{t('receipt.errorReason')}</Text>
           <Text style={{ overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>
-            {job.errorMessage?.trim() || t('receipt.errorUnavailable')}
+            {/* A known cause reads in the viewer's language; others keep the server's diagnostic. */}
+            {deviceFailure
+              ? t('receipt.deviceUnreachable')
+              : job.errorMessage?.trim() || t('receipt.errorUnavailable')}
           </Text>
         </Flexbox>
+      )}
+      {deviceFailure && (
+        <BlockedDevice
+          channelId={channelId}
+          deviceId={job.deviceId}
+          manageable={manageable}
+          member={member}
+        />
       )}
       {error !== undefined && <AsyncError error={error} variant="inline" />}
     </Flexbox>
@@ -196,9 +215,15 @@ export function MessageFailureMark({
   });
   return (
     <Popover
-      content={<ReplyList channelId={detail.channel.id} entries={entries} />}
       placement="bottomLeft"
       trigger="click"
+      content={
+        <ReplyList
+          channelId={detail.channel.id}
+          entries={entries}
+          manageable={canManageAgents(detail.channel)}
+        />
+      }
     >
       <button
         aria-label={label}

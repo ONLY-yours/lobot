@@ -11,6 +11,8 @@ export default {
   'people.noOthers': 'No one else is in this workspace yet',
   'people.searchMore': 'Showing the first 50 members. Search to find more.',
   'receipt.errorReason': 'Failure reason',
+  'receipt.deviceUnreachable':
+    "The device this Agent runs on is offline, so the reply couldn't start. Reconnect the device or switch to another one, then send again.",
   'receipt.errorUnavailable':
     'No detailed reason was recorded. Check the Agent’s model and device settings before sending again.',
   'sort.by': 'Sort by',

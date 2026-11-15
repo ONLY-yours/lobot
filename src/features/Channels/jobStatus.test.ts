@@ -6,6 +6,7 @@ import {
   channelJobTone,
   directAvatarState,
   hasReplyActivity,
+  isDeviceFailure,
   memberCurrentJob,
   memberJobStatus,
   replyActivityJobs,
@@ -257,5 +258,21 @@ describe('hasReplyActivity', () => {
     });
     expect(hasReplyActivity(running, 'thread-a')).toBe(true);
     expect(hasReplyActivity(running, null)).toBe(false);
+  });
+});
+
+describe('isDeviceFailure', () => {
+  it('recognizes a reply that failed to reach its device', () => {
+    expect(isDeviceFailure({ errorType: 'DeviceGatewayNotConfigured', status: 'failed' })).toBe(
+      true,
+    );
+  });
+
+  it('leaves other failures and unfinished replies to their own message', () => {
+    expect(isDeviceFailure({ errorType: 'InvalidProviderAPIKey', status: 'failed' })).toBe(false);
+    expect(isDeviceFailure({ errorType: null, status: 'failed' })).toBe(false);
+    expect(isDeviceFailure({ errorType: 'DeviceGatewayNotConfigured', status: 'queued' })).toBe(
+      false,
+    );
   });
 });

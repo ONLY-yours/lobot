@@ -1,4 +1,4 @@
-import type { ChannelDetail, ChannelReplyJob } from '@lobechat/types';
+import type { ChannelDetail, ChannelPublicJob, ChannelReplyJob } from '@lobechat/types';
 import type { AgentAvatarState } from '@lobehub/ui';
 
 export const channelJobStatus = (job: ChannelReplyJob) =>
@@ -35,6 +35,13 @@ export const channelJobTone = (job: ChannelReplyJob): ChannelStatusTone => {
   if (job.status === 'completed') return 'done';
   return 'quiet';
 };
+
+/**
+ * A reply that failed because its device was offline or unreachable. The server files every
+ * "no reachable run device" case under this one error type.
+ */
+export const isDeviceFailure = (job: Pick<ChannelPublicJob, 'errorType' | 'status'>) =>
+  job.status === 'failed' && job.errorType === 'DeviceGatewayNotConfigured';
 
 /** Still able to publish a reply, so the user can stop it. */
 export const isChannelJobActive = (job: ChannelReplyJob) =>

@@ -1,6 +1,7 @@
 import type { ChannelPublicMember } from '@lobechat/types';
 import { Button, Flexbox, Text, usePopoverContext } from '@lobehub/ui';
 import dayjs from 'dayjs';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { getDeviceIcon } from '@/features/DeviceManager/getDeviceIcon';
@@ -23,24 +24,10 @@ function Hint() {
   );
 }
 
-/**
- * The device a reply waits for and what the device gateway sees of it now, with a way to move
- * the Agent to another device. Reading the Agent's environment is for Channel admins.
- */
-function ManagedBlockedDevice({
-  channelId,
-  member,
-}: {
-  channelId: string;
-  member: ChannelPublicMember;
-}) {
+/** A device, what the device gateway sees of it now, and a way to move the Agent elsewhere. */
+function DeviceRow({ deviceId, onChange }: { deviceId: string; onChange?: () => void }) {
   const { t } = useTranslation('channel');
-  const { close } = usePopoverContext();
-  const environment = channelActions.useFetchAgentEnvironment(channelId, member.id);
   const devices = useDeviceList({ refreshInterval: 15_000 });
-  const deviceId = environment.data?.deviceId;
-  if (!deviceId) return <Hint />;
-
   const state = blockedDeviceState(deviceId, devices.data, devices.isConfirmed);
   const name = 'device' in state ? deviceLabel(state.device) : t('environment.unavailableDevice');
   const presence =
@@ -67,33 +54,69 @@ function ManagedBlockedDevice({
           {presence}
         </Text>
       </Flexbox>
-      <Button
-        size="small"
-        style={{ flexShrink: 0 }}
-        onClick={() => {
-          close();
-          openChannelAgentEnvironment(channelId, member);
-        }}
-      >
-        {t('blockedDevice.change')}
-      </Button>
+      {onChange && (
+        <Button size="small" style={{ flexShrink: 0 }} onClick={onChange}>
+          {t('blockedDevice.change')}
+        </Button>
+      )}
     </Flexbox>
   );
 }
 
-/** Why a reply waits for a device, under the reply's row. */
-export function BlockedDevice({
+/** The device set for the Agent in this Channel, which only Channel admins may read. */
+function ChannelEnvironmentDevice({
   channelId,
-  manageable,
+  fallback,
   member,
+  onChange,
 }: {
   channelId: string;
+  fallback: ReactNode;
+  member: ChannelPublicMember;
+  onChange: () => void;
+}) {
+  const environment = channelActions.useFetchAgentEnvironment(channelId, member.id);
+  const deviceId = environment.data?.deviceId;
+  return deviceId ? <DeviceRow deviceId={deviceId} onChange={onChange} /> : fallback;
+}
+
+/**
+ * The device a reply waits for or failed to reach, under the reply's row. The job names the
+ * device when the server knows it; otherwise an admin's view reads the Channel's own setting.
+ * `waiting` replies that name no device say they start once the device connects.
+ */
+export function BlockedDevice({
+  channelId,
+  deviceId,
+  manageable,
+  member,
+  waiting,
+}: {
+  channelId: string;
+  deviceId?: string | null;
   manageable?: boolean;
   member?: ChannelPublicMember;
+  waiting?: boolean;
 }) {
-  return manageable && member ? (
-    <ManagedBlockedDevice channelId={channelId} member={member} />
-  ) : (
-    <Hint />
-  );
+  const { close } = usePopoverContext();
+  const change =
+    manageable && member
+      ? () => {
+          close();
+          openChannelAgentEnvironment(channelId, member);
+        }
+      : undefined;
+  const fallback = waiting ? <Hint /> : null;
+
+  if (deviceId) return <DeviceRow deviceId={deviceId} onChange={change} />;
+  if (change && member)
+    return (
+      <ChannelEnvironmentDevice
+        channelId={channelId}
+        fallback={fallback}
+        member={member}
+        onChange={change}
+      />
+    );
+  return fallback;
 }

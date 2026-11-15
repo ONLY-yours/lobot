@@ -4,6 +4,7 @@ import * as stylex from '@stylexjs/stylex';
 import { CircleAlert, LocateFixed } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { canManageAgents } from './channelAccess';
 import { unresolvedFailures } from './jobStatus';
 import type { ReplyEntry } from './MessageReceipts';
 import { ReplyDetail, replyEntries } from './MessageReceipts';
@@ -15,12 +16,20 @@ const findMessage = (messageId: string) =>
     `[data-channel-conversation="main"] [data-message-id="${CSS.escape(messageId)}"]`,
   );
 
-function FailureRow({ channelId, entry }: { channelId: string; entry: ReplyEntry }) {
+function FailureRow({
+  channelId,
+  entry,
+  manageable,
+}: {
+  channelId: string;
+  entry: ReplyEntry;
+  manageable: boolean;
+}) {
   const { t } = useTranslation('channel');
   const { close } = usePopoverContext();
   return (
     <Flexbox gap={4}>
-      <ReplyDetail channelId={channelId} entry={entry} />
+      <ReplyDetail channelId={channelId} entry={entry} manageable={manageable} />
       <Button
         icon={LocateFixed}
         size="small"
@@ -58,7 +67,12 @@ export function FailureIndicator({ detail }: { detail: ChannelDetail }) {
             {label}
           </Text>
           {entries.map((entry) => (
-            <FailureRow channelId={detail.channel.id} entry={entry} key={entry.job.id} />
+            <FailureRow
+              channelId={detail.channel.id}
+              entry={entry}
+              key={entry.job.id}
+              manageable={canManageAgents(detail.channel)}
+            />
           ))}
         </Flexbox>
       }

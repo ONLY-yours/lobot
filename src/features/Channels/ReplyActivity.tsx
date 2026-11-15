@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import AgentAvatar from '@/components/AgentAvatar';
 
 import { activityLabel } from './activityLabel';
+import { canManageAgents } from './channelAccess';
 import { channelJobStatus, conversationReplies, memberCurrentJob } from './jobStatus';
 import { replyEntries, ReplyList } from './MessageReceipts';
 import { activityStyles, styles } from './styles';
@@ -59,8 +60,7 @@ export function ReplyActivity({
         <ReplyList
           channelId={detail.channel.id}
           entries={entries}
-          // Who may change where an Agent runs, as in the member list and header menu.
-          manageable={detail.channel.canDelete && detail.channel.status !== 'archived'}
+          manageable={canManageAgents(detail.channel)}
         />
       }
     >
