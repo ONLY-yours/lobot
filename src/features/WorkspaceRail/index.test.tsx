@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   loading: false,
   openCreate: vi.fn(),
   navigate: vi.fn(),
+  order: undefined as string[] | undefined,
+  updatePreference: vi.fn(async (_patch: unknown) => {}),
   switchToPersonal: vi.fn(async () => {}),
   switchWorkspace: vi.fn(async (_id: string) => {}),
   workspaces: [] as { avatar: string | null; id: string; name: string; slug: string }[],
@@ -42,13 +44,21 @@ vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
 }));
 vi.mock('@/components/Avatar', () => ({ default: () => <span /> }));
 vi.mock('@/components/WorkspaceAvatar', () => ({ default: () => <span /> }));
-vi.mock('@/store/user', () => ({ useUserStore: () => '' }));
+vi.mock('@/store/user', () => ({
+  useUserStore: (selector: (s: unknown) => unknown) =>
+    selector({
+      preference: { workspace: { order: mocks.order } },
+      updatePreference: mocks.updatePreference,
+      user: { avatar: '', fullName: '', id: 'user-1' },
+    }),
+}));
 
 describe('WorkspaceRail', () => {
   beforeEach(() => {
     mocks.activeId = null;
     mocks.available = true;
     mocks.loading = false;
+    mocks.order = undefined;
     mocks.workspaces = [
       { avatar: null, id: 'ws-1', name: 'LobeHub', slug: 'lobehub' },
       { avatar: null, id: 'ws-2', name: 'Acme', slug: 'acme' },
@@ -117,6 +127,18 @@ describe('WorkspaceRail', () => {
     ]);
     expect(screen.getByRole('button', { name: 'Acme' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: 'LobeHub' })).not.toHaveAttribute('aria-current');
+  });
+
+  it("lays the workspaces out in the user's own order", () => {
+    mocks.order = ['ws-2', 'ws-1'];
+    render(<WorkspaceRail />);
+
+    expect(screen.getAllByRole('button').map((el) => el.getAttribute('aria-label'))).toEqual([
+      'workspaceRail.personal',
+      'Acme',
+      'LobeHub',
+      'workspaceRail.create',
+    ]);
   });
 
   it('switches to a workspace and lands on its home', async () => {

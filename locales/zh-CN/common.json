@@ -614,6 +614,7 @@
   "workspaceRail.createModal.title": "创建工作空间",
   "workspaceRail.createModal.totalLimit": "最多可以加入 {{count}} 个工作空间。",
   "workspaceRail.personal": "个人空间",
+  "workspaceRail.reorderError": "工作空间排序保存失败，请重试",
   "workspaceRail.title": "工作空间",
   "zoom": "缩放"
 }

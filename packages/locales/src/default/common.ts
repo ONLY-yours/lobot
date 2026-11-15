@@ -635,6 +635,7 @@ export default {
   'workspaceRail.createModal.title': 'Create workspace',
   'workspaceRail.createModal.totalLimit': 'You can join up to {{count}} workspaces.',
   'workspaceRail.personal': 'Personal',
+  'workspaceRail.reorderError': "Couldn't save the order of your workspaces. Try again.",
   'workspaceRail.title': 'Workspaces',
   'tab.projects': 'Projects',
   'recents': 'Recents',

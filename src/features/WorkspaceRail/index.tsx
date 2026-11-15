@@ -1,17 +1,36 @@
 'use client';
 
+import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import * as stylex from '@stylexjs/stylex';
 import { PlusIcon } from 'lucide-react';
-import { memo, type ReactNode, useCallback, useEffect } from 'react';
+import { type HTMLAttributes, memo, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { WorkspaceListItem } from '@/business/client/hooks/useActiveWorkspace';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useSwitchWorkspace } from '@/business/client/hooks/useSwitchWorkspace';
-import { useWorkspaces } from '@/business/client/hooks/useWorkspaces';
 import { useWorkspaceStore } from '@/business/client/workspace/store';
 import Avatar from '@/components/Avatar';
 import WorkspaceAvatar from '@/components/WorkspaceAvatar';
+import { suppressNextClick } from '@/features/HomeSidebar/Body/sortableRow';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
@@ -19,40 +38,96 @@ import { userProfileSelectors } from '@/store/user/selectors';
 import { useOpenCreateWorkspace } from './CreateWorkspace';
 import { writeWorkspaceRailHint } from './railHint';
 import { RAIL_AVATAR_SIZE, RAIL_TILE_RADIUS, styles } from './style';
+import { useOrderedWorkspaces } from './useOrderedWorkspaces';
 import { useRailColumnShown } from './useRailColumnShown';
 
 interface RailItemProps {
   active?: boolean;
   children: ReactNode;
+  /** dnd-kit's attributes and listeners, when the tile can be dragged. */
+  dragProps?: HTMLAttributes<HTMLDivElement>;
   onClick: () => void;
   title: string;
+  tooltipDisabled?: boolean;
 }
 
-const RailItem = memo<RailItemProps>(({ active, children, onClick, title }) => (
-  <Tooltip placement={'right'} title={title}>
-    <div
-      aria-current={active ? 'page' : undefined}
-      aria-label={title}
-      role={'button'}
-      {...stylex.props(styles.item, stylex.defaultMarker())}
-      onClick={onClick}
-    >
-      {active !== undefined && (
-        <>
-          {!active && <span {...stylex.props(styles.dot)} />}
-          <span {...stylex.props(styles.pill, active && styles.pillActive)} />
-        </>
-      )}
-      {children}
-    </div>
-  </Tooltip>
-));
+const RailItem = memo<RailItemProps>(
+  ({ active, children, dragProps, onClick, title, tooltipDisabled }) => (
+    <Tooltip disabled={tooltipDisabled} placement={'right'} title={title}>
+      <div
+        role={'button'}
+        {...dragProps}
+        aria-current={active ? 'page' : undefined}
+        aria-label={title}
+        {...stylex.props(styles.item, stylex.defaultMarker())}
+        onClick={onClick}
+      >
+        {active !== undefined && (
+          <>
+            {!active && <span {...stylex.props(styles.dot)} />}
+            <span {...stylex.props(styles.pill, active && styles.pillActive)} />
+          </>
+        )}
+        {children}
+      </div>
+    </Tooltip>
+  ),
+);
 
 RailItem.displayName = 'WorkspaceRailItem';
 
+interface SortableWorkspaceItemProps {
+  active: boolean;
+  /** Any tile is being dragged: tooltips would trail the pointer across the rail. */
+  dragging: boolean;
+  onOpen: (id: string) => void;
+  workspace: WorkspaceListItem;
+}
+
+const SortableWorkspaceItem = memo<SortableWorkspaceItemProps>(
+  ({ active, dragging, onOpen, workspace }) => {
+    const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({
+      id: workspace.id,
+    });
+
+    return (
+      // The sortable node wraps the tile so the Tooltip keeps its own ref on the tile.
+      <div
+        ref={setNodeRef}
+        style={{
+          flex: 'none',
+          position: 'relative',
+          // The rail only reorders vertically and clips sideways, so drop the pointer's x.
+          transform: CSS.Translate.toString(transform && { ...transform, x: 0 }),
+          transition,
+          width: '100%',
+          zIndex: isDragging ? 1 : undefined,
+        }}
+      >
+        <RailItem
+          active={active}
+          dragProps={{ ...attributes, ...listeners }}
+          title={workspace.name}
+          tooltipDisabled={dragging}
+          onClick={() => onOpen(workspace.id)}
+        >
+          <WorkspaceAvatar
+            avatar={workspace.avatar}
+            name={workspace.name}
+            size={RAIL_AVATAR_SIZE}
+            style={{ borderRadius: RAIL_TILE_RADIUS }}
+          />
+        </RailItem>
+      </div>
+    );
+  },
+);
+
+SortableWorkspaceItem.displayName = 'SortableWorkspaceItem';
+
 /**
  * Discord-style scope switcher: the personal space on top, then one avatar per
- * workspace, and a button to create one. Picking a scope sends every request to
+ * workspace in the user's own order (drag to rearrange), and a button to create one. Picking a scope sends every request to
  * it and lands on the Messages home. Hidden where the server has no workspaces
  * (self-hosted).
  */
@@ -63,7 +138,8 @@ const WorkspaceRail = memo(() => {
     s.isWorkspaceLoading,
   ]);
   const columnShown = useRailColumnShown();
-  const workspaces = useWorkspaces();
+  const { reorder, workspaces } = useOrderedWorkspaces();
+  const [dragging, setDragging] = useState(false);
   const activeId = useActiveWorkspaceId();
   const { switchToPersonal, switchWorkspace } = useSwitchWorkspace();
   const navigate = useWorkspaceAwareNavigate();
@@ -90,6 +166,23 @@ const WorkspaceRail = memo(() => {
     [activeId, openHome, switchWorkspace],
   );
 
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
+    // A press-and-hold picks a tile up on touch, so a vertical swipe still scrolls the rail.
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    setDragging(false);
+    // The drop lands on the dragged tile, whose click would switch to it.
+    suppressNextClick();
+    if (!over || active.id === over.id) return;
+
+    const ids = workspaces.map((workspace) => workspace.id);
+    reorder(arrayMove(ids, ids.indexOf(String(active.id)), ids.indexOf(String(over.id))));
+  };
+
   // Remember the outcome once the list settles, for the next boot skeleton.
   useEffect(() => {
     if (!loading) writeWorkspaceRailHint(available);
@@ -113,21 +206,29 @@ const WorkspaceRail = memo(() => {
         <Avatar avatar={userAvatar} name={userName} shape={'circle'} size={RAIL_AVATAR_SIZE} />
       </RailItem>
       <span {...stylex.props(styles.divider)} />
-      {workspaces.map((workspace) => (
-        <RailItem
-          active={activeId === workspace.id}
-          key={workspace.id}
-          title={workspace.name}
-          onClick={() => openWorkspace(workspace.id)}
+      {/* Only the workspaces reorder: the personal space and the create button stay put. */}
+      <DndContext
+        collisionDetection={closestCenter}
+        sensors={sensors}
+        onDragCancel={() => setDragging(false)}
+        onDragEnd={handleDragEnd}
+        onDragStart={() => setDragging(true)}
+      >
+        <SortableContext
+          items={workspaces.map((workspace) => workspace.id)}
+          strategy={verticalListSortingStrategy}
         >
-          <WorkspaceAvatar
-            avatar={workspace.avatar}
-            name={workspace.name}
-            size={RAIL_AVATAR_SIZE}
-            style={{ borderRadius: RAIL_TILE_RADIUS }}
-          />
-        </RailItem>
-      ))}
+          {workspaces.map((workspace) => (
+            <SortableWorkspaceItem
+              active={activeId === workspace.id}
+              dragging={dragging}
+              key={workspace.id}
+              workspace={workspace}
+              onOpen={openWorkspace}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
       <RailItem title={t('workspaceRail.create')} onClick={openCreate}>
         <span {...stylex.props(styles.add)}>
           <Icon icon={PlusIcon} size={18} />
