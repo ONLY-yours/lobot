@@ -5,13 +5,14 @@ import { Flexbox, Text } from '@lobehub/ui';
 import { useMemo } from 'react';
 import { Navigate } from 'react-router';
 
+import { ChannelEmpty } from '@/features/Channels/ChannelEmpty';
 import { channelActivity } from '@/features/MessageList/conversations';
 import { channelActions, channelSelectors, useChannelStore } from '@/store/channel';
 
 /**
  * Lobot has no dashboard: the Messages tab opens the Channel with the latest
  * message, and the Channel list stays beside it. Without any Channel it shows
- * the empty state.
+ * the blank logo page.
  */
 const DesktopHomeRoute = () => {
   const sync = channelActions.useFetchList();
@@ -33,11 +34,15 @@ const DesktopHomeRoute = () => {
     return <Navigate replace to={CHANNEL_URL(latest.id)} />;
   }
 
-  return (
-    <Flexbox align={'center'} gap={8} height={'100%'} justify={'center'}>
-      <Text type={'secondary'}>{sync.error ? 'Channel 列表加载失败' : '还没有 Channel'}</Text>
-    </Flexbox>
-  );
+  if (sync.error) {
+    return (
+      <Flexbox align={'center'} gap={8} height={'100%'} justify={'center'}>
+        <Text type={'secondary'}>Channel 列表加载失败</Text>
+      </Flexbox>
+    );
+  }
+
+  return <ChannelEmpty />;
 };
 
 export default DesktopHomeRoute;

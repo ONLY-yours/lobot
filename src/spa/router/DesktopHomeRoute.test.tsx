@@ -9,6 +9,9 @@ const mocks = vi.hoisted(() => ({ channels: undefined as unknown[] | undefined }
 vi.mock('react-router', () => ({
   Navigate: ({ to }: { to: string }) => createElement('div', { 'data-testid': 'redirect' }, to),
 }));
+vi.mock('@/features/Channels/ChannelEmpty', () => ({
+  ChannelEmpty: () => createElement('div', { 'data-testid': 'channel-empty' }),
+}));
 vi.mock('@/store/channel', () => ({
   channelActions: { useFetchList: () => ({}) },
   channelSelectors: { list: () => mocks.channels },
@@ -49,12 +52,12 @@ describe('DesktopHomeRoute', () => {
     expect(screen.getByTestId('redirect')).toHaveTextContent('chn_b');
   });
 
-  it('shows the empty state without any Channel', () => {
+  it('shows the blank logo page without any Channel', () => {
     mocks.channels = [];
 
     render(createElement(DesktopHomeRoute));
 
     expect(screen.queryByTestId('redirect')).not.toBeInTheDocument();
-    expect(screen.getByText('还没有 Channel')).toBeInTheDocument();
+    expect(screen.getByTestId('channel-empty')).toBeInTheDocument();
   });
 });

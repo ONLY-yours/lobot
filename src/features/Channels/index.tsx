@@ -15,8 +15,9 @@ import { useChatStore } from '@/store/chat';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 
 import { AgentProfilePanel } from './AgentProfilePanel';
-import { visibleChannelDetail } from './channelAccess';
+import { isChannelGone, visibleChannelDetail } from './channelAccess';
 import { ChannelConversation } from './ChannelConversation';
+import { ChannelEmpty } from './ChannelEmpty';
 import { MEMBER_FLOAT_BREAKPOINT, MemberPanel } from './MemberPanel';
 import { MemberStatus } from './MemberStatus';
 import { openTopic } from './openTopic';
@@ -41,6 +42,11 @@ function EnabledChannelPage() {
   const view = { channelId: channelId ?? '', threadId: null };
   const sync = channelActions.useFetchDetail(channelId ? view : null);
   const detail = visibleChannelDetail(useChannelStore(channelSelectors.detail(view)), sync.error);
+  // The list row stands in while the detail loads, so the header never falls back to "Channel".
+  const listItem = useChannelStore((s) =>
+    channelSelectors.list(s)?.find((item) => item.id === channelId),
+  );
+  const isDirect = !!(detail?.channel ?? listItem)?.agentId;
   const directAgent = detail?.channel.agentId
     ? detail.members.find((member) => member.agentId === detail.channel.agentId)
     : undefined;
@@ -64,6 +70,8 @@ function EnabledChannelPage() {
     thread: !!(threadId || threadDraft || pageThreadId),
   });
   if (!channelId) return null;
+  // A removed or out-of-reach Channel (e.g. a link from another workspace) leaves nothing open.
+  if (isChannelGone(sync.error)) return <ChannelEmpty />;
 
   return (
     <Flexbox {...stylex.props(styles.layout)}>
@@ -76,9 +84,9 @@ function EnabledChannelPage() {
           ) : (
             <Flexbox horizontal align="center" gap={8}>
               {/* A direct conversation is titled by its Agent's name alone, like an IM chat. */}
-              {!directAgent && <Hash color={cssVar.colorTextDescription} size={16} />}
+              {!isDirect && <Hash color={cssVar.colorTextDescription} size={16} />}
               <Text ellipsis weight={500}>
-                {detail?.channel.title || t('title')}
+                {detail?.channel.title || listItem?.title}
               </Text>
               {detail?.channel.status === 'archived' && <Tag size="small">{t('archived')}</Tag>}
             </Flexbox>
