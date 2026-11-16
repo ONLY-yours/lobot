@@ -16,6 +16,7 @@ import { defaultChannelTitle } from './channelTitle';
 import { MemberSelection } from './MemberSelection';
 import { usePersonName } from './PeopleOptions';
 import { getChannelSaveErrorKey } from './saveError';
+import { ScopeField } from './ScopeField';
 import { useChannelAgentOptions } from './useChannelAgentOptions';
 
 interface ExistingChannel {
@@ -35,7 +36,7 @@ interface CreateChannelProps {
   /** Set when inviting members into a Channel that already exists. */
   existing?: ExistingChannel;
   onCreated?: (id: string) => void;
-  /** A new Channel created from a project's sidebar is grouped under that project. */
+  /** A new Channel created from a project's sidebar starts out as that project's. */
   projectId?: string;
 }
 
@@ -49,15 +50,6 @@ const openMemberDialog = (props: CreateChannelProps) =>
 
 export const openCreateChannel = (onCreated?: (id: string) => void, projectId?: string) =>
   openMemberDialog({ onCreated, projectId });
-
-/** The same flow named for what a multi-Agent Channel is to the user: a group. */
-export const openCreateGroupChannel = (onCreated?: (id: string) => void) =>
-  createModal({
-    content: <CreateChannel onCreated={onCreated} />,
-    footer: null,
-    title: t('newGroupChat', { ns: 'chat' }),
-    width: 'min(90vw, 800px)',
-  });
 
 /** The single entry for adding people and Agents to an existing Channel. */
 export const openInviteMembers = (existing: ExistingChannel, onCreated?: (id: string) => void) =>
@@ -76,7 +68,9 @@ function CreateChannel({ existing, onCreated, projectId }: CreateChannelProps) {
   const [people, setPeople] = useState<ChannelPersonOption[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
-  const options = useChannelAgentOptions(existing ? undefined : projectId);
+  // A new Channel is general or a project's; the project, if any, is changeable until created.
+  const [scopeProjectId, setScopeProjectId] = useState<string | null>(projectId ?? null);
+  const options = useChannelAgentOptions(existing ? undefined : (scopeProjectId ?? undefined));
   const direct = existing?.directAgentName !== undefined;
   const nameOf = usePersonName();
   const activeWorkspaceId = useActiveWorkspaceId();
@@ -136,7 +130,7 @@ function CreateChannel({ existing, onCreated, projectId }: CreateChannelProps) {
       } else {
         const id = await channelActions.create({
           agents: selections,
-          projectId,
+          projectId: scopeProjectId ?? undefined,
           title: title.trim() || autoTitle,
           userIds: people.map((person) => person.userId),
         });
@@ -158,6 +152,7 @@ function CreateChannel({ existing, onCreated, projectId }: CreateChannelProps) {
           {t('invite.directHint', { name: existing?.directAgentName || t('unnamedAgent') })}
         </Text>
       )}
+      {!existing && <ScopeField inert={busy} value={scopeProjectId} onChange={setScopeProjectId} />}
       <Flexbox gap={8} inert={busy}>
         <MemberSelection
           emptyHint={existing ? undefined : t('create.onlyYou')}

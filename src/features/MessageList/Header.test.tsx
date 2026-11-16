@@ -6,7 +6,7 @@ import Header from './Header';
 const mocks = vi.hoisted(() => ({
   channelsEnabled: true,
   navigate: vi.fn(),
-  openCreateGroupChannel: vi.fn(),
+  openCreateChannel: vi.fn(),
 }));
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
@@ -28,9 +28,8 @@ vi.mock('@lobehub/ui', () => ({
   SearchBar: () => null,
   Text: () => null,
 }));
-vi.mock('@lobehub/ui/icons', () => ({ GroupBotSquareIcon: () => null }));
 vi.mock('@/features/Channels/CreateChannel', () => ({
-  openCreateGroupChannel: mocks.openCreateGroupChannel,
+  openCreateChannel: mocks.openCreateChannel,
 }));
 vi.mock('@/features/Channels/useChannelsEnabled', () => ({
   useChannelsEnabled: () => mocks.channelsEnabled,
@@ -55,14 +54,14 @@ describe('MessageList Header create menu', () => {
     vi.clearAllMocks();
   });
 
-  it('offers only creating an Agent and a group, the group being a multi-Agent Channel', () => {
+  it('offers creating an Agent or a Channel, the group a Channel is with Channels on', () => {
     render(<Header />);
-    expect(menuKeys()).toEqual(['newAgent', 'newGroupChat']);
+    expect(menuKeys()).toEqual(['newAgent', 'newChannel']);
 
-    fireEvent.click(screen.getByRole('button', { name: 'newGroupChat' }));
-    expect(mocks.openCreateGroupChannel).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'newChannel' }));
+    expect(mocks.openCreateChannel).toHaveBeenCalledOnce();
 
-    mocks.openCreateGroupChannel.mock.calls[0][0]('chn_1');
+    mocks.openCreateChannel.mock.calls[0][0]('chn_1');
     expect(mocks.navigate).toHaveBeenCalledWith('/channels/chn_1');
   });
 

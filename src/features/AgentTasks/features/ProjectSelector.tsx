@@ -56,6 +56,8 @@ interface ProjectSelectorProps {
   /** Makes the picker read-only for a reason other than permission. */
   disabledReason?: string;
   fullWidth?: boolean;
+  /** Names the "no project" option, for a host where it means something else. */
+  noneLabel?: string;
   /** Reports the pick instead of saving it, for a composer holding it in a draft. */
   onChange?: (projectId: string | null) => void;
   /** The task a pick is saved to when there is no `onChange`. */
@@ -69,7 +71,15 @@ interface ProjectSelectorProps {
  * Projects lab is off, so no host can offer a feature the user has not enabled.
  */
 const ProjectSelector = memo<ProjectSelectorProps>(
-  ({ children, disabledReason, fullWidth, onChange, taskIdentifier, value }) => {
+  ({
+    children,
+    disabledReason,
+    fullWidth,
+    noneLabel: noneLabelProp,
+    onChange,
+    taskIdentifier,
+    value,
+  }) => {
     const { t } = useTranslation('chat');
     const enabled = useUserStore(labPreferSelectors.enableProjects);
     const { allowed: canEdit, reason } = usePermission('create_content');
@@ -93,7 +103,7 @@ const ProjectSelector = memo<ProjectSelectorProps>(
     });
 
     const query = search.trim();
-    const noneLabel = t('taskProject.none');
+    const noneLabel = noneLabelProp ?? t('taskProject.none');
     const matches = useMemo(() => filterProjectsByName(projects, query), [projects, query]);
     const options = useMemo<ProjectOption[]>(() => {
       const showNone = !query || noneLabel.toLowerCase().includes(query.toLowerCase());
