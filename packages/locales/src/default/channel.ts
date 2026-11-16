@@ -104,6 +104,8 @@ export default {
   'deleteThreadForbidden': 'Only the channel owner or an administrator can move threads to trash.',
   'deleteThreadSuccess': 'Thread moved to trash',
   'deletedMember': 'Former member',
+  'members.agents': 'Agents · {{count}}',
+  'memberActionsNamed': 'Actions for {{name}}',
   'membersTitle': 'Members',
   'members.show': 'Show member list',
   'members.hide': 'Hide member list',
