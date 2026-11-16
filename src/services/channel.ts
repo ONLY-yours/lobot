@@ -1,6 +1,6 @@
 import type { ChannelDetail, ChannelListItem } from '@lobechat/types';
 
-import { lambdaClient } from '@/libs/trpc/client';
+import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
 
 export interface ChannelAgentSelection {
   agentId: string;
@@ -77,6 +77,9 @@ class ChannelService {
   detail = async (params: ChannelViewParams): Promise<ChannelDetail> =>
     (await lambdaClient.channel.detail.query(params)).data;
   list = async (): Promise<ChannelListItem[]> => (await lambdaClient.channel.list.query()).data;
+  /** The Channel list of a scope other than the active one; `null` is the personal space. */
+  listInScope = async (workspaceId: string | null): Promise<ChannelListItem[]> =>
+    (await createWorkspaceLambdaClient(workspaceId).channel.list.query()).data;
   markRead = (channelId: string, sequence: number) =>
     lambdaClient.channel.markRead.mutate({ channelId, sequence });
   remove = (channelId: string) => lambdaClient.channel.remove.mutate({ channelId });

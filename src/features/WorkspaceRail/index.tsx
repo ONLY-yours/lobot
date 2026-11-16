@@ -40,6 +40,7 @@ import { writeWorkspaceRailHint } from './railHint';
 import { RAIL_AVATAR_SIZE, RAIL_TILE_RADIUS, styles } from './style';
 import { useOrderedWorkspaces } from './useOrderedWorkspaces';
 import { useRailColumnShown } from './useRailColumnShown';
+import { useScopeUnread } from './useScopeUnread';
 
 interface RailItemProps {
   active?: boolean;
@@ -49,10 +50,12 @@ interface RailItemProps {
   onClick: () => void;
   title: string;
   tooltipDisabled?: boolean;
+  /** The scope's Messages unread count, badged on the tile's bottom-right corner. */
+  unread?: number;
 }
 
 const RailItem = memo<RailItemProps>(
-  ({ active, children, dragProps, onClick, title, tooltipDisabled }) => (
+  ({ active, children, dragProps, onClick, title, tooltipDisabled, unread }) => (
     <Tooltip disabled={tooltipDisabled} placement={'right'} title={title}>
       <div
         role={'button'}
@@ -69,6 +72,9 @@ const RailItem = memo<RailItemProps>(
           </>
         )}
         {children}
+        {!!unread && unread > 0 && (
+          <span {...stylex.props(styles.unread)}>{unread > 99 ? '99+' : unread}</span>
+        )}
       </div>
     </Tooltip>
   ),
@@ -89,6 +95,7 @@ const SortableWorkspaceItem = memo<SortableWorkspaceItemProps>(
     const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({
       id: workspace.id,
     });
+    const unread = useScopeUnread(workspace.id, active);
 
     return (
       // The sortable node wraps the tile so the Tooltip keeps its own ref on the tile.
@@ -109,6 +116,7 @@ const SortableWorkspaceItem = memo<SortableWorkspaceItemProps>(
           dragProps={{ ...attributes, ...listeners }}
           title={workspace.name}
           tooltipDisabled={dragging}
+          unread={unread}
           onClick={() => onOpen(workspace.id)}
         >
           <WorkspaceAvatar
@@ -145,6 +153,7 @@ const WorkspaceRail = memo(() => {
   const navigate = useWorkspaceAwareNavigate();
   const userAvatar = useUserStore(userProfileSelectors.userAvatar);
   const userName = useUserStore(userProfileSelectors.displayUserName);
+  const personalUnread = useScopeUnread(null, activeId === null);
 
   // Lobot has no workspace routes: switching changes the request scope, then lands on the
   // Messages home, since the open conversation belongs to the scope just left.
@@ -201,6 +210,7 @@ const WorkspaceRail = memo(() => {
       <RailItem
         active={activeId === null}
         title={t('workspaceRail.personal')}
+        unread={personalUnread}
         onClick={openPersonal}
       >
         <Avatar avatar={userAvatar} name={userName} shape={'circle'} size={RAIL_AVATAR_SIZE} />

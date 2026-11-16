@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   updatePreference: vi.fn(async (_patch: unknown) => {}),
   switchToPersonal: vi.fn(async () => {}),
   switchWorkspace: vi.fn(async (_id: string) => {}),
+  unread: {} as Record<string, number>,
   workspaces: [] as { avatar: string | null; id: string; name: string; slug: string }[],
 }));
 
@@ -21,7 +22,19 @@ vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => k
 vi.mock('./style', () => ({
   RAIL_AVATAR_SIZE: 32,
   RAIL_TILE_RADIUS: 10,
-  styles: { add: {}, divider: {}, dot: {}, item: {}, pill: {}, pillActive: {}, rail: {} },
+  styles: {
+    add: {},
+    divider: {},
+    dot: {},
+    item: {},
+    pill: {},
+    pillActive: {},
+    rail: {},
+    unread: {},
+  },
+}));
+vi.mock('./useScopeUnread', () => ({
+  useScopeUnread: (scopeId: string | null) => mocks.unread[scopeId ?? 'personal'] ?? 0,
 }));
 vi.mock('./CreateWorkspace', () => ({ useOpenCreateWorkspace: () => mocks.openCreate }));
 vi.mock('@/business/client/workspace/store', () => ({
@@ -59,6 +72,7 @@ describe('WorkspaceRail', () => {
     mocks.available = true;
     mocks.loading = false;
     mocks.order = undefined;
+    mocks.unread = {};
     mocks.workspaces = [
       { avatar: null, id: 'ws-1', name: 'LobeHub', slug: 'lobehub' },
       { avatar: null, id: 'ws-2', name: 'Acme', slug: 'acme' },
@@ -174,5 +188,14 @@ describe('WorkspaceRail', () => {
 
     expect(mocks.switchWorkspace).not.toHaveBeenCalled();
     expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it("badges each scope's tile with its unread count, capped at 99+", () => {
+    mocks.unread = { 'personal': 3, 'ws-2': 120 };
+    render(<WorkspaceRail />);
+
+    expect(screen.getByRole('button', { name: 'workspaceRail.personal' })).toHaveTextContent('3');
+    expect(screen.getByRole('button', { name: 'Acme' })).toHaveTextContent('99+');
+    expect(screen.getByRole('button', { name: 'LobeHub' }).textContent).toBe('');
   });
 });

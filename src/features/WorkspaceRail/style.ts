@@ -89,4 +89,28 @@ export const styles = stylex.create({
     paddingBlockEnd: '8px',
     scrollbarWidth: 'none',
   },
+  // Discord's unread badge: on the tile's bottom-right corner, cut out of the tile by a ring of
+  // the window background. It hangs 4px below the tile into the 8px gap (the last scope sits above
+  // the create button, and the rail's bottom padding covers the end), never above the first tile,
+  // which the scrolling rail would clip.
+  unread: {
+    pointerEvents: 'none',
+    position: 'absolute',
+    insetBlockEnd: '-4px',
+    // The tile is centered in the 48px item, so its corner sits 8px in; overhang it by 4px.
+    insetInlineEnd: '4px',
+    minWidth: '18px',
+    height: '18px',
+    paddingInline: '4px',
+    borderWidth: '3px',
+    borderStyle: 'solid',
+    borderColor: cssVar.colorBgLayout,
+    borderRadius: '999px',
+    fontSize: '10px',
+    fontWeight: 600,
+    lineHeight: '12px',
+    color: cssVar.colorTextLightSolid,
+    textAlign: 'center',
+    backgroundColor: cssVar.colorError,
+  },
 });
