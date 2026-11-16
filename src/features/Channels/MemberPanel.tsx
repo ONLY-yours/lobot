@@ -9,12 +9,39 @@ import { useTranslation } from 'react-i18next';
 
 import NavHeader from '@/features/NavHeader';
 import RightPanel from '@/features/RightPanel';
+import { useGlobalStore } from '@/store/global';
+import { systemStatusSelectors } from '@/store/global/selectors';
 
 import { MemberList, useMemberEntries } from './MemberList';
 import { styles } from './styles';
 
 export const MEMBER_PANEL_WIDTH = 256;
 export const MEMBER_FLOAT_BREAKPOINT = 640;
+const MEMBER_PANEL_MAX_WIDTH = 480;
+/** Room the conversation keeps beside a widened side panel. */
+const MEMBER_PANEL_CONVERSATION_MIN = 360;
+
+/** Resize bounds for the side panel: floats full-width when narrow, otherwise drags within room left by the feed. */
+export function channelSidePanelSize(availableWidth: number, preferredWidth: number) {
+  if (availableWidth < MEMBER_FLOAT_BREAKPOINT)
+    return {
+      maxWidth: availableWidth,
+      minWidth: availableWidth,
+      mode: 'float' as const,
+      width: availableWidth,
+    };
+
+  const maxWidth = Math.max(
+    MEMBER_PANEL_WIDTH,
+    Math.min(MEMBER_PANEL_MAX_WIDTH, availableWidth - MEMBER_PANEL_CONVERSATION_MIN),
+  );
+  return {
+    maxWidth,
+    minWidth: MEMBER_PANEL_WIDTH,
+    mode: 'fixed' as const,
+    width: Math.min(Math.max(preferredWidth, MEMBER_PANEL_WIDTH), maxWidth),
+  };
+}
 
 const panelStyles = stylex.create({
   panel: {
@@ -45,8 +72,11 @@ export function ChannelSidePanel({
   title: string;
   xstyle?: StyleXStyles;
 }) {
-  const narrow = availableWidth < MEMBER_FLOAT_BREAKPOINT;
-  const width = narrow ? availableWidth : MEMBER_PANEL_WIDTH;
+  const [preferredWidth, updateSystemStatus] = useGlobalStore((s) => [
+    systemStatusSelectors.channelSidePanelWidth(s),
+    s.updateSystemStatus,
+  ]);
+  const { maxWidth, minWidth, mode, width } = channelSidePanelSize(availableWidth, preferredWidth);
 
   return (
     <RightPanel
@@ -54,14 +84,19 @@ export function ChannelSidePanel({
       expandFollowsSelection
       className={stylex.props(styles.threadPanel).className}
       classNames={{ content: stylex.props(styles.threadContent).className }}
-      maxWidth={width}
-      minWidth={width}
-      mode={narrow ? 'float' : 'fixed'}
+      maxWidth={maxWidth}
+      minWidth={minWidth}
+      mode={mode}
       showHandleWhenCollapsed={false}
       showHandleWideArea={false}
       width={width}
       onExpandChange={(open) => {
         if (!open) onClose();
+      }}
+      onSizeChange={(size) => {
+        if (mode === 'float') return;
+        const next = Number.parseFloat(String(size?.width));
+        if (Number.isFinite(next)) updateSystemStatus({ channelSidePanelWidth: Math.round(next) });
       }}
     >
       <Flexbox

@@ -252,6 +252,10 @@ export interface SystemStatus {
    * Which Channel activity raises a desktop notification on this device; unset means `all`.
    */
   channelNotificationLevel?: 'all' | 'mentions' | 'off';
+  /**
+   * Width of a Channel's right column (member roster / Agent profile), shared by both.
+   */
+  channelSidePanelWidth?: number;
   chatInputHeight?: number;
   /**
    * Which topicGroups are collapsed, bucketed by group mode. We persist the
