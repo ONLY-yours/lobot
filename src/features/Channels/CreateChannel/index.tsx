@@ -20,6 +20,7 @@ import AsyncError from '@/components/AsyncError';
 import { type ChannelPersonOption, channelService } from '@/services/channel';
 import { channelActions } from '@/store/channel';
 
+import { confirmPublishPrivateAgents, ownPrivateAgentIds } from '../privateAgentJoin';
 import type { ChannelAgentDraft } from './agentEnvironment';
 import { canSubmitChannelMembers, toChannelAgentSelection } from './agentEnvironment';
 import { defaultChannelTitle } from './channelTitle';
@@ -38,6 +39,8 @@ interface ExistingChannel {
    */
   directAgentName?: string;
   id: string;
+  /** Active people in the Channel, the inviter included. */
+  peopleCount: number;
   /** People can be invited only into workspace Channels. */
   workspaceId: string | null;
 }
@@ -130,6 +133,23 @@ function CreateChannel({ existing, onCreated, projectId }: CreateChannelProps) {
     setBusy(true);
     setError(undefined);
     try {
+      // Anyone besides the inviter would get no reply from a private Agent.
+      const shared = people.length > 0 || (!direct && (existing?.peopleCount ?? 0) > 1);
+      const privateIds = shared ? ownPrivateAgentIds(agents.map(({ agentId }) => agentId)) : [];
+      try {
+        await confirmPublishPrivateAgents(
+          privateIds.map((id) => ({
+            id,
+            name: agentDisplayName(
+              options.agents?.find((agent) => agent.id === id),
+              t('unnamedAgent'),
+            ),
+          })),
+        );
+      } catch {
+        // Declined, or publishing failed and said so: keep the picks for another try.
+        return;
+      }
       const selections = agents.map(toChannelAgentSelection);
       if (existing && direct) {
         const id = await channelActions.createGroupFromDirect({

@@ -8,6 +8,7 @@ import {
   FolderIcon,
   InfoIcon,
   KeyRoundIcon,
+  LogOutIcon,
   type LucideIcon,
   UsersIcon,
 } from 'lucide-react';
@@ -32,6 +33,12 @@ export interface VisibilityConfirmContentProps {
    * guessing whether their library just lost an entry.
    */
   inLibrary?: boolean;
+  /**
+   * Group chats shared with other members that the resource leaves on going
+   * private (an Agent nobody else can run there). Named with its count so the
+   * removal is a stated consequence, not a surprise.
+   */
+  sharedChannelCount?: number;
   variant: VisibilityConfirmVariant;
 }
 
@@ -54,6 +61,14 @@ const CAPTURED_STATE_ITEM: Item = {
   emphasis: true,
   icon: KeyRoundIcon,
   key: 'visibilityConfirm.publish.itemCapturedState',
+  tone: 'danger',
+};
+
+/** Appended to `makePrivate` when the resource leaves group chats shared with others. */
+const CHANNELS_ITEM: Item = {
+  emphasis: true,
+  icon: LogOutIcon,
+  key: 'visibilityConfirm.makePrivate.itemChannels',
   tone: 'danger',
 };
 
@@ -184,7 +199,7 @@ const rowIconClass = (tone: Tone) => {
  * separate hero icon here.
  */
 const VisibilityConfirmContent = memo<VisibilityConfirmContentProps>(
-  ({ capturedState, inLibrary, variant }) => {
+  ({ capturedState, inLibrary, sharedChannelCount = 0, variant }) => {
     const { t } = useTranslation('common');
     const config = CONFIG[variant];
     const irreversibleSuffix = t('visibilityConfirm.irreversible');
@@ -196,8 +211,12 @@ const VisibilityConfirmContent = memo<VisibilityConfirmContentProps>(
         : variant === 'publish' && capturedState
           ? CAPTURED_STATE_ITEM
           : undefined;
-    const items = extra
-      ? [...config.items.slice(0, -1), extra, ...config.items.slice(-1)]
+    const extras = [
+      ...(extra ? [extra] : []),
+      ...(variant === 'makePrivate' && sharedChannelCount > 0 ? [CHANNELS_ITEM] : []),
+    ];
+    const items = extras.length
+      ? [...config.items.slice(0, -1), ...extras, ...config.items.slice(-1)]
       : config.items;
 
     return (
@@ -210,7 +229,9 @@ const VisibilityConfirmContent = memo<VisibilityConfirmContentProps>(
                 <Icon icon={ItemIcon} size={14} />
               </span>
               <span className={item.emphasis ? styles.emphasis : undefined}>
-                {t(item.key as any)}
+                {item === CHANNELS_ITEM
+                  ? t('visibilityConfirm.makePrivate.itemChannels', { count: sharedChannelCount })
+                  : t(item.key as any)}
                 {item.showIrreversible && (
                   <span className={styles.suffix}>{irreversibleSuffix}</span>
                 )}

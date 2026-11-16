@@ -478,6 +478,7 @@ export default {
   'messageList.empty': 'No conversations yet',
   'messageList.newChat': 'New conversation',
   'messageList.search': 'Search',
+  'messageList.startGroupChat': 'Start group chat',
   'taskNav.all': 'All tasks',
   'taskNav.noProjects': 'No projects yet',
   'navPanel.agent': 'Agents',
@@ -536,6 +537,8 @@ export default {
     'It stays in the library you filed it in — other members just stop seeing it there',
   'visibilityConfirm.makePrivate.itemLoaded':
     'Content others have already loaded can’t be pulled back',
+  'visibilityConfirm.makePrivate.itemChannels':
+    'It will be removed from {{count}} group chats shared with other members',
   'visibilityConfirm.publish.itemVisible': 'All workspace members will see this immediately',
   'visibilityConfirm.publish.itemReversible':
     'You can switch it back to private later from the same menu',

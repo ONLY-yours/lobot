@@ -540,14 +540,27 @@ export const useAgentDropdownMenu = ({
                       label: t('makePrivate', { ns: 'common' }),
                       onClick: async ({ domEvent }: any) => {
                         domEvent?.stopPropagation();
+                        // Unknown when the lookup fails: the server then refuses a demotion
+                        // that would leave shared group chats unconfirmed.
+                        const sharedChannelCount = await agentService
+                          .getPrivateDemotionImpact(id)
+                          .then((impact) => impact.sharedChannelCount)
+                          .catch(() => 0);
                         confirmModal({
                           cancelText: t('cancel', { ns: 'common' }),
-                          content: <VisibilityConfirmContent variant="makePrivate" />,
+                          content: (
+                            <VisibilityConfirmContent
+                              sharedChannelCount={sharedChannelCount}
+                              variant="makePrivate"
+                            />
+                          ),
                           okButtonProps: { danger: true },
                           okText: t('makePrivate.confirm.ok', { ns: 'common' }),
                           onOk: async () => {
                             try {
-                              await agentService.setAgentVisibility(id, 'private');
+                              await agentService.setAgentVisibility(id, 'private', {
+                                removeFromChannels: sharedChannelCount > 0,
+                              });
                               await refreshAgentList();
                               revealSidebarSection('private');
                               toast.success(t('makePrivate.success', { ns: 'common' }));

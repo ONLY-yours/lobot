@@ -52,6 +52,10 @@ vi.mock('@/services/channel', () => ({
   channelService: { updateVisibility: mocks.updateVisibility },
 }));
 vi.mock('@/store/channel', () => ({ channelActions: { create: mocks.create } }));
+vi.mock('../privateAgentJoin', () => ({
+  confirmPublishPrivateAgents: async () => {},
+  ownPrivateAgentIds: () => [],
+}));
 vi.mock('./MemberSelection', () => ({
   MemberSelection: () => <div data-testid={'members'} />,
 }));
@@ -173,7 +177,9 @@ describe('CreateChannel', () => {
   });
 
   it('goes straight to members when inviting into an existing Channel', () => {
-    renderDialog(() => openInviteMembers({ agentIds: [], id: 'chn_1', workspaceId: null }));
+    renderDialog(() =>
+      openInviteMembers({ agentIds: [], id: 'chn_1', peopleCount: 1, workspaceId: null }),
+    );
     expect(screen.queryByTestId('scope')).not.toBeInTheDocument();
     expect(screen.getByTestId('members')).toBeInTheDocument();
   });

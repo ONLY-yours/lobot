@@ -24,6 +24,11 @@ import { useChannelAgentDraft } from './CreateChannel/useChannelAgentDraft';
 import { useChannelAgentOptions } from './CreateChannel/useChannelAgentOptions';
 import { matchInviteAgents, MENTION_INVITE_LIMIT, mentionDescription } from './mentionGroups';
 import type { ChannelMentionInvite } from './mentions';
+import {
+  confirmPublishPrivateAgents,
+  ownPrivateAgentIds,
+  PrivateAgentDeclinedError,
+} from './privateAgentJoin';
 
 /** Like a chosen Agent in the invite dialog: it keeps its own device and directory. */
 const INHERITED = { directoryOptional: true };
@@ -256,10 +261,21 @@ export const useMentionInvites = (
     const pending = running.get(key);
     if (pending) return pending;
     setError('');
+    // Like the invite dialog: a private Agent joins a group with other people only once public.
+    const publishFirst =
+      target.actorType === 'agent' &&
+      members.filter((member) => member.actorType === 'user' && member.status === 'active').length >
+        1 &&
+      ownPrivateAgentIds([target.id]).length > 0;
     const added = (
       target.actorType === 'user'
         ? channelActions.addMember(channel.id, { userId: target.id })
-        : resolveAgent(target.id).then((agent) => channelActions.addMember(channel.id, { agent }))
+        : (publishFirst
+            ? confirmPublishPrivateAgents([{ id: target.id, name: target.name }]).then(() =>
+                resolveAgent(target.id),
+              )
+            : resolveAgent(target.id)
+          ).then((agent) => channelActions.addMember(channel.id, { agent }))
     )
       .then((memberId) => {
         // Searches cached before the invite would still list them as outside.
@@ -267,6 +283,10 @@ export const useMentionInvites = (
         return memberId;
       })
       .catch((cause: unknown) => {
+        if (cause instanceof PrivateAgentDeclinedError) {
+          setError(t('privateAgentJoin.declined', { name: target.name }));
+          throw cause;
+        }
         console.error('Failed to invite a mentioned member', cause);
         const reasonKey =
           cause instanceof AgentIssueError

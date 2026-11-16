@@ -106,6 +106,15 @@ const sharedAgents = (s: HomeStore): SidebarAgentItem[] => [
 ];
 
 /**
+ * The current user's own private agents. Empty in personal mode.
+ */
+const privateAgents = (s: HomeStore): SidebarAgentItem[] => [
+  ...s.privatePinnedAgents,
+  ...s.privateAgentGroups.flatMap((g) => g.items),
+  ...s.privateUngroupedAgents,
+];
+
+/**
  * Get agent by id
  */
 const getAgentById =
@@ -138,6 +147,7 @@ export const homeAgentListSelectors = {
   isAgentListConfirmed,
   isAgentListInit,
   pinnedAgents,
+  privateAgents,
   privateAgentGroups,
   privatePinnedAgents,
   privateUngroupedAgents,

@@ -7,6 +7,7 @@ import { channelService } from '@/services/channel';
 import { channelActions } from '@/store/channel';
 
 import type { ChannelMentionInvite } from './mentions';
+import { confirmPublishPrivateAgents, PrivateAgentDeclinedError } from './privateAgentJoin';
 import { useMentionInvites } from './useMentionInvites';
 
 const { agentDraft } = vi.hoisted(() => ({
@@ -17,6 +18,11 @@ vi.mock('react-i18next', () => ({
     t: (key: string, options?: Record<string, string>) =>
       options ? `${key} ${JSON.stringify(options)}` : key,
   }),
+}));
+vi.mock('./privateAgentJoin', () => ({
+  PrivateAgentDeclinedError: class extends Error {},
+  confirmPublishPrivateAgents: vi.fn(),
+  ownPrivateAgentIds: (ids: string[]) => ids.filter((id) => id === 'agt_private'),
 }));
 vi.mock('@/components/AgentAvatar', () => ({ default: () => null }));
 vi.mock('@/components/Avatar', () => ({ default: () => null }));
@@ -186,6 +192,38 @@ describe('@mentions that invite people and Agents from outside the Channel', () 
     expect(channelActions.addMember).toHaveBeenCalledExactlyOnceWith(channel.id, {
       agent: { agentId: 'agt_writer', deviceId: 'dev_1' },
     });
+  });
+
+  it('keeps a declined private Agent out of a group shared with other people', async () => {
+    vi.mocked(confirmPublishPrivateAgents).mockRejectedValueOnce(
+      new PrivateAgentDeclinedError(['Name agt_private']),
+    );
+    const people = [
+      { actorType: 'user', id: 'mem_me', status: 'active', userId: 'user_me' },
+      { actorType: 'user', id: 'mem_lin', status: 'active', userId: 'user_lin' },
+    ] as ChannelPublicMember[];
+    const { result } = setup(channel, [joinedAgent, ...people]);
+    let resolved: Promise<string[] | undefined>;
+    act(() => {
+      resolved = result.current.resolve([target('agent', 'agt_private')]);
+    });
+    await expect(resolved!).resolves.toBeUndefined();
+    expect(confirmPublishPrivateAgents).toHaveBeenCalledExactlyOnceWith([
+      { id: 'agt_private', name: 'Name agt_private' },
+    ]);
+    expect(channelActions.addMember).not.toHaveBeenCalled();
+    await waitFor(() => expect(result.current.error).toContain('privateAgentJoin.declined'));
+  });
+
+  it('adds a private Agent without asking when its owner is alone with it', async () => {
+    const { result, rerenderDrafts } = setup();
+    let resolved: Promise<string[] | undefined>;
+    act(() => {
+      resolved = result.current.resolve([target('agent', 'agt_private')]);
+    });
+    rerenderDrafts();
+    await expect(resolved!).resolves.toEqual(['mem_agt_private']);
+    expect(confirmPublishPrivateAgents).not.toHaveBeenCalled();
   });
 
   it('reports an Agent whose environment blocks it, and the message is not sent', async () => {

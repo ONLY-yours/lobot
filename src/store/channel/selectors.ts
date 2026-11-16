@@ -10,6 +10,7 @@ const NO_OUTGOING: ChannelOutgoingMessage[] = [];
 
 /** These wait for a device or a person rather than for earlier work to finish. */
 const EXTERNAL_BLOCKS = new Set<ChannelJobBlockCode>([
+  'agent_private',
   'device_approval_pending',
   'device_offline',
   'device_required',

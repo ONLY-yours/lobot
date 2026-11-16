@@ -168,9 +168,18 @@ class AgentService {
    * agent's creator or a workspace owner to pull a published agent back to
    * private, and rejects builtin agents (LobeAI etc.) outright.
    */
-  setAgentVisibility = async (id: string, visibility: 'private' | 'public'): Promise<void> => {
-    await lambdaClient.agent.setAgentVisibility.mutate({ id, visibility });
+  setAgentVisibility = async (
+    id: string,
+    visibility: 'private' | 'public',
+    /** Going private also takes it out of group Channels shared with other people. */
+    options?: { removeFromChannels?: boolean },
+  ): Promise<void> => {
+    await lambdaClient.agent.setAgentVisibility.mutate({ id, visibility, ...options });
   };
+
+  /** The group Channels shared with other people that the agent leaves if made private. */
+  getPrivateDemotionImpact = async (id: string): Promise<{ sharedChannelCount: number }> =>
+    lambdaClient.agent.getPrivateDemotionImpact.query({ id });
 
   /**
    * Create a virtual agent without session.

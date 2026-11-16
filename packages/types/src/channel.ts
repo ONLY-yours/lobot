@@ -249,6 +249,8 @@ export interface ChannelJobWake {
 
 /** Why a queued job cannot start yet. Typed so clients never infer it from error text. */
 export type ChannelJobBlockCode =
+  /** Another person's private Agent: only its owner can run it, so the requester must ask them. */
+  | 'agent_private'
   /** A deferred `followup` waiting for the message's primary responder to settle. */
   | 'awaiting_primary'
   | 'device_approval_pending'
@@ -366,6 +368,11 @@ export interface ChannelListItem {
    * the only entry of `memberAvatars`; null otherwise.
    */
   peerUserId?: string | null;
+  /**
+   * When the caller pinned the conversation atop their own list, null when not pinned; set by the
+   * Channel list. Personal: other members never see it.
+   */
+  pinnedAt?: Date | null;
   /** The project the channel is grouped under; null for a standalone channel. */
   projectId: string | null;
   /**
@@ -419,6 +426,8 @@ export interface ChannelPublicMessage {
   };
   content: string;
   createdAt: Date;
+  /** Set once the author has edited the text; shown as "(edited)". */
+  editedAt?: Date | null;
   fileIds: string[];
   id: string;
   mentions: string[];

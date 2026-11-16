@@ -192,6 +192,9 @@ export function MemberStatus({
                 ),
                 directAgentName: channel.agentId ? (directAgent?.name ?? '') : undefined,
                 id: channel.id,
+                peopleCount: allMembers.filter(
+                  (member) => member.status === 'active' && member.actorType === 'user',
+                ).length,
                 workspaceId: channel.workspaceId,
               },
               // Inviting from a direct conversation opens the group it starts.
