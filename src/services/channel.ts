@@ -44,6 +44,9 @@ class ChannelService {
   /** Replaces the Channel's whole reply strategy; `null` returns it to the defaults. */
   updateWakeConfig = (channelId: string, wake: ChannelWakeConfig | null) =>
     lambdaClient.channel.updateWakeConfig.mutate({ channelId, wake });
+  /** Opens a workspace group Channel to the whole workspace, or makes it invite-only again. */
+  updateVisibility = (channelId: string, visibility: 'private' | 'public') =>
+    lambdaClient.channel.updateVisibility.mutate({ channelId, visibility });
   rename = (channelId: string, title: string) =>
     lambdaClient.channel.rename.mutate({ channelId, title });
   addUser = (channelId: string, userId: string) =>

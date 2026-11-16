@@ -8,13 +8,23 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(async () => 'chn_new'),
   createModal: vi.fn(),
   optionsProjectIds: [] as (string | undefined)[],
+  updateVisibility: vi.fn(async () => ({})),
+  workspaceId: null as string | null,
 }));
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('i18next', () => ({ t: (key: string) => key }));
 vi.mock('@lobehub/ui', () => ({
-  Button: ({ children, onClick }: { children: ReactNode; onClick?: () => void }) => (
-    <button type={'button'} onClick={onClick}>
+  Button: ({
+    children,
+    disabled,
+    onClick,
+  }: {
+    children: ReactNode;
+    disabled?: boolean;
+    onClick?: () => void;
+  }) => (
+    <button disabled={disabled} type={'button'} onClick={onClick}>
       {children}
     </button>
   ),
@@ -22,15 +32,29 @@ vi.mock('@lobehub/ui', () => ({
   Flexbox: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   Icon: () => null,
   Input: () => null,
+  Switch: ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+    <input
+      aria-label={'private'}
+      checked={checked}
+      type={'checkbox'}
+      onChange={(event) => onChange(event.target.checked)}
+    />
+  ),
   Text: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+  toast: { warning: vi.fn() },
   useModalContext: () => ({ close: vi.fn(), setCanDismissByClickOutside: vi.fn() }),
 }));
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
-  useActiveWorkspaceId: () => null,
+  useActiveWorkspaceId: () => mocks.workspaceId,
 }));
 vi.mock('@/components/AsyncError', () => ({ default: () => null }));
+vi.mock('@/services/channel', () => ({
+  channelService: { updateVisibility: mocks.updateVisibility },
+}));
 vi.mock('@/store/channel', () => ({ channelActions: { create: mocks.create } }));
-vi.mock('./MemberSelection', () => ({ MemberSelection: () => null }));
+vi.mock('./MemberSelection', () => ({
+  MemberSelection: () => <div data-testid={'members'} />,
+}));
 vi.mock('./PeopleOptions', () => ({ usePersonName: () => () => '' }));
 vi.mock('./useChannelAgentOptions', () => ({
   useChannelAgentOptions: (projectId?: string) => {
@@ -39,19 +63,27 @@ vi.mock('./useChannelAgentOptions', () => ({
   },
 }));
 vi.mock('./ScopeField', () => ({
+  useChannelKindsEnabled: () => true,
   ScopeField: ({
-    onChange,
-    value,
+    kind,
+    onKindChange,
+    onProjectChange,
+    projectId,
   }: {
-    onChange: (id: string | null) => void;
-    value: string | null;
+    kind: string;
+    onKindChange: (kind: string) => void;
+    onProjectChange: (id: string | null) => void;
+    projectId: string | null;
   }) => (
-    <div data-testid={'scope'} data-value={value ?? 'general'}>
-      <button type={'button'} onClick={() => onChange('prj_2')}>
-        pick project
+    <div data-kind={kind} data-project={projectId ?? 'none'} data-testid={'scope'}>
+      <button type={'button'} onClick={() => onKindChange('project')}>
+        kind project
       </button>
-      <button type={'button'} onClick={() => onChange(null)}>
-        pick general
+      <button type={'button'} onClick={() => onKindChange('general')}>
+        kind general
+      </button>
+      <button type={'button'} onClick={() => onProjectChange('prj_2')}>
+        pick project
       </button>
     </div>
   ),
@@ -62,46 +94,87 @@ const renderDialog = (open: () => void) => {
   render(mocks.createModal.mock.calls.at(-1)![0].content);
 };
 
-describe('CreateChannel scope', () => {
+const next = () => fireEvent.click(screen.getByRole('button', { name: 'create.next' }));
+const submit = async () => {
+  fireEvent.click(screen.getByRole('button', { name: 'submit' }));
+  await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
+  return mocks.create.mock.calls[0][0] as Record<string, unknown>;
+};
+
+describe('CreateChannel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.optionsProjectIds = [];
+    mocks.workspaceId = null;
   });
 
-  it('creates a general Channel from the "+" menu by default', async () => {
+  it('asks the kind and name first, then members, and creates a general Channel by default', async () => {
     renderDialog(() => openCreateChannel());
-    expect(screen.getByTestId('scope')).toHaveAttribute('data-value', 'general');
+    expect(screen.getByTestId('scope')).toHaveAttribute('data-kind', 'general');
+    expect(screen.queryByTestId('members')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'submit' }));
-    await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
-    expect(mocks.create.mock.calls[0][0]).toMatchObject({ projectId: undefined });
+    next();
+    expect(screen.getByTestId('members')).toBeInTheDocument();
+    expect(await submit()).toMatchObject({ projectId: undefined });
   });
 
-  it("makes it a project's Channel once a project is picked", async () => {
+  it('needs a project before a project Channel can go on, then offers its Agents', async () => {
     renderDialog(() => openCreateChannel());
+    fireEvent.click(screen.getByRole('button', { name: 'kind project' }));
+    expect(screen.getByRole('button', { name: 'create.next' })).toBeDisabled();
+
     fireEvent.click(screen.getByRole('button', { name: 'pick project' }));
-
-    // The picker then offers that project's Agents first.
     expect(mocks.optionsProjectIds.at(-1)).toBe('prj_2');
-    fireEvent.click(screen.getByRole('button', { name: 'submit' }));
-    await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
-    expect(mocks.create.mock.calls[0][0]).toMatchObject({ projectId: 'prj_2' });
+    next();
+    expect(await submit()).toMatchObject({ projectId: 'prj_2' });
   });
 
   it("starts as the project's own from a project sidebar, and can turn general", async () => {
     renderDialog(() => openCreateChannel(undefined, 'prj_1'));
-    expect(screen.getByTestId('scope')).toHaveAttribute('data-value', 'prj_1');
+    expect(screen.getByTestId('scope')).toHaveAttribute('data-kind', 'project');
+    expect(screen.getByTestId('scope')).toHaveAttribute('data-project', 'prj_1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'pick general' }));
-    fireEvent.click(screen.getByRole('button', { name: 'submit' }));
-    await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
-    expect(mocks.create.mock.calls[0][0]).toMatchObject({ projectId: undefined });
+    fireEvent.click(screen.getByRole('button', { name: 'kind general' }));
+    next();
+    expect(await submit()).toMatchObject({ projectId: undefined });
   });
 
-  it('asks nothing about scope when inviting into an existing Channel', () => {
-    renderDialog(() =>
-      openInviteMembers({ agentIds: [], id: 'chn_1', workspaceId: null } as never),
-    );
+  it('keeps what was entered when going back from the member step', () => {
+    renderDialog(() => openCreateChannel());
+    fireEvent.click(screen.getByRole('button', { name: 'pick project' }));
+    fireEvent.click(screen.getByRole('button', { name: 'kind project' }));
+    next();
+    fireEvent.click(screen.getByRole('button', { name: 'create.back' }));
+    expect(screen.getByTestId('scope')).toHaveAttribute('data-kind', 'project');
+    expect(screen.getByTestId('scope')).toHaveAttribute('data-project', 'prj_2');
+  });
+
+  it('opens a new workspace Channel to the workspace unless it is made private', async () => {
+    mocks.workspaceId = 'ws_1';
+    renderDialog(() => openCreateChannel());
+    expect(screen.getByRole('checkbox', { name: 'private' })).not.toBeChecked();
+    next();
+    await submit();
+    await waitFor(() => expect(mocks.updateVisibility).toHaveBeenCalledWith('chn_new', 'public'));
+  });
+
+  it('leaves a private workspace Channel invite-only', async () => {
+    mocks.workspaceId = 'ws_1';
+    renderDialog(() => openCreateChannel());
+    fireEvent.click(screen.getByRole('checkbox', { name: 'private' }));
+    next();
+    await submit();
+    expect(mocks.updateVisibility).not.toHaveBeenCalled();
+  });
+
+  it('asks nothing about privacy outside a workspace', () => {
+    renderDialog(() => openCreateChannel());
+    expect(screen.queryByRole('checkbox', { name: 'private' })).toBeNull();
+  });
+
+  it('goes straight to members when inviting into an existing Channel', () => {
+    renderDialog(() => openInviteMembers({ agentIds: [], id: 'chn_1', workspaceId: null }));
     expect(screen.queryByTestId('scope')).not.toBeInTheDocument();
+    expect(screen.getByTestId('members')).toBeInTheDocument();
   });
 });

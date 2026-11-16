@@ -1,13 +1,23 @@
 import { agentDisplayName, CHANNEL_LIMITS } from '@lobechat/types';
-import { Button, createModal, Flexbox, Icon, Input, Text, useModalContext } from '@lobehub/ui';
+import {
+  Button,
+  createModal,
+  Flexbox,
+  Icon,
+  Input,
+  Switch,
+  Text,
+  toast,
+  useModalContext,
+} from '@lobehub/ui';
 import { t } from 'i18next';
-import { Hash } from 'lucide-react';
+import { Hash, Lock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
-import type { ChannelPersonOption } from '@/services/channel';
+import { type ChannelPersonOption, channelService } from '@/services/channel';
 import { channelActions } from '@/store/channel';
 
 import type { ChannelAgentDraft } from './agentEnvironment';
@@ -16,7 +26,7 @@ import { defaultChannelTitle } from './channelTitle';
 import { MemberSelection } from './MemberSelection';
 import { usePersonName } from './PeopleOptions';
 import { getChannelSaveErrorKey } from './saveError';
-import { ScopeField } from './ScopeField';
+import { type ChannelKind, ScopeField, useChannelKindsEnabled } from './ScopeField';
 import { useChannelAgentOptions } from './useChannelAgentOptions';
 
 interface ExistingChannel {
@@ -56,9 +66,10 @@ export const openInviteMembers = (existing: ExistingChannel, onCreated?: (id: st
   openMemberDialog({ existing, onCreated });
 
 /**
- * Like starting a group chat: choose members first. The name is optional and defaults to the
- * members' names; the sidebar renames it later. Inviting into an existing Channel uses the
- * same picker without a name. Workspace Channels, new or existing, also list workspace members.
+ * Creating asks what the Channel is first, like Discord: its kind (general or a project's), its
+ * name and whether it is private; members come in a second step. The name is optional and
+ * defaults to the members' names. Inviting into an existing Channel is only the member step.
+ * Workspace Channels, new or existing, also list workspace members.
  */
 function CreateChannel({ existing, onCreated, projectId }: CreateChannelProps) {
   const { t } = useTranslation('channel');
@@ -70,7 +81,15 @@ function CreateChannel({ existing, onCreated, projectId }: CreateChannelProps) {
   const [error, setError] = useState<unknown>();
   // A new Channel is general or a project's; the project, if any, is changeable until created.
   const [scopeProjectId, setScopeProjectId] = useState<string | null>(projectId ?? null);
-  const options = useChannelAgentOptions(existing ? undefined : (scopeProjectId ?? undefined));
+  const kindsEnabled = useChannelKindsEnabled();
+  const [kind, setKind] = useState<ChannelKind>(projectId ? 'project' : 'general');
+  const [step, setStep] = useState<'basics' | 'members'>(existing ? 'members' : 'basics');
+  // Like Discord, a new workspace Channel is open to the workspace unless made private.
+  const [isPrivate, setIsPrivate] = useState(false);
+  const projectChannel = kindsEnabled && kind === 'project';
+  const options = useChannelAgentOptions(
+    existing || !projectChannel ? undefined : (scopeProjectId ?? undefined),
+  );
   const direct = existing?.directAgentName !== undefined;
   const nameOf = usePersonName();
   const activeWorkspaceId = useActiveWorkspaceId();
@@ -130,10 +149,17 @@ function CreateChannel({ existing, onCreated, projectId }: CreateChannelProps) {
       } else {
         const id = await channelActions.create({
           agents: selections,
-          projectId: scopeProjectId ?? undefined,
+          projectId: projectChannel ? (scopeProjectId ?? undefined) : undefined,
           title: title.trim() || autoTitle,
           userIds: people.map((person) => person.userId),
         });
+        // Channels are created private; opening one to the workspace is a second write.
+        if (activeWorkspaceId && !isPrivate) {
+          await channelService.updateVisibility(id, 'public').catch((cause: unknown) => {
+            console.error('Failed to make the new Channel public', cause);
+            toast.warning(t('create.publicFailed'));
+          });
+        }
         close();
         onCreated?.(id);
       }
@@ -145,6 +171,65 @@ function CreateChannel({ existing, onCreated, projectId }: CreateChannelProps) {
     }
   };
 
+  if (step === 'basics')
+    return (
+      <Flexbox gap={20}>
+        {kindsEnabled && (
+          <ScopeField
+            kind={kind}
+            projectId={scopeProjectId}
+            onKindChange={setKind}
+            onProjectChange={(id) => {
+              setScopeProjectId(id);
+              // "No project" in the picker is the general kind.
+              if (!id) setKind('general');
+            }}
+          />
+        )}
+        <Flexbox gap={6}>
+          <label htmlFor="channel-title" style={{ fontWeight: 500 }}>
+            {t('nameOptional')}
+          </label>
+          <Input
+            autoFocus
+            id="channel-title"
+            maxLength={CHANNEL_LIMITS.titleLength}
+            placeholder={t('create.namePlaceholder')}
+            prefix={<Icon icon={Hash} size={14} />}
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            onPressEnter={() =>
+              projectChannel && !scopeProjectId ? undefined : setStep('members')
+            }
+          />
+        </Flexbox>
+        {activeWorkspaceId && (
+          <Flexbox horizontal align={'center'} gap={16} justify={'space-between'}>
+            <Flexbox gap={2}>
+              <Flexbox horizontal align={'center'} gap={6}>
+                <Icon icon={Lock} size={14} />
+                <Text weight={500}>{t('create.private')}</Text>
+              </Flexbox>
+              <Text fontSize={12} type={'secondary'}>
+                {t('create.privateHint')}
+              </Text>
+            </Flexbox>
+            <Switch checked={isPrivate} onChange={setIsPrivate} />
+          </Flexbox>
+        )}
+        <Flexbox horizontal align="center" gap={8} justify="flex-end">
+          <Button onClick={close}>{t('cancel')}</Button>
+          <Button
+            disabled={projectChannel && !scopeProjectId}
+            type="primary"
+            onClick={() => setStep('members')}
+          >
+            {t('create.next')}
+          </Button>
+        </Flexbox>
+      </Flexbox>
+    );
+
   return (
     <Flexbox gap={16}>
       {direct && (
@@ -152,7 +237,6 @@ function CreateChannel({ existing, onCreated, projectId }: CreateChannelProps) {
           {t('invite.directHint', { name: existing?.directAgentName || t('unnamedAgent') })}
         </Text>
       )}
-      {!existing && <ScopeField inert={busy} value={scopeProjectId} onChange={setScopeProjectId} />}
       <Flexbox gap={8} inert={busy}>
         <MemberSelection
           emptyHint={existing ? undefined : t('create.onlyYou')}
@@ -167,7 +251,7 @@ function CreateChannel({ existing, onCreated, projectId }: CreateChannelProps) {
           onChange={setAgents}
         />
       </Flexbox>
-      {(!existing || direct) && (
+      {direct && (
         <Flexbox gap={6} inert={busy}>
           <label htmlFor="channel-title" style={{ fontWeight: 500 }}>
             {t('nameOptional')}
@@ -192,9 +276,15 @@ function CreateChannel({ existing, onCreated, projectId }: CreateChannelProps) {
             {t('environment.resolveRequired')}
           </Text>
         )}
-        <Button disabled={busy} onClick={close}>
-          {t('cancel')}
-        </Button>
+        {existing ? (
+          <Button disabled={busy} onClick={close}>
+            {t('cancel')}
+          </Button>
+        ) : (
+          <Button disabled={busy} onClick={() => setStep('basics')}>
+            {t('create.back')}
+          </Button>
+        )}
         <Button disabled={!canSubmit} loading={busy} type="primary" onClick={() => void submit()}>
           {t(existing && !direct ? 'invite.submit' : 'submit')}
         </Button>
