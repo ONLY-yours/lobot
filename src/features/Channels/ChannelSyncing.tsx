@@ -1,7 +1,6 @@
-import { Icon } from '@lobehub/ui';
+import { Spin } from '@lobehub/ui';
 import { cssVar } from '@lobehub/ui/stylex/cssVar.stylex';
 import * as stylex from '@stylexjs/stylex';
-import { Loader2Icon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -38,9 +37,9 @@ export function ChannelSyncing({ failed, params }: { failed: boolean; params: Ch
   if (!unconfirmed || !visible) return null;
 
   return (
-    <span role="status" {...stylex.props(styles.syncing)}>
-      <Icon spin icon={Loader2Icon} size={12} />
+    <div aria-live="polite" role="status" {...stylex.props(styles.syncing)}>
+      <Spin size={12} variant="network" />
       {t('syncing')}
-    </span>
+    </div>
   );
 }

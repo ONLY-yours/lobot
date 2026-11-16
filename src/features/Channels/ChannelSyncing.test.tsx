@@ -37,13 +37,13 @@ describe('ChannelSyncing', () => {
   it('shows while a stored copy waits for the server, then clears once it answers', () => {
     showing('storage');
     render(<ChannelSyncing failed={false} params={params} />);
-    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByText('syncing')).toBeNull();
 
     act(() => vi.advanceTimersByTime(200));
-    expect(screen.getByRole('status').textContent).toBe('syncing');
+    expect(screen.getByText('syncing')).toBeTruthy();
 
     showing('server');
-    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByText('syncing')).toBeNull();
   });
 
   it('leaves a failed read to its own error', () => {
@@ -51,6 +51,6 @@ describe('ChannelSyncing', () => {
     render(<ChannelSyncing failed params={params} />);
     act(() => vi.advanceTimersByTime(200));
 
-    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByText('syncing')).toBeNull();
   });
 });
