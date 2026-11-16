@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   openCreate: vi.fn(),
   navigate: vi.fn(),
   order: undefined as string[] | undefined,
+  pathname: '/',
   updatePreference: vi.fn(async (_patch: unknown) => {}),
   switchToPersonal: vi.fn(async () => {}),
   switchWorkspace: vi.fn(async (_id: string) => {}),
@@ -46,6 +47,12 @@ vi.mock('@/business/client/hooks/useWorkspaces', () => ({ useWorkspaces: () => m
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
   useActiveWorkspaceId: () => mocks.activeId,
 }));
+vi.mock('@/business/client/hooks/useActiveWorkspaceSlug', () => ({
+  useActiveWorkspaceSlug: () => null,
+}));
+vi.mock('@/hooks/useActiveLocation', () => ({
+  useActiveLocation: () => ({ pathname: mocks.pathname }),
+}));
 vi.mock('@/business/client/hooks/useSwitchWorkspace', () => ({
   useSwitchWorkspace: () => ({
     switchToPersonal: mocks.switchToPersonal,
@@ -72,6 +79,7 @@ describe('WorkspaceRail', () => {
     mocks.available = true;
     mocks.loading = false;
     mocks.order = undefined;
+    mocks.pathname = '/';
     mocks.unread = {};
     mocks.workspaces = [
       { avatar: null, id: 'ws-1', name: 'LobeHub', slug: 'lobehub' },
@@ -164,6 +172,18 @@ describe('WorkspaceRail', () => {
 
     expect(mocks.switchWorkspace).toHaveBeenCalledWith('ws-2');
     expect(mocks.navigate).toHaveBeenCalledWith('/', { escape: true });
+  });
+
+  it('stays on Contacts when switching from the Contacts tab', async () => {
+    mocks.pathname = '/agents/agt-1';
+    render(<WorkspaceRail />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Acme' }));
+    });
+
+    expect(mocks.switchWorkspace).toHaveBeenCalledWith('ws-2');
+    expect(mocks.navigate).toHaveBeenCalledWith('/agents', { escape: true });
   });
 
   it('switches back to the personal space', async () => {

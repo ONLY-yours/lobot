@@ -26,12 +26,16 @@ import { useTranslation } from 'react-i18next';
 
 import type { WorkspaceListItem } from '@/business/client/hooks/useActiveWorkspace';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { useSwitchWorkspace } from '@/business/client/hooks/useSwitchWorkspace';
 import { useWorkspaceStore } from '@/business/client/workspace/store';
 import Avatar from '@/components/Avatar';
 import WorkspaceAvatar from '@/components/WorkspaceAvatar';
+import { CONTACTS_URL } from '@/features/ContactList/const';
 import { suppressNextClick } from '@/features/HomeSidebar/Body/sortableRow';
+import { resolveRailTab } from '@/features/NavRail/railTab';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import { useActiveLocation } from '@/hooks/useActiveLocation';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
@@ -136,7 +140,7 @@ SortableWorkspaceItem.displayName = 'SortableWorkspaceItem';
 /**
  * Discord-style scope switcher: the personal space on top, then one avatar per
  * workspace in the user's own order (drag to rearrange), and a button to create one. Picking a scope sends every request to
- * it and lands on the Messages home. Hidden where the server has no workspaces
+ * it and lands on the same tab's root (Contacts or Messages). Hidden where the server has no workspaces
  * (self-hosted).
  */
 const WorkspaceRail = memo(() => {
@@ -155,9 +159,17 @@ const WorkspaceRail = memo(() => {
   const userName = useUserStore(userProfileSelectors.displayUserName);
   const personalUnread = useScopeUnread(null, activeId === null);
 
+  const { pathname } = useActiveLocation();
+  const activeWorkspaceSlug = useActiveWorkspaceSlug();
+  const stayOnContacts = resolveRailTab(pathname, activeWorkspaceSlug) === 'contacts';
+
   // Lobot has no workspace routes: switching changes the request scope, then lands on the
-  // Messages home, since the open conversation belongs to the scope just left.
-  const openHome = useCallback(() => navigate('/', { escape: true }), [navigate]);
+  // current tab's root — the Contacts list, or the Messages home — since the open
+  // conversation or contact belongs to the scope just left.
+  const openHome = useCallback(
+    () => navigate(stayOnContacts ? CONTACTS_URL : '/', { escape: true }),
+    [navigate, stayOnContacts],
+  );
   const openCreate = useOpenCreateWorkspace(openHome);
 
   const openPersonal = useCallback(async () => {
