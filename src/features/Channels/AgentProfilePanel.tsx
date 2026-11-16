@@ -6,13 +6,13 @@ import * as stylex from '@stylexjs/stylex';
 import { SquareArrowOutUpRightIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 
 import { MemberAvatar } from './MemberAvatar';
 import { memberName } from './memberName';
 import { ChannelSidePanel } from './MemberPanel';
+import { useOpenDirectAgent } from './useOpenDirectAgent';
 
 const styles = stylex.create({
   description: {
@@ -57,18 +57,20 @@ const styles = stylex.create({
 export function AgentProfilePanel({
   agentId,
   availableWidth,
+  channelId,
   id,
   member,
   onClose,
 }: {
   agentId: string;
   availableWidth?: number;
+  channelId: string;
   id: string;
   member: ChannelPublicMember;
   onClose: () => void;
 }) {
   const { t } = useTranslation('channel');
-  const navigate = useWorkspaceAwareNavigate();
+  const openAgent = useOpenDirectAgent(channelId, agentId);
   const useHydrateAgentConfig = useAgentStore((s) => s.useHydrateAgentConfig);
   // A Channel has no active Agent, so nothing else loads this one's config.
   useHydrateAgentConfig(true, agentId);
@@ -87,13 +89,15 @@ export function AgentProfilePanel({
       label={t('profile.title')}
       title={t('profile.title')}
       actions={
-        <ActionIcon
-          aria-label={t('profile.view')}
-          icon={SquareArrowOutUpRightIcon}
-          size="small"
-          title={t('profile.view')}
-          onClick={() => navigate(`/agent/${agentId}/profile`)}
-        />
+        openAgent && (
+          <ActionIcon
+            aria-label={t('profile.view')}
+            icon={SquareArrowOutUpRightIcon}
+            size="small"
+            title={t('profile.view')}
+            onClick={() => openAgent('/profile')}
+          />
+        )
       }
       onClose={onClose}
     >

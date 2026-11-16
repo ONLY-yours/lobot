@@ -209,6 +209,7 @@ function EnabledChannelPage() {
               <AgentProfilePanel
                 agentId={directAgent.agentId}
                 availableWidth={conversationWidth}
+                channelId={detail.channel.id}
                 id={memberPanelId}
                 key={directAgent.agentId}
                 member={directAgent}

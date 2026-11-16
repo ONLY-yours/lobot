@@ -7,8 +7,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { MemberStatus } from './MemberStatus';
 
-const { navigate, openEnvironment } = vi.hoisted(() => ({
+const { navigate, openAgent, openEnvironment } = vi.hoisted(() => ({
   navigate: vi.fn(),
+  openAgent: { current: vi.fn() as ((path?: string) => void) | undefined },
   openEnvironment: vi.fn(),
 }));
 
@@ -42,6 +43,7 @@ vi.mock('./MemberList', () => ({
   useMemberEntries: ({ members }: { members: any[] }) =>
     members.map((member) => ({ member, name: member.name })),
 }));
+vi.mock('./useOpenDirectAgent', () => ({ useOpenDirectAgent: () => openAgent.current }));
 vi.mock('./useChannelMenu', () => ({
   useChannelMenu: () => () => [
     { key: 'rename' },
@@ -77,6 +79,23 @@ describe('MemberStatus in a direct conversation', () => {
     expect(menuKeys()).toEqual(['openAgent', 'environment', 'copyId']);
     fireEvent.click(screen.getByText('environment'));
     expect(openEnvironment).toHaveBeenCalledWith('chn_cook', expect.objectContaining(cook));
+  });
+
+  it('opens the Agent through its opener', () => {
+    render(createElement(MemberStatus, { detail: detail() }));
+
+    fireEvent.click(screen.getByText('openAgent'));
+    expect(openAgent.current).toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('offers no Open Agent when the Agent cannot be opened', () => {
+    const opener = openAgent.current;
+    openAgent.current = undefined;
+    render(createElement(MemberStatus, { detail: detail() }));
+    openAgent.current = opener;
+
+    expect(menuKeys()).toEqual(['environment', 'copyId']);
   });
 
   it('offers no environment setup once the conversation is archived', () => {

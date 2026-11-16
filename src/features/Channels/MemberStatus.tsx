@@ -25,6 +25,7 @@ import { FailureIndicator } from './FailureIndicator';
 import { MemberList, StatusAvatar, useMemberEntries } from './MemberList';
 import { statusStyles, styles } from './styles';
 import { useChannelMenu } from './useChannelMenu';
+import { useOpenDirectAgent } from './useOpenDirectAgent';
 
 /** Header avatars before the rest fold into a count; the list shows everyone. */
 const MAX_VISIBLE = 5;
@@ -55,6 +56,7 @@ export function MemberStatus({
   const directAgent = channel.agentId
     ? entries.find((entry) => entry.member.agentId === channel.agentId)
     : undefined;
+  const openAgent = useOpenDirectAgent(channel.id, channel.agentId ?? '');
   const channelMenu = useChannelMenu();
   const overflow = entries.length - MAX_VISIBLE;
   const title = t('membersCount', { count: entries.length });
@@ -64,12 +66,16 @@ export function MemberStatus({
   const directMenu = () => [
     ...(directAgent
       ? [
-          {
-            icon: Bot,
-            key: 'openAgent',
-            label: t('openAgentNamed', { name: directAgent.name }),
-            onClick: () => navigate(`/agent/${channel.agentId}`),
-          },
+          ...(openAgent
+            ? [
+                {
+                  icon: Bot,
+                  key: 'openAgent',
+                  label: t('openAgentNamed', { name: directAgent.name }),
+                  onClick: () => openAgent(),
+                },
+              ]
+            : []),
           // The member list is hidden here, so its device and directory setup lives in this menu.
           ...(directAgent.member.status === 'active' &&
           channel.canDelete &&
