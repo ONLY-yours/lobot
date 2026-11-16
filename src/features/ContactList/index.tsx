@@ -17,7 +17,7 @@ import {
 } from '@lobehub/ui';
 import * as stylex from '@stylexjs/stylex';
 import isEqual from 'fast-deep-equal';
-import { ArrowDownUpIcon, Pin, PinOff, UserRoundPlusIcon, UserRoundSearchIcon } from 'lucide-react';
+import { ArrowDownUpIcon, Pin, PinOff, UserRoundPlusIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -26,8 +26,6 @@ import AsyncError from '@/components/AsyncError';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { openAddContactModal } from '@/features/AddContactModal';
 import { useChannelsEnabled } from '@/features/Channels/useChannelsEnabled';
-import { AgentModalProvider } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
-import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import { AVATAR_SIZE, ConversationRow, ListHeader } from '@/features/MessageList';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { NavPanelPortal } from '@/features/NavPanel/NavPanelPortal';
@@ -273,38 +271,21 @@ export { Body as ContactListBody };
 
 const Header = memo(() => {
   const { t } = useTranslation('common');
-  const { createTopLevelMenuItems, isLoading } = useCreateMenuItems();
+  // Creating agents and groups lives in the home sidebar; here the header only finds new contacts.
   const channelsEnabled = useChannelsEnabled();
-  const createItems = useMemo(
-    () => [
-      ...(channelsEnabled
-        ? [
-            {
-              icon: <Icon icon={UserRoundSearchIcon} />,
-              key: 'addContact',
-              label: t('contacts.add'),
-              onClick: () => openAddContactModal(),
-            },
-            { type: 'divider' as const },
-          ]
-        : []),
-      ...createTopLevelMenuItems(),
-    ],
-    [channelsEnabled, createTopLevelMenuItems, t],
-  );
 
   return (
     <ListHeader
       title={t('tab.contacts')}
       actions={
-        <DropdownMenu items={createItems}>
+        channelsEnabled && (
           <ActionIcon
             icon={UserRoundPlusIcon}
-            loading={isLoading}
             size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-            title={t('contacts.create')}
+            title={t('contacts.add')}
+            onClick={() => openAddContactModal()}
           />
-        </DropdownMenu>
+        )
       }
     />
   );
@@ -319,9 +300,7 @@ Header.displayName = 'ContactListHeader';
  */
 const ContactListPortal = () => (
   <NavPanelPortal navKey={NAV_PANEL_CONTACTS_KEY}>
-    <AgentModalProvider>
-      <SideBarLayout body={<Body />} header={<Header />} />
-    </AgentModalProvider>
+    <SideBarLayout body={<Body />} header={<Header />} />
   </NavPanelPortal>
 );
 

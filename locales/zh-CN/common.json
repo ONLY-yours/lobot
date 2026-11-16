@@ -194,7 +194,6 @@
   "contacts.agent.byOwner": "{{name}} 分享",
   "contacts.agent.remove": "从通讯录移除",
   "contacts.agent.unavailable": "主人已停止分享这个 Agent",
-  "contacts.create": "新建助理",
   "contacts.editProfile": "编辑档案",
   "contacts.empty": "暂无",
   "contacts.groups": "群组",

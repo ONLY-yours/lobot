@@ -432,7 +432,6 @@ export default {
   'addNew': 'Add new',
   'gotIt': 'Got it',
   'more': 'More',
-  'contacts.create': 'New agent',
   'contacts.editProfile': 'Edit profile',
   'contacts.empty': 'None yet',
   'contacts.groups': 'Groups',

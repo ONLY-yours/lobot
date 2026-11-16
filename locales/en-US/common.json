@@ -194,7 +194,6 @@
   "contacts.agent.byOwner": "Shared by {{name}}",
   "contacts.agent.remove": "Remove from contacts",
   "contacts.agent.unavailable": "The owner stopped sharing this Agent",
-  "contacts.create": "New agent",
   "contacts.editProfile": "Edit profile",
   "contacts.empty": "None yet",
   "contacts.groups": "Groups",
