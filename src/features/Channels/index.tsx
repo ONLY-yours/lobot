@@ -33,6 +33,7 @@ import { type ReplyTopic, ReplyTopicPanel } from './ReplyTopicPanel';
 import { styles } from './styles';
 import { ThreadPageActions, ThreadPageTitle } from './ThreadPageTitle';
 import { THREAD_FLOAT_BREAKPOINT, ThreadPanel } from './ThreadPanel';
+import { ThreadsButton } from './ThreadSwitcher';
 import { channelBrowserSessionId, usePortalPanelOpen } from './usePortalPanel';
 import { useThreadPanel } from './useThreadPanel';
 
@@ -96,7 +97,12 @@ function EnabledChannelPage() {
         {...stylex.props(styles.threadHeader)}
         left={
           pageThreadId && detail ? (
-            <ThreadPageTitle detail={detail} threadId={pageThreadId} onBack={panel.close} />
+            <ThreadPageTitle
+              detail={detail}
+              threadId={pageThreadId}
+              onBack={panel.close}
+              onSwitch={panel.openPage}
+            />
           ) : (
             <Flexbox horizontal align="center" gap={8}>
               {/* A direct conversation is titled by its Agent's name alone, like an IM chat. */}
@@ -116,6 +122,18 @@ function EnabledChannelPage() {
           detail && (
             <Flexbox horizontal align="center" gap={8}>
               {pageThreadId && <ThreadPageActions detail={detail} threadId={pageThreadId} />}
+              <ThreadsButton
+                activeId={pageThreadId ?? threadId}
+                detail={detail}
+                onOpen={(nextThreadId) => {
+                  // A thread page switches in place; the feed opens the thread beside it.
+                  if (pageThreadId) return panel.openPage(nextThreadId);
+                  setTopic(null);
+                  clearPortalStack();
+                  // Under a report the thread only looks closed, so bring it back, don't toggle it off.
+                  panel.openThread(nextThreadId, !portalOpen);
+                }}
+              />
               <MemberStatus
                 detail={detail}
                 memberPanel={

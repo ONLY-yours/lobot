@@ -1,24 +1,30 @@
 import type { ChannelDetail } from '@lobechat/types';
 import { ActionIcon, cssVar, DropdownMenu, Flexbox, Icon, Text } from '@lobehub/ui';
 import * as stylex from '@stylexjs/stylex';
-import { ChevronRight, GitBranch, Hash, MoreHorizontal } from 'lucide-react';
+import { ChevronDown, ChevronRight, Hash, MessagesCircle, MoreHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { channelSelectors, useChannelStore } from '@/store/channel';
 
 import { styles } from './styles';
 import { ThreadFollowers } from './ThreadPanel';
+import { ThreadSwitchMenu } from './ThreadSwitcher';
 import { threadTitle } from './threadTitle';
 import { useThreadMenu } from './useThreadMenu';
 
-/** The header of a thread opened as the page: `# Channel › thread`, the Channel leading back. */
+/**
+ * The header of a thread opened as the page: `# Channel › thread`, the Channel leading back and
+ * the thread switching to another thread of the Channel.
+ */
 export const ThreadPageTitle = ({
   detail,
   onBack,
+  onSwitch,
   threadId,
 }: {
   detail: ChannelDetail;
   onBack: () => void;
+  onSwitch: (threadId: string) => void;
   threadId: string;
 }) => {
   const { t } = useTranslation('channel');
@@ -42,10 +48,15 @@ export const ThreadPageTitle = ({
         </Text>
       </button>
       <Icon color={cssVar.colorTextDescription} icon={ChevronRight} size={14} />
-      <Icon icon={GitBranch} size={16} />
-      <Text ellipsis title={title} weight={500}>
-        {title}
-      </Text>
+      <ThreadSwitchMenu detail={detail} threadId={threadId} onOpen={onSwitch}>
+        <button type="button" {...stylex.props(styles.crumb, styles.threadCrumb)}>
+          <Icon icon={MessagesCircle} size={16} />
+          <Text ellipsis title={title} weight={500}>
+            {title}
+          </Text>
+          <Icon color={cssVar.colorTextDescription} icon={ChevronDown} size={14} />
+        </button>
+      </ThreadSwitchMenu>
     </Flexbox>
   );
 };

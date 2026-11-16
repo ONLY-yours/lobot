@@ -134,6 +134,7 @@ export default {
   'threadCard.messages_other': '{{count}} messages',
   'closeThread': 'Close thread',
   'thread': 'Thread',
+  'threadList': 'Threads',
   'threadDivider': 'Replies in this thread',
   'followers': 'Replies from: {{names}}',
   'olderMessages': 'Older messages',

@@ -62,6 +62,12 @@ export const styles = stylex.create({
     },
     cursor: 'pointer',
   },
+  // The open thread's title takes the room the Channel crumb leaves, and gives way first.
+  threadCrumb: {
+    flexShrink: 1,
+    gap: 6,
+    maxWidth: 'none',
+  },
   threadHeader: {
     borderBlockEndWidth: 1,
     borderBlockEndStyle: 'solid',
