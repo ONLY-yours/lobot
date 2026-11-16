@@ -119,6 +119,27 @@ class ChannelActionImpl {
     if (channelId) await this.#refreshAfterWrite(this.refreshList);
     return channelId ?? undefined;
   };
+  /**
+   * The direct conversation with another person's Agent, from its share; no contact entry or
+   * friendship is needed. Reuses a listed conversation with that Agent.
+   */
+  openShared = async (share: { agentId: string; shareId: string }) => {
+    const existing = channelSelectors.directByAgent(share.agentId)(useChannelStore.getState());
+    if (existing) return existing.id;
+    const channelId = await channelService.openShared(share.shareId);
+    if (channelId) await this.#refreshAfterWrite(this.refreshList);
+    return channelId ?? undefined;
+  };
+  /** The personal conversation with a contact; the server requires the mutual relation. */
+  openPeer = async (userId: string) => {
+    const existing = useChannelStore
+      .getState()
+      .listMap.all?.find((channel) => channel.peerUserId === userId);
+    if (existing) return existing.id;
+    const channelId = await channelService.openPeer(userId);
+    await this.#refreshAfterWrite(this.refreshList);
+    return channelId;
+  };
   remove = async (channelId: string) => {
     const scope = cacheScope.get();
     // Optimistically hide the row; failure restores it. Keep the open conversation
