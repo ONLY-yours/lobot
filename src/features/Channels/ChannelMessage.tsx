@@ -18,6 +18,7 @@ import {
   GitBranch,
   MessagesSquare,
   MoreHorizontal,
+  PencilLine,
   Reply,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -31,6 +32,7 @@ import { ChatItem } from '@/features/Conversation/ChatItem';
 import Markdown from '@/features/Conversation/Markdown';
 import EntityLinkElement from '@/features/EntityLink/element';
 import UserAvatar from '@/features/User/UserAvatar';
+import { channelActions } from '@/store/channel';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
@@ -38,6 +40,7 @@ import { authorAvatar, isCurrentUserAuthor, memberName } from './memberName';
 import { MemberProfilePopup } from './MemberProfilePopup';
 import { CHANNEL_MENTION_TAG, remarkChannelMentions } from './mentionMarkdown';
 import { MessageAttachments } from './MessageAttachments';
+import { MessageEditor } from './MessageEditor';
 import { channelMessageTime, channelTimeFormatters, foldsByDefault } from './messagePresentation';
 import { MessageFailureMark, MessageRoutingStatus } from './MessageReceipts';
 import { RelayLabel } from './RelayLabel';
@@ -173,7 +176,20 @@ export const ChannelMessage = ({
   const collapsible = historic || !detail.channel.agentId;
   const [collapsed, setCollapsed] = useState(historic);
   const [overflowing, setOverflowing] = useState(false);
+  const [editing, setEditing] = useState(false);
+  // Only a person's own sent message; one still sending has nothing on the server to edit yet.
+  const canEdit = isOwnMessage && message.author.type === 'user' && !pending && !delivery;
   const moreItems = [
+    ...(canEdit
+      ? [
+          {
+            icon: PencilLine,
+            key: 'edit',
+            label: t('message.edit'),
+            onClick: () => setEditing(true),
+          },
+        ]
+      : []),
     ...(agentAuthorId && sourceTopicId && onOpenTopic
       ? [
           {
@@ -215,7 +231,7 @@ export const ChannelMessage = ({
         ]
       : []),
   ];
-  const hasToolbar = !!onReply || canBranch || moreItems.length > 0;
+  const hasToolbar = !editing && (!!onReply || canBranch || moreItems.length > 0);
   const mentionedMembers = detail.members.filter((member) => message.mentions.includes(member.id));
   return (
     <div
@@ -317,7 +333,17 @@ export const ChannelMessage = ({
             {message.fileIds.length > 0 && (
               <MessageAttachments attachments={detail.attachments} fileIds={message.fileIds} />
             )}
-            {message.content &&
+            {editing ? (
+              <MessageEditor
+                allowEmpty={message.fileIds.length > 0}
+                content={message.content}
+                onCancel={() => setEditing(false)}
+                onSave={(content) =>
+                  channelActions.editMessage(detail.channel.id, message.id, content)
+                }
+              />
+            ) : (
+              message.content &&
               (collapsible ? (
                 <CollapsibleContent
                   hideCollapseToggle
@@ -334,7 +360,17 @@ export const ChannelMessage = ({
                 </CollapsibleContent>
               ) : (
                 <MessageText content={message.content} members={mentionedMembers} />
-              ))}
+              ))
+            )}
+            {message.editedAt && !editing && (
+              <time
+                dateTime={new Date(message.editedAt).toISOString()}
+                title={timeFormats.full.format(new Date(message.editedAt))}
+                {...stylex.props(styles.messageEdited)}
+              >
+                {t('message.edited')}
+              </time>
+            )}
             {!!message.works?.length && <ReplyWorks works={message.works} />}
             {thread && (
               <ThreadPreviewCard

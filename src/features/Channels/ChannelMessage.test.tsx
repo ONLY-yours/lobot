@@ -95,6 +95,8 @@ vi.mock('./MemberProfilePopup', () => ({
   MemberProfilePopup: ({ children, member }: { children: ReactNode; member?: { id: string } }) =>
     createElement('div', { 'data-member-id': member?.id, 'data-testid': 'member-popup' }, children),
 }));
+const editMessage = vi.hoisted(() => vi.fn());
+vi.mock('@/store/channel', () => ({ channelActions: { editMessage } }));
 vi.mock('./MessageAttachments', () => ({ MessageAttachments: () => null }));
 vi.mock('./MessageReceipts', () => ({
   MessageFailureMark: () => null,
@@ -507,5 +509,69 @@ describe('ChannelMessage relay', () => {
 
     expect(container.querySelector('[data-continuation]')).toBeNull();
     expect(screen.getByText('message.relayedBy')).toBeTruthy();
+  });
+});
+
+describe('ChannelMessage editing', () => {
+  const own = () => ({
+    ...message({ avatar: null, id: 'user-self', name: 'Me', type: 'user' }),
+    content: 'Helo',
+  });
+
+  it('offers editing only on the viewer’s own sent messages', () => {
+    const { unmount } = render(
+      <ChannelMessage
+        detail={detail}
+        message={{
+          ...message({ avatar: null, id: 'user-other', name: 'Ann', type: 'user' }),
+          content: 'Hi',
+        }}
+      />,
+    );
+    expect(screen.queryByText('message.edit')).toBeNull();
+    unmount();
+
+    render(<ChannelMessage pending detail={detail} message={own()} />);
+    expect(screen.queryByText('message.edit')).toBeNull();
+  });
+
+  it('saves the new text on Enter and closes the editor', async () => {
+    editMessage.mockResolvedValue(undefined);
+    render(<ChannelMessage detail={detail} message={own()} />);
+
+    fireEvent.click(screen.getByText('message.edit'));
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: ' Hello ' } });
+    await act(async () => {
+      fireEvent.keyDown(input, { key: 'Enter' });
+    });
+
+    expect(editMessage).toHaveBeenCalledWith('chn_1', 'msg_1', 'Hello');
+    expect(screen.queryByRole('textbox')).toBeNull();
+  });
+
+  it('leaves the message as it was on Escape', () => {
+    editMessage.mockClear();
+    render(<ChannelMessage detail={detail} message={own()} />);
+
+    fireEvent.click(screen.getByText('message.edit'));
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(editMessage).not.toHaveBeenCalled();
+  });
+
+  it('marks an edited message as edited', () => {
+    const { unmount } = render(<ChannelMessage detail={detail} message={own()} />);
+    expect(screen.queryByText('message.edited')).toBeNull();
+    unmount();
+
+    render(
+      <ChannelMessage
+        detail={detail}
+        message={{ ...own(), editedAt: new Date('2026-11-17T00:30:00Z') }}
+      />,
+    );
+    expect(screen.getByText('message.edited')).toBeTruthy();
   });
 });

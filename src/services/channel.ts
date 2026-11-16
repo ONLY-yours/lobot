@@ -44,6 +44,8 @@ class ChannelService {
   /** Replaces the Channel's whole reply strategy; `null` returns it to the defaults. */
   updateWakeConfig = (channelId: string, wake: ChannelWakeConfig | null) =>
     lambdaClient.channel.updateWakeConfig.mutate({ channelId, wake });
+  editMessage = (channelId: string, messageId: string, content: string) =>
+    lambdaClient.channel.editMessage.mutate({ channelId, content, messageId });
   /** Opens a workspace group Channel to the whole workspace, or makes it invite-only again. */
   updateVisibility = (channelId: string, visibility: 'private' | 'public') =>
     lambdaClient.channel.updateVisibility.mutate({ channelId, visibility });
@@ -85,6 +87,8 @@ class ChannelService {
     (await createWorkspaceLambdaClient(workspaceId).channel.list.query()).data;
   markRead = (channelId: string, sequence: number) =>
     lambdaClient.channel.markRead.mutate({ channelId, sequence });
+  setPinned = (channelId: string, pinned: boolean) =>
+    lambdaClient.channel.setPinned.mutate({ channelId, pinned });
   remove = (channelId: string) => lambdaClient.channel.remove.mutate({ channelId });
   removeThread = (channelId: string, threadId: string) =>
     lambdaClient.channel.removeThread.mutate({ channelId, threadId });

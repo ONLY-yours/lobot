@@ -1,4 +1,9 @@
-import type { ChannelPublicThread, ChannelStatus, ChannelThreadStatus } from '@lobechat/types';
+import type {
+  ChannelPublicMessage,
+  ChannelPublicThread,
+  ChannelStatus,
+  ChannelThreadStatus,
+} from '@lobechat/types';
 
 import { cacheScope } from '@/libs/replica';
 import { mutate, useClientDataSWR } from '@/libs/swr';
@@ -21,7 +26,7 @@ import {
 } from './outbox';
 import { channelOutboxStorage } from './outboxStorage';
 import { ChannelPrivateAction } from './privateAction';
-import { channelThreadEntityId } from './projection';
+import { channelMessageEntityId, channelThreadEntityId } from './projection';
 import { channelSelectors } from './selectors';
 import { initialState, useChannelStore } from './store';
 
@@ -107,6 +112,16 @@ class ChannelActionImpl {
         unreadCount: Math.min(channel.unreadCount ?? 0, Math.max(0, channel.sequence - sequence)),
       }),
       () => channelService.markRead(channelId, sequence),
+    );
+  /**
+   * Pins the conversation atop the caller's own list, or unpins it; the row moves before the
+   * server confirms. Re-pinning keeps the first pin time.
+   */
+  setPinned = (channelId: string, pinned: boolean) =>
+    this.#private.entity.optimistic(
+      channelId,
+      (channel) => ({ ...channel, pinnedAt: pinned ? (channel.pinnedAt ?? new Date()) : null }),
+      () => channelService.setPinned(channelId, pinned),
     );
   /**
    * The caller's direct Channel with an Agent, opening it for an Agent that predates direct
@@ -200,6 +215,20 @@ class ChannelActionImpl {
       throw error;
     }
     if (archived) await this.#refreshAfterWrite(() => this.refreshDetail({ channelId, threadId }));
+  };
+  /** The new text shows as edited right away and returns to the original if the server refuses. */
+  editMessage = async (channelId: string, messageId: string, content: string) => {
+    const tokens = this.#private.detail.beginEntityOptimistic<ChannelPublicMessage>(
+      channelMessageEntityId(channelId, messageId),
+      (message) => ({ ...message, content, editedAt: new Date() }),
+    );
+    try {
+      await channelService.editMessage(channelId, messageId, content);
+      for (const token of tokens) token.commit();
+    } catch (error) {
+      for (const token of tokens) token.rollback();
+      throw error;
+    }
   };
   /** Threads restored from the recycle bin; call before revalidating their views. */
   forgetThreadRemovals = (threadIds: string[]) => this.#private.forgetThreadRemovals(threadIds);

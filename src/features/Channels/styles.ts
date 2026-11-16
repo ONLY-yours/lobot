@@ -106,6 +106,13 @@ export const styles = stylex.create({
   continuationWithAction: {
     paddingInlineEnd: 88,
   },
+  /** "(edited)" under a message's text: a quiet note, like its time. */
+  messageEdited: {
+    alignSelf: 'flex-start',
+    marginBlockStart: -4,
+    fontSize: cssVar.fontSizeSM,
+    color: cssVar.colorTextTertiary,
+  },
   messageTime: {
     flexShrink: 0,
     fontSize: cssVar.fontSizeSM,
