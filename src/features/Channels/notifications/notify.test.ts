@@ -14,6 +14,7 @@ vi.mock('@/services/channel', () => ({ channelService: {} }));
 vi.mock('@/services/electron/completionSound', () => ({ completionSoundService: {} }));
 vi.mock('@/services/electron/desktopNotification', () => ({ desktopNotificationService: {} }));
 vi.mock('@/store/user', () => ({ getUserStoreState: () => ({}) }));
+vi.mock('@/store/project', () => ({ projectListItemSelector: vi.fn(), useProjectStore: {} }));
 vi.mock('@/store/chat/utils/desktopNotification', () => ({
   buildNotificationBody: (content: string | undefined, fallback: string) => content || fallback,
   buildNotificationSender: vi.fn(),
@@ -44,9 +45,29 @@ const message = (name: string | null, content = 'ship it') =>
   >;
 
 describe('buildChannelBanner', () => {
-  it('shows "sender: message" under a group Channel title', () => {
+  it('titles a group message "sender (Channel)" on one line and shows only the message', () => {
     expect(buildChannelBanner({ channel: channel(), kind: 'message' }, message('Ann'))).toEqual({
-      body: 'Ann: ship it',
+      body: 'ship it',
+      title: 'notification.groupTitle(channel=Marketing,name=Ann)',
+    });
+  });
+
+  it("adds a project Channel's project after the Channel", () => {
+    expect(
+      buildChannelBanner(
+        { channel: channel({ projectId: 'prj_1' }), kind: 'message' },
+        message('Ann'),
+        'Launch',
+      ),
+    ).toEqual({
+      body: 'ship it',
+      title: 'notification.groupTitleInProject(channel=Marketing,name=Ann,project=Launch)',
+    });
+  });
+
+  it('keeps the Channel title when no sender is known', () => {
+    expect(buildChannelBanner({ channel: channel(), kind: 'message' }, undefined)).toEqual({
+      body: 'preview',
       title: 'Marketing',
     });
   });
@@ -133,27 +154,25 @@ describe('buildDirectSender', () => {
 });
 
 describe('buildGroupSender', () => {
-  it('pictures the author and keeps the banner title as the group name', async () => {
+  it('pictures the author and names it by the one-line banner title, not as a group', async () => {
     expect(
       await buildGroupSender(
         channel(),
         { author: { avatar: 'https://cdn/ann.png', id: 'u2', name: 'Ann', type: 'user' } },
-        'Marketing',
+        'Ann (Marketing)',
       ),
     ).toEqual({
       avatarDataUrl: 'png:https://cdn/ann.png',
       conversationId: 'chn_1',
-      groupName: 'Marketing',
-      name: 'Ann',
+      name: 'Ann (Marketing)',
     });
   });
 
   it('names the author even without an avatar', async () => {
-    expect(await buildGroupSender(channel(), message('Ann'), 'Marketing')).toEqual({
+    expect(await buildGroupSender(channel(), message('Ann'), 'Ann (Marketing)')).toEqual({
       avatarDataUrl: undefined,
       conversationId: 'chn_1',
-      groupName: 'Marketing',
-      name: 'Ann',
+      name: 'Ann (Marketing)',
     });
   });
 

@@ -1,6 +1,8 @@
 export default {
   'message.relayReplyFrom': '{{name}} replied in #{{channel}}',
   'message.relayedBy': 'Relayed by {{name}}',
+  'notification.groupTitle': '{{name}} ({{channel}})',
+  'notification.groupTitleInProject': '{{name}} ({{channel}} · {{project}})',
   'notification.mentioned': 'You were mentioned in {{channel}}',
   'notification.mentionedBy': '{{name}} mentioned you in {{channel}}',
   'notification.newMessage': 'New message',

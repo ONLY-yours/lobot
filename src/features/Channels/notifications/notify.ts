@@ -11,6 +11,7 @@ import {
   buildNotificationSender,
 } from '@/store/chat/utils/desktopNotification';
 import { renderAvatarToDataUrl } from '@/store/chat/utils/notificationAvatar';
+import { projectListItemSelector, useProjectStore } from '@/store/project';
 import { getUserStoreState } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
@@ -32,12 +33,13 @@ interface ChannelBanner {
 /**
  * Banner wording, the way chat apps word it:
  * - a direct conversation is titled by its Agent and shows the message;
- * - a group shows "sender: message" under the Channel title;
+ * - a group is titled on one line "sender (Channel · project)" and shows the message;
  * - an @mention says who mentioned the user, and where.
  */
 export const buildChannelBanner = (
   { channel, kind }: ChannelActivityEvent,
   message: Pick<ChannelPublicMessage, 'author' | 'content'> | undefined,
+  projectName?: string,
 ): ChannelBanner => {
   const sender = message?.author.name || '';
   const text = buildNotificationBody(
@@ -54,9 +56,18 @@ export const buildChannelBanner = (
     };
 
   const direct = !!channel.agentId && !channel.projectId;
+  if (direct || !sender) return { body: text, title: channel.title };
+
   return {
-    body: direct || !sender ? text : `${sender}: ${text}`,
-    title: channel.title,
+    body: text,
+    title: projectName
+      ? t('notification.groupTitleInProject', {
+          channel: channel.title,
+          name: sender,
+          ns: 'channel',
+          project: projectName,
+        })
+      : t('notification.groupTitle', { channel: channel.title, name: sender, ns: 'channel' }),
   };
 };
 
@@ -92,13 +103,15 @@ export const buildDirectSender = async (
 };
 
 /**
- * Who a group Channel's banner comes from: the message author, with their avatar, while the
- * banner keeps its own title as the group name. Without the message there is no one to picture.
+ * Who a group Channel's banner comes from: the message author, with their avatar. The sender
+ * carries the banner's whole title, since macOS titles a communication banner by its sender; it is
+ * not marked as a group, which macOS would split onto a second title line. Without the message
+ * there is no one to picture.
  */
 export const buildGroupSender = async (
   channel: Pick<ChannelListItem, 'id'>,
   message: Pick<ChannelPublicMessage, 'author'> | undefined,
-  groupName: string,
+  title: string,
 ): Promise<DesktopNotificationSender | undefined> => {
   const author = message?.author;
   if (!author?.name) return undefined;
@@ -108,8 +121,7 @@ export const buildGroupSender = async (
       ? await renderAvatarToDataUrl(author.id ?? channel.id, { avatar: author.avatar })
       : undefined,
     conversationId: channel.id,
-    groupName,
-    name: author.name,
+    name: title,
   };
 };
 
@@ -127,7 +139,10 @@ export const notifyChannelActivity = async (event: ChannelActivityEvent): Promis
       latestIncoming(channel.id).catch(() => undefined),
       completionSoundService.getNotificationSoundFile(),
     ]);
-    const banner = buildChannelBanner(event, message);
+    const projectName = projectListItemSelector(channel.projectId)(
+      useProjectStore.getState(),
+    )?.name;
+    const banner = buildChannelBanner(event, message, projectName);
     // A direct conversation reads as a message from its Agent; a group one from its author.
     const sender =
       channel.agentId && !channel.projectId

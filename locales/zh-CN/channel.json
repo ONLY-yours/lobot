@@ -140,6 +140,8 @@
   "moveToTrashSuccess": "频道已移至回收站",
   "nameOptional": "频道名称（可选）",
   "noDevices": "还没有已连接的设备。连接设备后，再回来选择。",
+  "notification.groupTitle": "{{name}}（{{channel}}）",
+  "notification.groupTitleInProject": "{{name}}（{{channel}} · {{project}}）",
   "notification.mentioned": "有人在 {{channel}} 提到了你",
   "notification.mentionedBy": "{{name}} 在 {{channel}} 提到了你",
   "notification.newMessage": "新消息",

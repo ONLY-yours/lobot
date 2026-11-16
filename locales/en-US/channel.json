@@ -140,6 +140,8 @@
   "moveToTrashSuccess": "Channel moved to trash",
   "nameOptional": "Channel name (optional)",
   "noDevices": "No device is connected. Connect one, then choose it here.",
+  "notification.groupTitle": "{{name}} ({{channel}})",
+  "notification.groupTitleInProject": "{{name}} ({{channel}} · {{project}})",
   "notification.mentioned": "You were mentioned in {{channel}}",
   "notification.mentionedBy": "{{name}} mentioned you in {{channel}}",
   "notification.newMessage": "New message",
