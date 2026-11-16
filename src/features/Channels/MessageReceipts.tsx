@@ -1,17 +1,19 @@
+import { AGENT_CHAT_TOPIC_URL } from '@lobechat/const';
 import type {
   ChannelDetail,
   ChannelPublicJob,
   ChannelPublicMember,
   ChannelPublicMessage,
 } from '@lobechat/types';
-import { Button, Flexbox, Popover, Text, usePopoverContext } from '@lobehub/ui';
+import { ActionIcon, Button, Flexbox, Popover, Text, usePopoverContext } from '@lobehub/ui';
 import * as stylex from '@stylexjs/stylex';
-import { Square } from 'lucide-react';
+import { ExternalLink, Square } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AgentAvatar from '@/components/AgentAvatar';
 import AsyncError from '@/components/AsyncError';
+import { openInWebApp } from '@/features/Electron/navigation/webApp';
 import { channelActions } from '@/store/channel';
 
 import { BlockedDevice } from './BlockedDevice';
@@ -140,19 +142,34 @@ export function ReplyDetail({
         <span style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
           <ChannelStatus label={t(channelJobStatus(job))} tone={channelJobTone(job)} />
         </span>
-        {job.canStop && isChannelJobActive(job) && (
-          <Button
-            danger
-            icon={Square}
-            loading={stopping}
-            size="small"
-            style={{ flexShrink: 0, marginInlineStart: 'auto' }}
-            type="text"
-            onClick={() => void stop()}
-          >
-            {t('stopReply')}
-          </Button>
-        )}
+        <Flexbox horizontal align="center" gap={4} style={{ marginInlineStart: 'auto' }}>
+          {/* The member who runs the reply can watch it work in its topic on LobeHub. */}
+          {agentId && job.topicId && (
+            <ActionIcon
+              aria-label={t('receipt.openTopic')}
+              icon={ExternalLink}
+              size="small"
+              title={t('receipt.openTopic')}
+              onClick={() => {
+                close();
+                openInWebApp(AGENT_CHAT_TOPIC_URL(agentId, job.topicId!));
+              }}
+            />
+          )}
+          {job.canStop && isChannelJobActive(job) && (
+            <Button
+              danger
+              icon={Square}
+              loading={stopping}
+              size="small"
+              style={{ flexShrink: 0 }}
+              type="text"
+              onClick={() => void stop()}
+            >
+              {t('stopReply')}
+            </Button>
+          )}
+        </Flexbox>
       </Flexbox>
       {job.status === 'queued' && job.blockedCode === 'device_offline' && (
         <BlockedDevice

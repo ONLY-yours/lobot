@@ -158,6 +158,7 @@ export default {
   'routing.receiving': 'Agents receiving your message…',
   'routing.unassigned': 'No Agent picked this up. Mention one to get a reply.',
   'receipt.failedHint': 'Mention it again to retry.',
+  'receipt.openTopic': 'Open its topic on LobeHub',
   'receipt.retry': 'Retry',
   'receipt.worktree': 'Working in its own worktree · {{branch}}',
   'recipients.all': 'All {{count}} Agents will reply',

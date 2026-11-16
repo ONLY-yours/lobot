@@ -9,9 +9,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReplyDetail } from './MessageReceipts';
 
 const retryJob = vi.fn();
+const openInWebApp = vi.fn();
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('@lobehub/ui', () => ({
+  ActionIcon: ({ onClick, title }: { onClick?: () => void; title?: string }) =>
+    createElement('button', { onClick }, title),
   Button: ({ children, onClick }: { children?: unknown; onClick?: () => void }) =>
     createElement('button', { onClick }, children as never),
   Flexbox: ({ children }: { children?: unknown }) => createElement('div', {}, children as never),
@@ -23,6 +26,9 @@ vi.mock('@/components/AgentAvatar', () => ({ default: () => null }));
 vi.mock('@/components/AsyncError', () => ({ default: () => null }));
 vi.mock('@/store/channel', () => ({
   channelActions: { retryJob: (...args: unknown[]) => retryJob(...args) },
+}));
+vi.mock('@/features/Electron/navigation/webApp', () => ({
+  openInWebApp: (path: string) => openInWebApp(path),
 }));
 vi.mock('./ChannelStatus', () => ({ ChannelStatus: () => null }));
 vi.mock('./useOpenReplyAgent', () => ({ useOpenReplyAgent: () => () => {} }));
@@ -65,5 +71,33 @@ describe('ReplyDetail retry', () => {
   it('offers no retry while the failed run is still being released', () => {
     renderReply(failedJob({ writerHeld: true }));
     expect(screen.queryByText('receipt.retry')).toBeNull();
+  });
+});
+
+describe('ReplyDetail topic', () => {
+  const runningJob = (job: Partial<ChannelPublicJob> = {}) =>
+    failedJob({ errorType: null, status: 'running', ...job });
+  const renderAgentReply = (job: ChannelPublicJob) =>
+    render(
+      createElement(ReplyDetail, {
+        channelId: 'chn_1',
+        entry: { agentId: 'agt_justin', job, name: 'Justin' },
+      }),
+    );
+
+  beforeEach(() => openInWebApp.mockReset());
+
+  // A reply at work showed only its status; its runner can now watch it in its topic.
+  it('opens a running reply’s topic on LobeHub for the member who runs it', () => {
+    renderAgentReply(runningJob({ topicId: 'tpc_1' }));
+
+    fireEvent.click(screen.getByText('receipt.openTopic'));
+    expect(openInWebApp).toHaveBeenCalledWith('/agent/agt_justin/tpc_1');
+  });
+
+  it('offers no topic to members who do not own it', () => {
+    renderAgentReply(runningJob());
+
+    expect(screen.queryByText('receipt.openTopic')).toBeNull();
   });
 });
