@@ -116,6 +116,7 @@ export default {
   'actionFailed': 'Something went wrong. Try again.',
   'send': 'Send',
   'sendFailed': 'Message was not sent. Your draft is preserved; try again.',
+  'sharedAgent.tag': 'Shared',
   'outgoing.discard': 'Delete',
   'outgoing.failed': 'Not sent',
   'outgoing.retry': 'Retry',

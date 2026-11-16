@@ -7,6 +7,7 @@ import { cssVar } from '@lobehub/ui/stylex/cssVar.stylex';
 import * as stylex from '@stylexjs/stylex';
 import { HashIcon } from 'lucide-react';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import AgentAvatar from '@/components/AgentAvatar';
 import UserAvatar from '@/components/UserAvatar';
@@ -30,6 +31,7 @@ interface ChannelConversationProps {
  * conversation with another person, or with someone's shared Agent, wears that counterpart.
  */
 const ChannelConversation = memo<ChannelConversationProps>(({ active, activeAt, channel }) => {
+  const { t } = useTranslation('channel');
   const menuItems = useChannelMenu();
   // A Channel grouped under a project wears that project's logo; a standalone one pictures
   // its members like a group chat, and keeps "#" until someone else joins.
@@ -51,6 +53,8 @@ const ChannelConversation = memo<ChannelConversationProps>(({ active, activeAt, 
         activeAt={activeAt}
         contextMenuItems={menuItems(channel)}
         preview={channelPreview(channel)}
+        // Someone else's Agent looks like one's own otherwise; the tag says it is theirs.
+        tag={channel.sharedAgent ? t('sharedAgent.tag') : undefined}
         title={counterpart.name || channel.title}
         unread={channel.unreadCount}
         url={CHANNEL_URL(channel.id)}

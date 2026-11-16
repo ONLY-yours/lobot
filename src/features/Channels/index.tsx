@@ -57,6 +57,7 @@ function EnabledChannelPage() {
   const directAgentId = (detail?.channel ?? listItem)?.agentId ?? undefined;
   const isDirect = !!directAgentId;
   const isPeer = !!(detail?.channel ?? listItem)?.peerUserId;
+  const isSharedAgent = !!(detail?.channel.sharedAgent || listItem?.sharedAgent);
   const viewerId = useUserStore(userProfileSelectors.userId);
   const directAgent = detail?.channel.agentId
     ? detail.members.find((member) => member.agentId === detail.channel.agentId)
@@ -112,6 +113,11 @@ function EnabledChannelPage() {
                   ? channelTitle(detail, viewerId)
                   : listItem && (directCounterpart(listItem)?.name || listItem.title)}
               </Text>
+              {isSharedAgent && (
+                <Text style={{ flex: 'none' }} type="secondary">
+                  {t('sharedAgent.tag')}
+                </Text>
+              )}
               {directAgentId && <DirectAgentRole agentId={directAgentId} job={directWorkingJob} />}
               {detail?.channel.status === 'archived' && <Tag size="small">{t('archived')}</Tag>}
               <ChannelSyncing failed={!!sync.error} params={view} />

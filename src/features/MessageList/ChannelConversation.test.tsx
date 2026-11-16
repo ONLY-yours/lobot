@@ -69,3 +69,17 @@ describe('ChannelConversation avatar', () => {
     expect(screen.queryByTestId('group-avatar')).toBeNull();
   });
 });
+
+describe('ChannelConversation shared Agent', () => {
+  it("tags another person's Agent as shared", () => {
+    store.project = undefined;
+    renderRow(channel({ memberAvatars: [member('agt_x')], sharedAgent: true }));
+    expect(screen.getByText('sharedAgent.tag')).toBeTruthy();
+  });
+
+  it('leaves a group Channel untagged', () => {
+    store.project = undefined;
+    renderRow(channel({ memberAvatars: [member('agt_a')] }));
+    expect(screen.queryByText('sharedAgent.tag')).toBeNull();
+  });
+});
