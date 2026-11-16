@@ -15,7 +15,8 @@ import { authSelectors } from '@/store/user/selectors';
 import { useChannelEvents } from '../useChannelEvents';
 import { useChannelsEnabled } from '../useChannelsEnabled';
 import { type ChannelActivitySnapshots, diffChannelActivity, snapshotChannels } from './activity';
-import { notifyChannelActivity, syncChannelBadge } from './notify';
+import { notifyChannelActivity } from './notify';
+import { useUnreadBadge } from './useUnreadBadge';
 
 /** `/channels/<id>` (optionally under a workspace slug) → the open Channel's id. */
 const openChannelId = (pathname: string) => {
@@ -57,9 +58,7 @@ const ActiveChannelNotifier = memo(() => {
   const unread = useHomeStore((s) =>
     messagesUnreadCount(homeAgentListSelectors.allAgents(s), list),
   );
-  useEffect(() => {
-    void syncChannelBadge(unread);
-  }, [unread]);
+  useUnreadBadge(unread);
 
   return null;
 });
