@@ -1,5 +1,8 @@
 import type { WorkspaceMemberItem } from '@lobechat/database/schemas';
 
+import { useWorkspaceStore } from '../workspace/store';
+import { useFetchWorkspaceMembers } from './useFetchWorkspaceMembers';
+
 export interface WorkspaceMemberUserProfile {
   avatar?: string | null;
   email?: string | null;
@@ -7,19 +10,20 @@ export interface WorkspaceMemberUserProfile {
   username?: string | null;
 }
 
-/**
- * Membership row enriched with the member's display profile. The OSS build
- * has no workspace membership, so the stub returns an empty list; cloud
- * overrides this hook with the real workspace store data.
- */
+/** Membership row enriched with the member's display profile (`workspaceMember.list`). */
 export type WorkspaceMemberWithProfile = WorkspaceMemberItem & {
   user?: WorkspaceMemberUserProfile | null;
 };
 
-export const useWorkspaceMembers = (): WorkspaceMemberWithProfile[] => [];
-
 /**
- * Non-hook snapshot of the same list, for imperative callers such as tool
- * executors. Empty in OSS; cloud reads the workspace store.
+ * Members of the active workspace. Reading them also loads them, so a caller such as the
+ * Contacts author column never shows "unknown author" just because nothing fetched the list.
  */
-export const getWorkspaceMembers = (): WorkspaceMemberWithProfile[] => [];
+export const useWorkspaceMembers = (): WorkspaceMemberWithProfile[] => {
+  useFetchWorkspaceMembers();
+  return useWorkspaceStore((s) => s.members);
+};
+
+/** Non-hook snapshot of the same list, for imperative callers such as tool executors. */
+export const getWorkspaceMembers = (): WorkspaceMemberWithProfile[] =>
+  useWorkspaceStore.getState().members;

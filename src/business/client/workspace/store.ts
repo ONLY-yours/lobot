@@ -9,6 +9,7 @@ import { mutate } from '@/libs/swr/mutate';
 import { expose } from '@/store/middleware/expose';
 
 import type { WorkspaceListItem } from '../hooks/useActiveWorkspace';
+import type { WorkspaceMemberWithProfile } from '../hooks/useWorkspaceMembers';
 import { workspaceService } from './service';
 
 /**
@@ -23,6 +24,8 @@ export interface WorkspaceState {
   /** The server answered the list, so workspaces can be listed and created (not self-hosted). */
   isWorkspaceAvailable: boolean;
   isWorkspaceLoading: boolean;
+  /** Members of the active workspace, for author names and avatars; empty in the personal space. */
+  members: WorkspaceMemberWithProfile[];
   workspaces: WorkspaceListItem[];
 }
 
@@ -34,6 +37,7 @@ interface WorkspaceActions {
 export type WorkspaceStore = WorkspaceState & WorkspaceActions;
 
 export const FETCH_WORKSPACES_KEY = 'workspace/list';
+export const FETCH_WORKSPACE_MEMBERS_KEY = 'workspace/members';
 
 /** The last scope the user picked, per user, so a restart reopens it. */
 const lastWorkspaceKey = (userId: string) => `lobot:last-workspace:${userId}`;
@@ -62,11 +66,13 @@ export const useWorkspaceStore = createWithEqualityFn<WorkspaceStore>()(
     isWorkspaceAvailable: false,
     // Loading until the first list settles, so nothing paints a scope it may leave.
     isWorkspaceLoading: true,
+    members: [],
+    // Another scope's members must not name this one's authors while its own list loads.
     switchToPersonal: () => {
-      if (get().activeWorkspaceId !== null) set({ activeWorkspaceId: null });
+      if (get().activeWorkspaceId !== null) set({ activeWorkspaceId: null, members: [] });
     },
     switchWorkspace: (id) => {
-      if (get().activeWorkspaceId !== id) set({ activeWorkspaceId: id });
+      if (get().activeWorkspaceId !== id) set({ activeWorkspaceId: id, members: [] });
     },
     workspaces: [],
   }),
@@ -146,4 +152,29 @@ export const useFetchWorkspaces = (
   }, [enabled, error, isLoading]);
 
   return swr;
+};
+
+/**
+ * Loads the active workspace's members into the store. Keyed by workspace, so a switch
+ * refetches; the personal space has no members and skips the request.
+ */
+export const useFetchWorkspaceMembersList = (
+  workspaceId: string | null,
+  options: { includeDeleted?: boolean } = {},
+): SWRResponse<WorkspaceMemberWithProfile[]> => {
+  const includeDeleted = options.includeDeleted ?? false;
+  return useSWR<WorkspaceMemberWithProfile[]>(
+    workspaceId ? [FETCH_WORKSPACE_MEMBERS_KEY, workspaceId, includeDeleted] : null,
+    () => workspaceService.listMembers({ includeDeleted }),
+    {
+      onSuccess: (data) => {
+        // Former members only feed the caller asking for them, never the shared roster.
+        if (includeDeleted) return;
+        // A late answer for a scope the user already left must not overwrite the new one.
+        if (useWorkspaceStore.getState().activeWorkspaceId !== workspaceId) return;
+        useWorkspaceStore.setState({ members: data ?? [] });
+      },
+      revalidateOnFocus: false,
+    },
+  );
 };
