@@ -56,6 +56,13 @@ export const conversationPreview = (
     ? (channelPreview(direct) ?? oneLine(description))
     : oneLine(topic?.lastAssistantMessage || topic?.title || description);
 
+/**
+ * Pinned by this person atop their own list. The pin lives on their membership of the
+ * conversation's Channel, so an Agent's workspace-wide sidebar pin does not pin it here.
+ */
+export const isPinned = (entry: { channel?: Pick<ChannelListItem, 'pinnedAt'> }) =>
+  !!entry.channel?.pinnedAt;
+
 /** When a Channel last had a message, else when it was opened. */
 export const channelActivity = (channel: ChannelListItem): Date =>
   new Date(channel.lastMessage?.createdAt ?? channel.updatedAt ?? channel.createdAt);
@@ -105,9 +112,10 @@ export const inboxActivity = (
 /**
  * Turn the sidebar agent/group list into IM-style conversations: each row
  * carries a preview of its latest topic and is ordered by latest activity,
- * pinned rows first. Only conversations that exist get a row — a direct Channel
- * or a topic; the rest stay in Contacts. Pinned rows and the open one stay,
- * and a search lists every agent so a new conversation can start from it.
+ * rows the person pinned first. Only conversations that exist get a row — a direct Channel
+ * or a topic; the rest stay in Contacts, pinned or not, since a pin is the workspace's list
+ * order and not a conversation of mine. The open one stays, and a search lists every agent
+ * so a new conversation can start from it.
  */
 export const buildConversationSections = (
   items: SidebarAgentItem[],
@@ -147,7 +155,7 @@ export const buildConversationSections = (
     }
 
     const latest = latestByOwner.get(item.id);
-    if (!latest && !includeIdle && !item.pinned && item.id !== activeId) continue;
+    if (!latest && !includeIdle && item.id !== activeId) continue;
 
     const latestTime = latest ? toTime(latest.updatedAt) : 0;
 
@@ -161,8 +169,8 @@ export const buildConversationSections = (
   conversations.sort((a, b) => b.activeAt.getTime() - a.activeAt.getTime());
 
   return {
-    pinned: conversations.filter((c) => c.item.pinned),
-    recent: conversations.filter((c) => !c.item.pinned),
+    pinned: conversations.filter(isPinned),
+    recent: conversations.filter((c) => !isPinned(c)),
   };
 };
 
@@ -172,9 +180,9 @@ export type ConversationEntry =
   | (Conversation & { type: 'item' });
 
 /**
- * One IM list like WeChat's: pinned rows first, then everything else by latest
- * activity. Lobe AI and group Channels are ordinary rows placed by their own
- * activity, not pinned to the top; a name / title filter narrows the whole list.
+ * One IM list like WeChat's: the rows the person pinned first, then everything else, each part
+ * by latest activity. Lobe AI and group Channels are placed by their own activity unless pinned;
+ * a name / title filter narrows the whole list.
  */
 export const buildConversationEntries = (
   { pinned, recent }: ConversationSections,
@@ -215,7 +223,12 @@ export const buildConversationEntries = (
     });
   }
 
-  return [...items(pinned), ...rest];
+  const byActivity = (a: ConversationEntry, b: ConversationEntry) =>
+    b.activeAt.getTime() - a.activeAt.getTime();
+  return [
+    ...[...items(pinned), ...rest.filter(isPinned)].sort(byActivity),
+    ...rest.filter((entry) => !isPinned(entry)),
+  ];
 };
 
 /**

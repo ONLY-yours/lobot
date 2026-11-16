@@ -136,8 +136,10 @@ export class RecentActionImpl {
     this.#conversationRecents = createReplicaSlice(conversationRecentResource, {
       actionPrefix: n('conversationRecents'),
       entity: recentEntity,
-      // Topics only, with previews: the IM list shows the latest reply per row.
-      fetcher: ({ limit }) => recentService.getAll(limit, RECENT_CONVERSATION_TYPES, true),
+      // Topics only, with previews: the IM list shows the latest reply per row. Only the viewer's
+      // own: a workspace feed otherwise carries every member's topics, so an Agent someone else
+      // talked to gets a row, previewing their reply, before this person ever messaged it.
+      fetcher: ({ limit }) => recentService.getAll(limit, RECENT_CONVERSATION_TYPES, true, true),
       get,
       set,
       stateKey: 'conversationRecentReplica',

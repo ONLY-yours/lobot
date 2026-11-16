@@ -169,10 +169,19 @@ describe('MessageList Body', () => {
   it('renders the pinned rows together in one block', () => {
     home.isInit = true;
     home.items = [
-      { id: 'p1', pinned: true, title: 'Pinned 1', type: 'agent', updatedAt: new Date() },
-      { id: 'p2', pinned: true, title: 'Pinned 2', type: 'agent', updatedAt: new Date() },
+      { id: 'p1', pinned: false, title: 'Pinned 1', type: 'agent', updatedAt: new Date() },
+      { id: 'p2', pinned: false, title: 'Pinned 2', type: 'agent', updatedAt: new Date() },
       { id: 'a', pinned: false, title: 'Agent A', type: 'agent', updatedAt: new Date() },
     ];
+    // Pinned by this person through their direct Channels with the two Agents.
+    home.channels = ['p1', 'p2'].map((agentId) => ({
+      agentId,
+      createdAt: new Date(),
+      id: `chn_${agentId}`,
+      pinnedAt: new Date(),
+      title: agentId,
+    }));
+    home.recents = [{ agentId: 'a', routePath: '/agent/a', type: 'topic', updatedAt: new Date() }];
 
     render(createElement(Body));
 

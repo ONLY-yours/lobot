@@ -6,12 +6,12 @@ import { directAvatarState, replyAvatarState } from '@/features/Channels/jobStat
 import { useChannelMenu } from '@/features/Channels/useChannelMenu';
 import { channelSelectors, useChannelStore } from '@/store/channel';
 
-/** The direct Channel's own conversation action, next to the Agent's own menu. */
-const CONVERSATION_ACTION_KEYS = new Set(['unarchive']);
+/** The direct Channel's own conversation actions, next to the Agent's own menu. */
+const CONVERSATION_ACTION_KEYS = new Set(['pin', 'unpin', 'unarchive']);
 
 /**
- * A direct Channel is the chat with one Agent, so it cannot be archived or trashed. The row only
- * frees one that was archived earlier. Keys are prefixed so they cannot collide with the Agent's
+ * A direct Channel is the chat with one Agent, so it cannot be archived or trashed. The row pins it
+ * atop the person's own list and frees one that was archived earlier. Keys are prefixed so they cannot collide with the Agent's
  * own menu.
  */
 export const conversationActions = (menu: DropdownItem[]): DropdownItem[] =>

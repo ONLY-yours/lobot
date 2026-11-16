@@ -37,6 +37,7 @@ import {
   type Conversation,
   type ConversationEntry,
   inboxActivity,
+  isPinned,
   latestTopicOf,
 } from './conversations';
 import GroupConversation from './GroupConversation';
@@ -204,7 +205,7 @@ const Body = memo(() => {
   );
 
   // Pinned rows lead the list; they render as one block rather than a card each.
-  const pinnedCount = entries.findIndex((entry) => entry.type !== 'item' || !entry.item.pinned);
+  const pinnedCount = entries.findIndex((entry) => !isPinned(entry));
   const pinnedEntries = pinnedCount === -1 ? entries : entries.slice(0, pinnedCount);
   const otherEntries = pinnedCount === -1 ? [] : entries.slice(pinnedCount);
 

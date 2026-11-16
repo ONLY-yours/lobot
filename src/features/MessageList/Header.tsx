@@ -1,8 +1,18 @@
 'use client';
 
 import { CHANNEL_URL } from '@lobechat/const';
-import { ActionIcon, DropdownMenu, Flexbox, Icon, SearchBar, Text } from '@lobehub/ui';
-import { Hash, PlusIcon } from 'lucide-react';
+import {
+  ActionIcon,
+  type DropdownItem,
+  DropdownMenu,
+  Flexbox,
+  Icon,
+  type IconProps,
+  SearchBar,
+  Text,
+} from '@lobehub/ui';
+import { GroupBotSquareIcon } from '@lobehub/ui/icons';
+import { BotIcon, CirclePlusIcon, Hash } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -13,6 +23,24 @@ import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
 import { useMessageSearch } from './SearchContext';
+
+/**
+ * A WeChat-style "+" menu row: a large line icon and roomier text than a dense action menu.
+ * The menu's own icon slot is fixed at 14px, so the icon rides in the label instead.
+ */
+const createRow = (item: DropdownItem, icon: IconProps['icon'], label?: string): DropdownItem =>
+  item && item.type !== 'group' && item.type !== 'divider'
+    ? {
+        ...item,
+        icon: undefined,
+        label: (
+          <Flexbox horizontal align={'center'} gap={12} paddingBlock={4}>
+            <Icon icon={icon} size={20} />
+            <span style={{ fontSize: 15 }}>{label ?? ('label' in item ? item.label : null)}</span>
+          </Flexbox>
+        ),
+      }
+    : item;
 
 interface ListHeaderProps {
   actions?: ReactNode;
@@ -50,15 +78,18 @@ const Header = memo(() => {
   // external ones) and a group. With Channels on, the group is a Channel, general or a project's.
   const createItems = useMemo(
     () => [
-      createAgentMenuItem(),
+      createRow(createAgentMenuItem(), BotIcon),
       channelsEnabled
-        ? {
-            icon: <Icon icon={Hash} />,
-            key: 'newChannel',
-            label: t('create', { ns: 'channel' }),
-            onClick: () => openCreateChannel((id) => navigate(CHANNEL_URL(id))),
-          }
-        : createGroupChatMenuItem(),
+        ? createRow(
+            {
+              key: 'newChannel',
+              onClick: () => openCreateChannel((id) => navigate(CHANNEL_URL(id))),
+            },
+            Hash,
+            t('create', { ns: 'channel' }),
+          )
+        : // Worded the way WeChat's "+" menu starts one.
+          createRow(createGroupChatMenuItem(), GroupBotSquareIcon, t('messageList.startGroupChat')),
     ],
     [channelsEnabled, createAgentMenuItem, createGroupChatMenuItem, navigate, t],
   );
@@ -81,9 +112,13 @@ const Header = memo(() => {
         variant={'filled'}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <DropdownMenu items={createItems}>
+      <DropdownMenu
+        items={createItems}
+        placement={'bottomRight'}
+        popupProps={{ style: { minWidth: 168, padding: 6 } }}
+      >
         <ActionIcon
-          icon={PlusIcon}
+          icon={CirclePlusIcon}
           loading={isLoading}
           size={DESKTOP_HEADER_ICON_SIZE}
           // Keeps its square: the search box gives way in a narrow column, not this button.

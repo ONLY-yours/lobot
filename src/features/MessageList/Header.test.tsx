@@ -12,12 +12,16 @@ const mocks = vi.hoisted(() => ({
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('@lobehub/ui', () => ({
   ActionIcon: () => null,
-  DropdownMenu: ({ items }: { items: { key: string; label: string; onClick?: () => void }[] }) => (
+  DropdownMenu: ({
+    items,
+  }: {
+    items: { key: string; label: React.ReactNode; onClick?: () => void }[];
+  }) => (
     <ul>
       {items.map((item) => (
         <li key={item.key}>
-          <button type={'button'} onClick={item.onClick}>
-            {item.key}
+          <button aria-label={item.key} type={'button'} onClick={item.onClick}>
+            {item.label}
           </button>
         </li>
       ))}
@@ -46,7 +50,7 @@ vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
 }));
 vi.mock('./SearchContext', () => ({ useMessageSearch: () => ({ query: '', setQuery: vi.fn() }) }));
 
-const menuKeys = () => screen.getAllByRole('button').map((el) => el.textContent);
+const menuKeys = () => screen.getAllByRole('button').map((el) => el.getAttribute('aria-label'));
 
 describe('MessageList Header create menu', () => {
   beforeEach(() => {
@@ -63,6 +67,18 @@ describe('MessageList Header create menu', () => {
 
     mocks.openCreateChannel.mock.calls[0][0]('chn_1');
     expect(mocks.navigate).toHaveBeenCalledWith('/channels/chn_1');
+  });
+
+  it('names the Channel entry for a Channel, and the legacy group the way WeChat does', () => {
+    const { unmount } = render(<Header />);
+    expect(screen.getByRole('button', { name: 'newChannel' }).textContent).toBe('create');
+    unmount();
+
+    mocks.channelsEnabled = false;
+    render(<Header />);
+    expect(screen.getByRole('button', { name: 'legacyGroupChat' }).textContent).toBe(
+      'messageList.startGroupChat',
+    );
   });
 
   it('falls back to an Agent group where Channels are off', () => {

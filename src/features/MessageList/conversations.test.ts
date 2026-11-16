@@ -22,6 +22,16 @@ const agent = (id: string, updatedAt: string, extra: Partial<SidebarAgentItem> =
     ...extra,
   }) as SidebarAgentItem;
 
+/** The person's direct Channel with an Agent, pinned atop their own list. */
+const pinnedDirect = (agentId: string) =>
+  ({
+    agentId,
+    createdAt: new Date('2026-01-01'),
+    id: `chn_${agentId}`,
+    lastMessage: null,
+    pinnedAt: new Date('2026-01-02'),
+  }) as ChannelListItem;
+
 const topic = (extra: Partial<RecentItem> & { updatedAt: string }) =>
   ({
     icon: '',
@@ -40,7 +50,7 @@ describe('buildConversationSections', () => {
       [
         agent('a', '2026-10-01'),
         agent('b', '2026-10-02'),
-        agent('p', '2026-09-01', { pinned: true }),
+        agent('p', '2026-09-01'),
         agent('g', '2026-09-01', { type: 'group' }),
       ],
       [
@@ -49,6 +59,7 @@ describe('buildConversationSections', () => {
         topic({ routePath: '/group/g/tpc_1', title: 'group topic', updatedAt: '2026-10-04' }),
         topic({ agentId: 'b', type: 'document', updatedAt: '2026-10-09' }),
       ],
+      new Map([['p', pinnedDirect('p')]]),
     );
 
     expect(pinned.map((c) => c.item.id)).toEqual(['p']);
@@ -64,6 +75,7 @@ describe('buildConversationSections', () => {
       agent('idle', '2026-10-09'),
       agent('idle-group', '2026-10-09', { type: 'group' }),
       agent('open', '2026-10-01'),
+      // Pinned by a workspace member, but this person never talked to it.
       agent('pinned', '2026-10-01', { pinned: true }),
     ];
     const recents = [topic({ agentId: 'talked', updatedAt: '2026-10-02' })];
@@ -72,8 +84,20 @@ describe('buildConversationSections', () => {
       activeId: 'open',
     });
 
-    expect(pinned.map((c) => c.item.id)).toEqual(['pinned']);
+    expect(pinned).toEqual([]);
     expect(recent.map((c) => c.item.id)).toEqual(['talked', 'open']);
+  });
+
+  // An Agent's sidebar pin is shared by the whole workspace, so it pinned the row for everyone.
+  it("pins only the person's own conversations, not an Agent's workspace pin", () => {
+    const { pinned, recent } = buildConversationSections(
+      [agent('team-pin', '2026-10-01', { pinned: true }), agent('mine', '2026-10-01')],
+      [topic({ agentId: 'team-pin', updatedAt: '2026-10-03' })],
+      new Map([['mine', pinnedDirect('mine')]]),
+    );
+
+    expect(pinned.map((c) => c.item.id)).toEqual(['mine']);
+    expect(recent.map((c) => c.item.id)).toEqual(['team-pin']);
   });
 
   it('keeps every agent while searching so a new conversation can start', () => {
@@ -178,10 +202,10 @@ describe('buildConversationEntries', () => {
     [
       agent('a', '2026-10-05', { title: 'Alpha' }),
       agent('b', '2026-10-01', { title: 'Beta' }),
-      agent('p', '2026-09-01', { pinned: true, title: 'Pinned' }),
+      agent('p', '2026-09-01', { title: 'Pinned' }),
     ],
     undefined,
-    undefined,
+    new Map([['p', pinnedDirect('p')]]),
     { includeIdle: true },
   );
   const ids = (entries: ReturnType<typeof buildConversationEntries>) =>
@@ -250,6 +274,27 @@ describe('buildConversationEntries', () => {
     ]);
     expect(ids(buildConversationEntries(sections, undefined, 'team', channels))).toEqual([
       'chn_team',
+    ]);
+  });
+
+  it('leads with every pinned conversation, group Channels and Lobe AI included', () => {
+    const channels = [
+      { ...channel('chn_team', 'Team', '2026-10-03'), pinnedAt: new Date('2026-10-04') },
+      channel('chn_old', 'Archive talk', '2026-08-01'),
+    ];
+    const inbox = {
+      activeAt: new Date('2026-08-02'),
+      channel: pinnedDirect('inbox'),
+      title: 'Lobe AI',
+    };
+
+    expect(ids(buildConversationEntries(sections, inbox, '', channels))).toEqual([
+      'chn_team',
+      'p',
+      'inbox',
+      'a',
+      'b',
+      'chn_old',
     ]);
   });
 

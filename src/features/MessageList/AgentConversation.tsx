@@ -63,10 +63,14 @@ const AgentConversation = memo<AgentConversationProps>(({ active, conversation }
 
   const menuItems = useMemo(
     () => () => {
-      const agentItems = contextMenuItems();
+      // The Agent's own pin orders the workspace's Agent list for everyone; this list pins the
+      // person's own conversation, through its direct Channel.
+      const agentItems = contextMenuItems().filter(
+        (entry) => !(entry && 'key' in entry && entry.key === 'pin'),
+      );
       const items = channelActions();
       if (items.length === 0) return agentItems;
-      return [...agentItems, { type: 'divider' as const }, ...items];
+      return [...items, { type: 'divider' as const }, ...agentItems];
     },
     [channelActions, contextMenuItems],
   );

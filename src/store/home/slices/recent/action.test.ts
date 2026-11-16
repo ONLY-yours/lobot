@@ -138,8 +138,9 @@ describe('recents replica', () => {
         homeRecentSelectors.conversationRecents(conversations)(useHomeStore.getState()),
       ).toHaveLength(1),
     );
-    // Topics with previews: the IM rows show the latest reply, not the title.
-    expect(getAll).toHaveBeenCalledWith(50, ['topic'], true);
+    // The viewer's own topics with previews: the IM rows show the latest reply, not the title, and
+    // a workspace member's topics must not give another person a conversation row.
+    expect(getAll).toHaveBeenCalledWith(50, ['topic'], true, true);
   });
 
   it('does not fetch while logged out', () => {

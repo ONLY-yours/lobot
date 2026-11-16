@@ -1,7 +1,7 @@
 import type { ChannelListItem } from '@lobechat/types';
 import { CHANNEL_LIMITS } from '@lobechat/types';
 import { copyToClipboard, toast } from '@lobehub/ui';
-import { Archive, ArchiveRestore, Copy, PencilLine, Trash } from 'lucide-react';
+import { Archive, ArchiveRestore, Copy, PencilLine, Pin, PinOff, Trash } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { openRenameModal } from '@/components/RenameModal';
@@ -11,7 +11,9 @@ import { isTrpcErrorCode } from '@/utils/trpcError';
 import { useChannelArchive } from './useChannelArchive';
 import { useRemoveChannel } from './useRemoveChannel';
 
-/** A Channel's menu wherever it is listed: rename, copy id, archive, and move to the trash. */
+/**
+ * A Channel's menu wherever it is listed: pin, rename, copy id, archive, and move to the trash.
+ */
 export const useChannelMenu = () => {
   const { t } = useTranslation('channel');
   const remove = useRemoveChannel();
@@ -33,7 +35,23 @@ export const useChannelMenu = () => {
       },
     });
 
+  const togglePin = async (channel: ChannelListItem) => {
+    try {
+      await channelActions.setPinned(channel.id, !channel.pinnedAt);
+    } catch (error) {
+      console.error('Failed to pin Channel', error);
+      toast.error(t('actionFailed'));
+    }
+  };
+
   return (channel: ChannelListItem) => [
+    // Any member pins it, for their own list only.
+    {
+      icon: channel.pinnedAt ? PinOff : Pin,
+      key: channel.pinnedAt ? 'unpin' : 'pin',
+      label: t(channel.pinnedAt ? 'pinOff' : 'pin', { ns: 'common' }),
+      onClick: () => void togglePin(channel),
+    },
     ...(channel.canDelete && channel.status !== 'archived'
       ? [{ icon: PencilLine, key: 'rename', label: t('rename'), onClick: () => rename(channel) }]
       : []),

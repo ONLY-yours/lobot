@@ -48,9 +48,6 @@ const InboxConversation = memo<{
     <ConversationRow
       closeOnReselect
       active={active}
-      activity={activity}
-      // Same preview and time as every other Agent row; its tagline when it has nothing yet.
-      preview={conversationPreview(meta.description, topic, channel) ?? t('inbox.desc')}
       title={title}
       unread={channel?.unreadCount ?? undefined}
       url={url}
@@ -67,8 +64,11 @@ const InboxConversation = memo<{
       onClick={onClick}
       onMouseEnter={() => inboxAgentId && prefetchAgent(inboxAgentId)}
       activeAt={activeAt}
-      // An archived direct Channel is the only thing this row can act on.
-      contextMenuItems={channel?.status === 'archived' ? channelActions : undefined}
+      // Its direct Channel is the only thing this row acts on: pin it, or free an archived one.
+      contextMenuItems={channel ? channelActions : undefined}
+      activity={activity}
+      // Same preview and time as every other Agent row; its tagline when it has nothing yet.
+      preview={conversationPreview(meta.description, topic, channel) ?? t('inbox.desc')}
     />
   );
 });
