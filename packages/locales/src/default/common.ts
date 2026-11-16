@@ -474,7 +474,6 @@ export default {
   'contacts.person.self': 'This is you',
   'contacts.person.sharedAgents': 'Shared Agents',
   'contacts.requests': 'New requests',
-  'contacts.sharedAgents': 'Shared Agents',
   'contacts.actionFailed': 'That didn’t work. Try again.',
   'messageList.empty': 'No conversations yet',
   'messageList.newChat': 'New conversation',

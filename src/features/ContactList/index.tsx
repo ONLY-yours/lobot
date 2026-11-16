@@ -162,15 +162,24 @@ const Body = memo(() => {
           },
         ]
       : []),
+    // Other people's Agents are contacts too: they follow the people in the same section.
     ...(channelsEnabled
       ? [
           {
-            count: people.length,
+            count: people.length + sharedAgents.length,
             key: 'people',
-            render: () =>
-              people.map((item) => (
+            render: () => [
+              ...people.map((item) => (
                 <PersonRow active={item.user.id === activeRouteId} item={item} key={item.user.id} />
               )),
+              ...sharedAgents.map((item) => (
+                <SharedAgentRow
+                  active={item.agent.agentId === activeRouteId}
+                  item={item}
+                  key={item.agent.agentId}
+                />
+              )),
+            ],
             title: t('contacts.people'),
           },
         ]
@@ -188,23 +197,6 @@ const Body = memo(() => {
       render: () => renderAgents(agents),
       title: t('navPanel.agent'),
     },
-    ...(sharedAgents.length > 0
-      ? [
-          {
-            count: sharedAgents.length,
-            key: 'sharedAgents',
-            render: () =>
-              sharedAgents.map((item) => (
-                <SharedAgentRow
-                  active={item.agent.agentId === activeRouteId}
-                  item={item}
-                  key={item.agent.agentId}
-                />
-              )),
-            title: t('contacts.sharedAgents'),
-          },
-        ]
-      : []),
   ];
 
   // The standard sidebar accordion (same as the home sidebar sections), so
@@ -213,7 +205,7 @@ const Body = memo(() => {
     <Flexbox paddingBlock={'4px 12px'} paddingInline={4}>
       <AccordionRoot
         // Listed up front so a section that appears later, like the first pin, opens expanded.
-        defaultValue={['requests', 'pinned', 'people', 'groups', 'agents', 'sharedAgents']}
+        defaultValue={['requests', 'pinned', 'people', 'groups', 'agents']}
         indicatorPlacement={'inline'}
         style={{ gap: 8 }}
       >

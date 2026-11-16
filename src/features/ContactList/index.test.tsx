@@ -173,6 +173,12 @@ describe('ContactListBody', () => {
       'href',
       '/agents/people/u_carol',
     );
+    // Shared Agents sit inside the people section, right below the people.
+    expect(screen.queryByText('contacts.sharedAgents')).not.toBeInTheDocument();
+    const people = screen.getByRole('link', { name: /Bob$/ });
+    const sharedAgent = screen.getByRole('link', { name: /Bob Helper/ });
+    expect(people.compareDocumentPosition(sharedAgent)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.getByText('contacts.people').nextElementSibling).toHaveTextContent('2');
     // Only requests waiting for my answer are listed.
     expect(screen.queryByText('Dan')).not.toBeInTheDocument();
   });
