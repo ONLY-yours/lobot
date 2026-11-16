@@ -12,7 +12,15 @@ export interface MentionNotificationRow {
   createdAt: Date;
   id: string;
   title: string;
+  /** Notification scenario, e.g. `document_mentioned`. */
+  type?: string;
 }
+
+/**
+ * Mentions another notifier already announces: the Channel notifier bannering every Channel
+ * message, @mentions included, as soon as it lands.
+ */
+const ANNOUNCED_ELSEWHERE: ReadonlySet<string> = new Set(['channel_mentioned']);
 
 /** Cap the banner body so a long comment doesn't overflow the OS notification. */
 const NOTIFICATION_BODY_MAX_LENGTH = 256;
@@ -72,7 +80,7 @@ export const pickNewMentions = (
   if (!watermark) return { fresh: [], watermark: nextWatermark };
 
   const fresh = rows
-    .filter((row) => isAfter(row, watermark))
+    .filter((row) => isAfter(row, watermark) && !ANNOUNCED_ELSEWHERE.has(row.type ?? ''))
     .slice(0, MAX_MENTION_BANNERS_PER_POLL)
     .reverse();
 

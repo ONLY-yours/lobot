@@ -42,6 +42,7 @@ export default {
   'billboard.menuLabel': 'Announcements',
   'category.agent': 'Agent',
   'category.billing': 'Billing',
+  'category.contact': 'Contacts',
   'category.generation': 'Generation',
   'category.mention': 'Mentions',
   'category.pending': 'Pending',

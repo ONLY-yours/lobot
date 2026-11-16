@@ -13,7 +13,7 @@ import { createMainAreaChildren, desktopRoutes } from '@/spa/router/desktopRoute
 import { useElectronStore } from '@/store/electron';
 
 import { navigateTab } from './activeTabNavigate';
-import { isLobotPath, LOBOT_ROOT_SEGMENTS, webAppUrl } from './webApp';
+import { isLobotPath, LOBOT_ROOT_SEGMENTS, toLobotPath, webAppUrl } from './webApp';
 
 const rootChildren = (routes: RouteObject[]): string[] =>
   routes.flatMap((route) =>
@@ -68,6 +68,42 @@ describe('isLobotPath', () => {
       '/acme/agent/agt_1',
     ]) {
       expect(isLobotPath(path), path).toBe(false);
+    }
+  });
+});
+
+// Regression: an inbox notification for a Channel @mention links to LobeHub's path, such as
+// `/acme/channels/:id` or `/acme/project/:id/channels/:id/threads/:threadId`, which Lobot did
+// not route, so clicking it opened an empty page.
+describe('toLobotPath', () => {
+  it("drops the workspace prefix from Lobot's own pages", () => {
+    expect(toLobotPath('/acme/channels/chn_1')).toBe('/channels/chn_1');
+    expect(toLobotPath('/acme/agents/people/u_1')).toBe('/agents/people/u_1');
+  });
+
+  it("opens a LobeHub Thread page as Lobot's Thread beside its Channel", () => {
+    expect(toLobotPath('/channels/chn_1/threads/thr%201')).toBe(
+      '/channels/chn_1?thread=thr%201&view=page',
+    );
+    expect(toLobotPath('/acme/project/prj_1/channels/chn_1/threads/thr_1')).toBe(
+      '/channels/chn_1?thread=thr_1&view=page',
+    );
+  });
+
+  it('opens a project Channel without its project, keeping the query', () => {
+    expect(toLobotPath('/project/prj_1/channels/chn_1?x=1')).toBe('/channels/chn_1?x=1');
+  });
+
+  it('leaves Lobot paths and LobeHub-only pages as they are', () => {
+    for (const path of [
+      '/',
+      '/channels/chn_1?thread=thr_1',
+      '/agents/agt_1',
+      '/acme/page/doc_1',
+      '/project/prj_1/tasks',
+      '/agent/agt_1/profile',
+    ]) {
+      expect(toLobotPath(path), path).toBe(path);
     }
   });
 });
@@ -138,6 +174,15 @@ describe('navigateTab', () => {
 
     expect(openExternal).toHaveBeenCalledWith('https://app.lobehub.com/agent/agt_1/profile');
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("opens a LobeHub link to a Lobot page at Lobot's own path", () => {
+    const { navigate, openExternal } = setup();
+
+    navigateTab('t1', '/acme/project/prj_1/channels/chn_1/threads/thr_1');
+
+    expect(navigate).toHaveBeenCalledWith('/channels/chn_1?thread=thr_1&view=page', undefined);
+    expect(openExternal).not.toHaveBeenCalled();
   });
 
   it('keeps navigating in place for Lobot pages', () => {

@@ -1,4 +1,4 @@
-import { OFFICIAL_URL } from '@lobechat/const';
+import { CHANNEL_URL, OFFICIAL_URL } from '@lobechat/const';
 
 import { getWorkspaceStoreState } from '@/business/client/workspace/store';
 import { parseRootSegment, RESERVED_ROOT_SEGMENTS } from '@/features/Workspace/rootSegments';
@@ -19,6 +19,35 @@ export const LOBOT_ROOT_SEGMENTS: ReadonlySet<string> = new Set([
   'onboarding',
   'settings',
 ]);
+
+const LOBEHUB_CHANNEL_PATH =
+  /^\/(?:project\/[^/?#]+\/)?channels\/([^/?#]+)(?:\/threads\/([^/?#]+))?\/?$/;
+
+/**
+ * Lobot's own path for a LobeHub link to one of its pages, such as a notification's. Lobot keeps
+ * the workspace in the store, not the URL, so a `/:workspaceSlug` prefix is dropped; a Channel
+ * opens without its project, and a Thread page path (`/channels/:id/threads/:threadId`)
+ * becomes Lobot's `?thread=`. Any other path is returned unchanged.
+ */
+export const toLobotPath = (path: string): string => {
+  const slug = parseRootSegment(path);
+  // Any other first segment is a `/:workspaceSlug`.
+  const unscoped =
+    slug !== null && !RESERVED_ROOT_SEGMENTS.has(slug) ? path.slice(slug.length + 1) || '/' : path;
+  const local = toLobotChannelPath(unscoped);
+  // Only a page Lobot has loses the prefix; the web app still needs it for the rest.
+  return isLobotPath(local) ? local : path;
+};
+
+const toLobotChannelPath = (path: string): string => {
+  const [pathname, query = ''] = path.split(/(?=[?#])/, 2);
+  const match = LOBEHUB_CHANNEL_PATH.exec(pathname);
+  if (!match) return path;
+  const [, channelId, threadId] = match;
+  return threadId
+    ? CHANNEL_URL(decodeURIComponent(channelId), decodeURIComponent(threadId))
+    : `${CHANNEL_URL(decodeURIComponent(channelId))}${query}`;
+};
 
 /** Whether an absolute in-app path is one of Lobot's own pages, workspace prefix or not. */
 export const isLobotPath = (path: string): boolean => {

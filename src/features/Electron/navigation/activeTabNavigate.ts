@@ -6,7 +6,7 @@ import { type NavigateOptions, type To } from 'react-router';
 import { getTabRouter } from '@/features/Electron/TabHost/tabRouterManager';
 import { useElectronStore } from '@/store/electron';
 
-import { isLobotPath, openInWebApp } from './webApp';
+import { isLobotPath, openInWebApp, toLobotPath } from './webApp';
 
 const absolutePath = (to: To): string | undefined => {
   if (typeof to === 'string') return to.startsWith('/') ? to : undefined;
@@ -19,10 +19,14 @@ export const navigateTab = (tabId: string | null, to: To, options?: NavigateOpti
   // A LobeHub page Lobot does not have (an Agent's profile, a group, memory...)
   // opens in the web app instead of an empty in-app route.
   const path = absolutePath(to);
-  if (path && !isLobotPath(path)) {
-    openInWebApp(path);
+  // A LobeHub link to a Lobot page (a notification's, say) may carry a workspace prefix or
+  // LobeHub's own Channel path, neither of which Lobot routes.
+  const local = path && toLobotPath(path);
+  if (local && !isLobotPath(local)) {
+    openInWebApp(local);
     return;
   }
+  if (local && local !== path) to = local;
 
   const router = tabId ? getTabRouter(tabId) : undefined;
   if (!router) {

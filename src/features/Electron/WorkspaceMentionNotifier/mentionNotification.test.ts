@@ -83,6 +83,19 @@ describe('pickNewMentions', () => {
     expect(watermark.ids).toEqual(new Set(['b1', 'b2']));
   });
 
+  // Regression: once Cloud filed Channel @mentions in the inbox, each one raised a second
+  // banner beside the Channel notifier's own.
+  it('leaves Channel mentions to the Channel notifier', () => {
+    const { watermark } = pickNewMentions([row('a')], undefined);
+    const next = pickNewMentions(
+      [row('c', { type: 'document_mentioned' }), row('b', { type: 'channel_mentioned' })],
+      watermark,
+    );
+
+    expect(ids(next.fresh)).toEqual(['c']);
+    expect(next.watermark.ids).toEqual(new Set(['c']));
+  });
+
   it('caps a burst to the newest mentions', () => {
     const baseline = pickNewMentions([], undefined);
     const rows = ['e', 'd', 'c', 'b', 'a'].map((id) => row(id));

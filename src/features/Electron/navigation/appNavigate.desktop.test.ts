@@ -33,13 +33,14 @@ afterEach(() => {
 });
 
 describe('appNavigate (desktop)', () => {
-  it('navigates the active tab router with the workspace-resolved url', () => {
+  // Lobot keeps the workspace in the store and routes no `/:workspaceSlug` prefix.
+  it('navigates the active tab router to the Lobot page of a workspace-resolved url', () => {
     vi.spyOn(slugModule, 'getActiveWorkspaceSlug').mockReturnValue('acme');
     const navigate = seedActiveRouter();
 
     appNavigate('/channels/x');
 
-    expect(navigate).toHaveBeenCalledWith('/acme/channels/x', {});
+    expect(navigate).toHaveBeenCalledWith('/channels/x', {});
   });
 
   it('skips workspace resolution when escape is set', () => {
