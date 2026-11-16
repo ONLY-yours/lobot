@@ -35,6 +35,11 @@ on:
       channel:
         required: true
         type: string
+      # Auto Release passes the CI-verified commit; empty checks out the event's ref.
+      ref:
+        required: false
+        type: string
+        default: ''
       rollout:
         required: false
         type: string
@@ -64,6 +69,8 @@ jobs:
       version: ${{ steps.seq.outputs.version }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
 
       # Each job derives the URL itself: GitHub drops a job output that contains a
       # secret, so passing it through `needs` would leave the other jobs with "".
@@ -119,6 +126,8 @@ jobs:
         platform: [darwin, win32, linux]
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Resolve update server base URL
         id: server
@@ -245,6 +254,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Download core releases
         uses: actions/download-artifact@v8

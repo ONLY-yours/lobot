@@ -36,10 +36,10 @@ bun run package:local
 
 ## Release
 
-`.github/workflows/auto-release.yml` tags a patch version (`vX.Y.Z`) when CI passes on `main` and user-facing commits landed since the last tag. The tag push runs `.github/workflows/release-desktop.yml`, which compares the shell ABI with the last full release on the channel:
+`.github/workflows/auto-release.yml` runs when CI passes on `main` and user-facing commits landed since the last tag. It compares the shell ABI with the last full release on the `stable` channel:
 
-- **Shell unchanged**: it ships only the core as an incremental (OTA) update through `release-desktop-core-ota.yml`.
-- **Shell changed, or no full release yet**: it builds macOS, Windows and Linux packages, publishes them to a GitHub Release and syncs them to the S3 update server. macOS builds embed Sparkle and the release also publishes a signed appcast with delta patches; the appcast is signed with `SPARKLE_ED_PUBLIC_KEY` / `SPARKLE_ED_PRIVATE_KEY`, or with the Ed25519 Core OTA pair (`RENDERER_OTA_*`) when those are unset.
+- **Shell unchanged**: it ships only the core as an incremental (OTA) update through `release-desktop-core-ota.yml`, versioned `<shell version>-core.<seq>`. No tag is created, since no new app version ships.
+- **Shell changed, or no full release yet**: it tags a patch version (`vX.Y.Z`). The tag push runs `.github/workflows/release-desktop.yml`, which builds macOS, Windows and Linux packages, publishes them to a GitHub Release and syncs them to the S3 update server. macOS builds embed Sparkle and the release also publishes a signed appcast with delta patches; the appcast is signed with `SPARKLE_ED_PUBLIC_KEY` / `SPARKLE_ED_PRIVATE_KEY`, or with the Ed25519 Core OTA pair (`RENDERER_OTA_*`) when those are unset.
 
 Release Desktop can also run by hand from the Actions tab with a version and channel (`stable` / `beta` / `canary`); `mode: full` forces a full release.
 

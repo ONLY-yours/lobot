@@ -1,12 +1,15 @@
 name: Auto Release
 
 # ============================================
-# main 上有面向用户的改动时自动打一个 patch 版本 tag（+0.0.1）
+# main 上有面向用户的改动时自动发版
 # ============================================
 # CI 在 main 上跑通后：若上一个 v* tag 之后有 feat / fix / style / perf 提交
-# （规则见 scripts/electronWorkflow/planAutoRelease.sh），就给这次 CI 验过的
-# 提交打 vX.Y.Z tag。这里只负责打 tag；tag push 触发 Release Desktop，由它判断
-# 发整包还是只发 core（OTA）。
+# （规则见 scripts/electronWorkflow/planAutoRelease.sh），按外壳是否变化决定怎么发：
+#
+# - 外壳变了（或还没有整包）：给这次 CI 验过的提交打 vX.Y.Z tag（+0.0.1），
+#   tag push 触发 Release Desktop 发整包。tag 只代表真正的整包版本。
+# - 外壳没变：直接调用 Release Desktop Core OTA 发增量 core（<外壳版本>-core.<seq>），
+#   不打 tag。没有 tag 时下一次仍从上个整包 tag 起算，core 没有变化时 OTA 自己会跳过。
 #
 # - 只发 CI 通过的提交；被后续 push 取消的 CI 不发，它的改动会随下一次发出
 # - head 提交的标题（首行）写 [skip release] 可跳过本次
@@ -29,9 +32,11 @@ concurrency:
 
 jobs:
   release:
-    name: Tag
+    name: Plan and tag
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.mode.outputs.mode }}
     steps:
       - uses: actions/create-github-app-token@v2
         id: app-token
@@ -55,8 +60,39 @@ jobs:
           set -euo pipefail
           bash scripts/electronWorkflow/planAutoRelease.sh "${{ github.event.workflow_run.head_sha }}" | tee -a "$GITHUB_OUTPUT"
 
-      - name: Tag
+      - name: Gate on shellAbi
+        id: gate
         if: steps.plan.outputs.release == 'true'
+        uses: ./.github/actions/desktop-shell-gate
+        with:
+          channel: stable
+          update-server-url: ${{ secrets.UPDATE_SERVER_URL }}
+          public-key: ${{ secrets.RENDERER_OTA_PUBLIC_KEY }}
+
+      # Same rules as Release Desktop's "Decide mode", so a tag always means a full release.
+      - name: Decide mode
+        id: mode
+        if: steps.plan.outputs.release == 'true'
+        shell: bash
+        env:
+          REQUIRES_FULL: ${{ steps.gate.outputs.requires-full-release }}
+          HAS_PRIVATE_KEY: ${{ secrets.RENDERER_OTA_PRIVATE_KEY != '' }}
+          SHIPPED_VERSION: ${{ steps.gate.outputs.app-version }}
+        run: |
+          set -euo pipefail
+          if [ "$HAS_PRIVATE_KEY" != "true" ]; then
+            MODE=full REASON="未配置 RENDERER_OTA_PRIVATE_KEY，无法签名 core"
+          elif [ "$REQUIRES_FULL" != "false" ]; then
+            MODE=full REASON="外壳自上次整包后有变化（或还没有整包）"
+          else
+            MODE=ota REASON="外壳与 ${SHIPPED_VERSION} 一致，只发 core，不打 tag"
+          fi
+          echo "mode=${MODE}" >> "$GITHUB_OUTPUT"
+          echo "Mode: ${MODE}（${REASON}）"
+          echo "### Release mode: \`${MODE}\`（${REASON}）" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Tag
+        if: steps.mode.outputs.mode == 'full'
         shell: bash
         run: |
           set -euo pipefail
@@ -64,3 +100,13 @@ jobs:
           git tag "$TAG" "${{ github.event.workflow_run.head_sha }}"
           git push origin "refs/tags/${TAG}"
           echo "🏷️ Tagged ${TAG} (${{ steps.plan.outputs.reason }})，Release Desktop 将由 tag push 触发" >> "$GITHUB_STEP_SUMMARY"
+
+  core-ota:
+    name: Core OTA
+    needs: release
+    if: needs.release.outputs.mode == 'ota'
+    uses: ./.github/workflows/release-desktop-core-ota.yml
+    with:
+      channel: stable
+      ref: ${{ github.event.workflow_run.head_sha }}
+    secrets: inherit

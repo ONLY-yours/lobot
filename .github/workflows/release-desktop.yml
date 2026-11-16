@@ -3,8 +3,8 @@ name: Release Desktop
 # ============================================
 # Lobot 桌面端发布
 # ============================================
-# v* tag（Auto Release 打的或手动推的）触发。先比较 HEAD 与 <channel>/shell.json
-# 的 shellAbi：
+# v* tag 触发：Auto Release 只在外壳变化时打 tag（外壳没变时它直接调 Core OTA，不打 tag），
+# 也可以手动推。先比较 HEAD 与 <channel>/shell.json 的 shellAbi：
 #   - 外壳未变 → 只发 core 增量包（OTA，调用 release-desktop-core-ota.yml），
 #     版本为 <上次整包版本>-core.<seq>，不建 GitHub Release
 #   - 外壳有变 / 还没有整包 / 未配置 OTA 密钥或更新源 → 构建三端安装包，发到本仓
