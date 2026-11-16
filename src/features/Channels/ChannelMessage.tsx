@@ -338,6 +338,7 @@ export const ChannelMessage = ({
             {!!message.works?.length && <ReplyWorks works={message.works} />}
             {thread && (
               <ThreadPreviewCard
+                detail={detail}
                 root={message}
                 thread={thread}
                 onOpen={() => onOpenThread?.(thread.id)}

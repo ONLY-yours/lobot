@@ -7,11 +7,13 @@ import {
   directAvatarState,
   hasReplyActivity,
   isDeviceFailure,
+  mainTimelineFailures,
   memberCurrentJob,
   memberJobStatus,
   replyActivityJobs,
   replyAvatarState,
   unresolvedFailures,
+  workingJob,
 } from './jobStatus';
 
 describe('memberJobStatus', () => {
@@ -163,6 +165,19 @@ describe('Channel task tone', () => {
   });
 });
 
+describe('mainTimelineFailures', () => {
+  const job = (patch: Partial<ChannelPublicJob>) =>
+    ({ memberId: 'a', publicationRevoked: false, threadId: null, ...patch }) as ChannelPublicJob;
+
+  it('keeps a main failure while the same Agent works in a thread', () => {
+    const jobs = [
+      job({ id: 'thread-running', status: 'running', threadId: 'thr_1' }),
+      job({ id: 'main-failed', status: 'failed' }),
+    ];
+    expect(mainTimelineFailures(jobs).map((entry) => entry.id)).toEqual(['main-failed']);
+  });
+});
+
 describe('directAvatarState', () => {
   const job = (patch: Partial<ChannelPublicJob> = {}) =>
     ({
@@ -258,6 +273,38 @@ describe('hasReplyActivity', () => {
     });
     expect(hasReplyActivity(running, 'thread-a')).toBe(true);
     expect(hasReplyActivity(running, null)).toBe(false);
+  });
+});
+
+describe('workingJob', () => {
+  const job = (patch: Partial<ChannelPublicJob> = {}) =>
+    ({
+      blockedCode: null,
+      id: 'job_1',
+      memberId: 'mem_nasa',
+      publicationRevoked: false,
+      status: 'running',
+      threadId: null,
+      writerHeld: true,
+      ...patch,
+    }) as ChannelPublicJob;
+
+  it('finds the member reply in progress, in any thread', () => {
+    const running = job({ threadId: 'thr_1' });
+    expect(workingJob([running], 'mem_nasa')).toBe(running);
+    expect(workingJob([running])).toBe(running);
+    expect(workingJob([running], 'mem_other')).toBeUndefined();
+  });
+
+  it('ignores blocked, stopping, deferred and settled replies', () => {
+    expect(workingJob([job({ blockedCode: 'device_offline', status: 'queued' })])).toBeUndefined();
+    expect(
+      workingJob([job({ publicationRevoked: true, status: 'running', writerHeld: true })]),
+    ).toBeUndefined();
+    expect(
+      workingJob([job({ blockedCode: 'awaiting_primary', status: 'queued' })]),
+    ).toBeUndefined();
+    expect(workingJob([job({ status: 'completed', writerHeld: false })])).toBeUndefined();
   });
 });
 

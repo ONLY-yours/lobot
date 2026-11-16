@@ -23,6 +23,7 @@ import { ChannelConversation } from './ChannelConversation';
 import { ChannelEmpty } from './ChannelEmpty';
 import { ChannelSyncing } from './ChannelSyncing';
 import { DirectAgentRole } from './DirectAgentRole';
+import { workingJob } from './jobStatus';
 import { MEMBER_FLOAT_BREAKPOINT, MemberPanel } from './MemberPanel';
 import { MemberStatus } from './MemberStatus';
 import { openTopic } from './openTopic';
@@ -58,6 +59,12 @@ function EnabledChannelPage() {
   const viewerId = useUserStore(userProfileSelectors.userId);
   const directAgent = detail?.channel.agentId
     ? detail.members.find((member) => member.agentId === detail.channel.agentId)
+    : undefined;
+  // The open conversation's jobs cover its threads too; the list row only knows the main one.
+  const directWorkingJob = isDirect
+    ? detail
+      ? workingJob(detail.jobs, directAgent?.id)
+      : workingJob(listItem?.replyJobs ?? [])
     : undefined;
   const [topic, setTopic] = useState<(ReplyTopic & { channelId: string }) | null>(null);
   const portalOpen = usePortalPanelOpen();
@@ -99,7 +106,7 @@ function EnabledChannelPage() {
                   ? channelTitle(detail, viewerId)
                   : listItem && (directCounterpart(listItem)?.name || listItem.title)}
               </Text>
-              {directAgentId && <DirectAgentRole agentId={directAgentId} />}
+              {directAgentId && <DirectAgentRole agentId={directAgentId} job={directWorkingJob} />}
               {detail?.channel.status === 'archived' && <Tag size="small">{t('archived')}</Tag>}
               <ChannelSyncing failed={!!sync.error} params={view} />
             </Flexbox>

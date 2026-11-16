@@ -348,6 +348,72 @@ describe('ChannelMessage thread card', () => {
     expect(onOpenThread).toHaveBeenCalledWith('cht_1');
   });
 
+  it('shows the Agent working in the thread in place of its latest reply', () => {
+    render(
+      <ChannelMessage
+        message={root}
+        detail={{
+          ...withThread({
+            lastReply: {
+              author: { avatar: null, id: 'agt_1', name: 'Nasa', type: 'agent' },
+              content: 'Earlier answer',
+              createdAt: new Date(),
+              id: 'msg_2',
+            },
+            replyCount: 2,
+          }),
+          jobs: [
+            {
+              blockedCode: null,
+              id: 'job_1',
+              memberId: 'mem_1',
+              publicationRevoked: false,
+              status: 'running',
+              threadId: 'cht_1',
+              writerHeld: true,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByRole('status').textContent).toContain('activity.one');
+    expect(screen.queryByText('Earlier answer')).toBeNull();
+  });
+
+  it('keeps the latest reply when the work is in another thread', () => {
+    render(
+      <ChannelMessage
+        message={root}
+        detail={{
+          ...withThread({
+            lastReply: {
+              author: { avatar: null, id: 'agt_1', name: 'Nasa', type: 'agent' },
+              content: 'Earlier answer',
+              createdAt: new Date(),
+              id: 'msg_2',
+            },
+            replyCount: 2,
+          }),
+          jobs: [
+            {
+              blockedCode: null,
+              id: 'job_1',
+              memberId: 'mem_1',
+              publicationRevoked: false,
+              status: 'running',
+              threadId: 'cht_other',
+              writerHeld: true,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByText('Earlier answer')).toBeTruthy();
+  });
+
   it('shows the viewer’s own latest reply with their live avatar', () => {
     render(
       <ChannelMessage

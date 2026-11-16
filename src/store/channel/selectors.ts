@@ -30,16 +30,16 @@ export const channelSelectors = {
     state.detailMap[channelViewKey(params)],
   /**
    * Receipt and reply progress must stay live even without gateway notifications. A job
-   * blocked on a device or a person does not count.
+   * blocked on a device or a person does not count. The main conversation also counts its
+   * threads' jobs, which its thread cards show as work in progress.
    */
   hasPendingWork: (params: ChannelViewParams | null) => (state: ChannelState) => {
     const detail = params ? state.detailMap[channelViewKey(params)] : undefined;
     if (!detail) return false;
+    const threadId = params?.threadId ?? null;
     return (
       detail.messages.some((message) => message.routingStatus === 'pending') ||
-      detail.jobs.some(
-        (job) => (job.threadId ?? null) === (params?.threadId ?? null) && isProgressing(job),
-      )
+      detail.jobs.some((job) => (!threadId || job.threadId === threadId) && isProgressing(job))
     );
   },
   /** The view on screen is a stored copy that no server answer has confirmed since it loaded. */

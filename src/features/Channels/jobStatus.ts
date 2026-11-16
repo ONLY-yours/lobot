@@ -68,6 +68,13 @@ export const unresolvedFailures = <T extends ChannelReplyJob>(jobs: T[]) => {
   });
 };
 
+/**
+ * The header's failures: the main conversation's own. Its view also carries replies still at
+ * work in threads, and one of those must not hide, then bring back, a main-timeline failure.
+ */
+export const mainTimelineFailures = <T extends ChannelReplyJob>(jobs: T[]) =>
+  unresolvedFailures(jobs.filter((job) => !job.threadId));
+
 /** What a member is busy with now: a running reply first, then the next queued one. */
 export const memberCurrentJob = <T extends ChannelReplyJob>(jobs: T[], memberId: string) => {
   const own = jobs.filter((job) => job.memberId === memberId);
@@ -114,4 +121,15 @@ export const replyAvatarState = (
 export const directAvatarState = (detail: ChannelDetail) => {
   const { jobs, receiving } = conversationReplies(detail, null);
   return replyAvatarState(jobs, receiving);
+};
+
+/**
+ * The reply a member (or, without one, the first replying member) is visibly working on: running
+ * or about to, not blocked, stopping or deferred. Undefined when nobody is.
+ */
+export const workingJob = <T extends ChannelReplyJob>(jobs: T[], memberId?: string) => {
+  const pending = replyActivityJobs(jobs);
+  const owner = memberId ?? pending[0]?.memberId;
+  const job = owner ? memberCurrentJob(pending, owner) : undefined;
+  return job && channelJobTone(job) === 'working' ? job : undefined;
 };
