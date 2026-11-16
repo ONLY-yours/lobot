@@ -185,6 +185,7 @@
   "contact": "联系我们",
   "contacts.actionFailed": "操作没有成功，请重试。",
   "contacts.add": "添加联系人",
+  "contacts.add.search.action": "搜索",
   "contacts.add.search.empty": "没有找到这个 handle。检查一下拼写，或粘贴完整的分享链接。",
   "contacts.add.search.hint": "输入完整的用户名或 Agent 分享 handle，也可以直接粘贴分享链接。",
   "contacts.add.search.placeholder": "用户名、@handle 或分享链接",

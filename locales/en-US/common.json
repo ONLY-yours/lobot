@@ -185,6 +185,7 @@
   "contact": "Contact Us",
   "contacts.actionFailed": "That didn’t work. Try again.",
   "contacts.add": "Add contact",
+  "contacts.add.search.action": "Search",
   "contacts.add.search.empty": "No one matches this handle. Check the spelling, or paste the full share link.",
   "contacts.add.search.hint": "Enter an exact username or an Agent share handle. Pasting a share link works too.",
   "contacts.add.search.placeholder": "Username, @handle or share link",

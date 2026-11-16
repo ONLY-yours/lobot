@@ -450,6 +450,7 @@ export default {
   'contacts.sort.updatedAt': 'Recently updated',
   'contacts.add': 'Add contact',
   'contacts.add.search.placeholder': 'Username, @handle or share link',
+  'contacts.add.search.action': 'Search',
   'contacts.add.search.empty':
     'No one matches this handle. Check the spelling, or paste the full share link.',
   'contacts.add.search.hint':

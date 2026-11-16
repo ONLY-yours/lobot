@@ -1,7 +1,7 @@
 'use client';
 
 import type { ContactSearchResult } from '@lobechat/types';
-import { Button, Flexbox, SearchBar, Text, toast, useModalContext } from '@lobehub/ui';
+import { Button, Center, Flexbox, SearchBar, Text, toast, useModalContext } from '@lobehub/ui';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -16,6 +16,8 @@ import { contactActions } from '@/store/contact';
 import { searchResultKey, searchResultName } from './result';
 
 const AVATAR_SIZE = 40;
+/** Fixed so the window doesn't jump between the hint, the empty state and results. */
+const BODY_HEIGHT = 420;
 
 const ResultAction = memo<{ result: ContactSearchResult }>(({ result }) => {
   const { t } = useTranslation('common');
@@ -141,7 +143,7 @@ const AddContactContent = memo(() => {
 
   const search = async () => {
     const value = query.trim();
-    if (!value) return;
+    if (!value || searching) return;
     setSearching(true);
     try {
       setResults(await contactService.search(value));
@@ -153,34 +155,44 @@ const AddContactContent = memo(() => {
     }
   };
 
+  const trimmed = query.trim();
+
   return (
-    <Flexbox gap={12} paddingBlock={'4px 16px'}>
-      <SearchBar
-        allowClear
-        autoFocus
-        loading={searching}
-        placeholder={t('contacts.add.search.placeholder')}
-        value={query}
-        onSearch={() => void search()}
-        onInputChange={(value) => {
-          setQuery(value);
-          setResults(undefined);
-        }}
-      />
-      {results === undefined ? (
-        <Text fontSize={12} type={'secondary'}>
-          {t('contacts.add.search.hint')}
-        </Text>
-      ) : results.length === 0 ? (
-        <Text fontSize={12} type={'secondary'}>
-          {t('contacts.add.search.empty')}
-        </Text>
+    <Flexbox gap={16} height={BODY_HEIGHT} paddingBlock={'4px 16px'}>
+      <Flexbox horizontal gap={8}>
+        <SearchBar
+          allowClear
+          autoFocus
+          placeholder={t('contacts.add.search.placeholder')}
+          style={{ flex: 1 }}
+          value={query}
+          onSearch={() => void search()}
+          onInputChange={(value) => {
+            setQuery(value);
+            setResults(undefined);
+          }}
+        />
+        <Button
+          disabled={!trimmed}
+          loading={searching}
+          type={'primary'}
+          onClick={() => void search()}
+        >
+          {t('contacts.add.search.action')}
+        </Button>
+      </Flexbox>
+      {results === undefined || results.length === 0 ? (
+        <Center flex={1} paddingInline={16}>
+          <Text fontSize={12} style={{ textAlign: 'center' }} type={'secondary'}>
+            {results === undefined ? t('contacts.add.search.hint') : t('contacts.add.search.empty')}
+          </Text>
+        </Center>
       ) : (
-        <Flexbox gap={8}>
+        <Flexbox flex={1} gap={16} style={{ minHeight: 0, overflowY: 'auto' }}>
           {results.map((result) => {
             const name = searchResultName(result, t('untitledAgent', { ns: 'chat' }));
             return (
-              <Flexbox horizontal align={'center'} gap={12} key={searchResultKey(result)}>
+              <Flexbox horizontal gap={12} key={searchResultKey(result)}>
                 {result.type === 'agent' ? (
                   <AgentAvatar
                     agentId={result.agent.agentId}
@@ -192,19 +204,22 @@ const AddContactContent = memo(() => {
                 ) : (
                   <UserAvatar avatar={result.user.avatar} name={name} size={AVATAR_SIZE} />
                 )}
-                <Flexbox flex={1} style={{ minWidth: 0 }}>
-                  <Text ellipsis weight={500}>
-                    {name}
-                  </Text>
-                  <Text ellipsis fontSize={12} type={'secondary'}>
-                    {result.type === 'agent'
-                      ? t('contacts.agent.byOwner', {
-                          name: result.agent.owner.fullName || result.agent.owner.username,
-                        })
-                      : result.user.username && `@${result.user.username}`}
-                  </Text>
+                {/* Actions sit under the name so a long name keeps the narrow window's width. */}
+                <Flexbox flex={1} gap={8} style={{ minWidth: 0 }}>
+                  <Flexbox>
+                    <Text ellipsis weight={500}>
+                      {name}
+                    </Text>
+                    <Text ellipsis fontSize={12} type={'secondary'}>
+                      {result.type === 'agent'
+                        ? t('contacts.agent.byOwner', {
+                            name: result.agent.owner.fullName || result.agent.owner.username,
+                          })
+                        : result.user.username && `@${result.user.username}`}
+                    </Text>
+                  </Flexbox>
+                  <ResultAction result={result} />
                 </Flexbox>
-                <ResultAction result={result} />
               </Flexbox>
             );
           })}

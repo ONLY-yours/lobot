@@ -11,5 +11,5 @@ export const openAddContactModal = () =>
     content: <AddContactContent />,
     footer: null,
     title: t('contacts.add.title', { ns: 'common' }),
-    width: 'min(90%, 440px)',
+    width: 'min(90%, 380px)',
   });
