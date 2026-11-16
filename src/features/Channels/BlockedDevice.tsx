@@ -12,7 +12,11 @@ import { openChannelAgentEnvironment } from './AgentEnvironment';
 import { blockedDeviceState } from './blockedDeviceState';
 import { deviceLabel } from './CreateChannel/EnvironmentFields';
 
-/** Lines up under the reply's name: avatar (24) plus the row gap (8). */
+/**
+ * A waiting reply shows the device right under its name row, so it lines up under the name:
+ * avatar (24) plus the row gap (8). A failed one shows it under the failure reason, which
+ * starts at the card's edge, so it starts there too.
+ */
 const INDENT = 32;
 
 function Hint() {
@@ -25,7 +29,15 @@ function Hint() {
 }
 
 /** A device, what the device gateway sees of it now, and a way to move the Agent elsewhere. */
-function DeviceRow({ deviceId, onChange }: { deviceId: string; onChange?: () => void }) {
+function DeviceRow({
+  deviceId,
+  indent,
+  onChange,
+}: {
+  deviceId: string;
+  indent?: boolean;
+  onChange?: () => void;
+}) {
   const { t } = useTranslation('channel');
   const devices = useDeviceList({ refreshInterval: 15_000 });
   const state = blockedDeviceState(deviceId, devices.data, devices.isConfirmed);
@@ -40,7 +52,7 @@ function DeviceRow({ deviceId, onChange }: { deviceId: string; onChange?: () => 
           : t('environment.checkingDevice');
 
   return (
-    <Flexbox horizontal align="center" gap={8} style={{ paddingInlineStart: INDENT }}>
+    <Flexbox horizontal align="center" gap={8} style={{ paddingInlineStart: indent ? INDENT : 0 }}>
       <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
         <Flexbox horizontal align="center" gap={6} style={{ minWidth: 0 }}>
           <span aria-hidden style={{ display: 'inline-flex', flexShrink: 0 }}>
@@ -67,17 +79,23 @@ function DeviceRow({ deviceId, onChange }: { deviceId: string; onChange?: () => 
 function ChannelEnvironmentDevice({
   channelId,
   fallback,
+  indent,
   member,
   onChange,
 }: {
   channelId: string;
   fallback: ReactNode;
+  indent?: boolean;
   member: ChannelPublicMember;
   onChange: () => void;
 }) {
   const environment = channelActions.useFetchAgentEnvironment(channelId, member.id);
   const deviceId = environment.data?.deviceId;
-  return deviceId ? <DeviceRow deviceId={deviceId} onChange={onChange} /> : fallback;
+  return deviceId ? (
+    <DeviceRow deviceId={deviceId} indent={indent} onChange={onChange} />
+  ) : (
+    fallback
+  );
 }
 
 /**
@@ -108,12 +126,13 @@ export function BlockedDevice({
       : undefined;
   const fallback = waiting ? <Hint /> : null;
 
-  if (deviceId) return <DeviceRow deviceId={deviceId} onChange={change} />;
+  if (deviceId) return <DeviceRow deviceId={deviceId} indent={waiting} onChange={change} />;
   if (change && member)
     return (
       <ChannelEnvironmentDevice
         channelId={channelId}
         fallback={fallback}
+        indent={waiting}
         member={member}
         onChange={change}
       />
