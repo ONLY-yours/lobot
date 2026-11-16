@@ -45,12 +45,19 @@ describe('PersonProfileCard', () => {
     expect(screen.getByText('memberProfile.joinedAt:November 3, 2026')).toBeTruthy();
   });
 
-  it('skips a handle that only repeats the name', () => {
+  // A handle matching the name was hidden, so one card had the line and the next did not.
+  it('shows the handle even when it matches the name', () => {
     render(<PersonProfileCard member={{ ...person, userName: 'Ann', username: 'ann' }} />);
 
     expect(screen.getByText('Ann')).toBeTruthy();
-    expect(screen.getByText('memberProfile.joinedAt:November 3, 2026')).toBeTruthy();
-    expect(screen.queryByText(/@ann/)).toBeNull();
+    expect(screen.getByText('@ann')).toBeTruthy();
+  });
+
+  it('leaves the handle out for a person without one', () => {
+    render(<PersonProfileCard member={{ ...person, username: null }} />);
+
+    expect(screen.getByText('Ann Lee')).toBeTruthy();
+    expect(screen.queryByText(/^@/)).toBeNull();
   });
 });
 

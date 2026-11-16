@@ -56,11 +56,9 @@ const styles = stylex.create({
 export const PersonProfileCard = ({ member }: { member: ChannelPublicMember }) => {
   const { t, i18n } = useTranslation('channel');
   const name = memberName(member, t('deletedMember'));
-  // The handle only adds something when the display name is not already it (`AmAzing-` / `amazing-`).
-  const handle =
-    member.username && member.username.toLowerCase() !== name.toLowerCase()
-      ? `@${member.username}`
-      : undefined;
+  // Every person's card shows the handle, even when it matches the name (`AmAzing-` / `amazing-`),
+  // so the cards read the same; only a person without one goes without.
+  const handle = member.username ? `@${member.username}` : undefined;
   const joinedAt = new Date(member.joinedAt);
   const joined = Number.isNaN(joinedAt.getTime())
     ? undefined
