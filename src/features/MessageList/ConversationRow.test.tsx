@@ -80,18 +80,33 @@ describe('ConversationRow', () => {
   });
 
   // The row said a green "running" with a spinner; it now reads like the header's typing line.
-  it('says typing in place of the preview while the Agent replies', () => {
+  it('says typing in place of the preview while the Agent prepares a reply', () => {
     render(
       createElement(ConversationRow, {
+        activity: 'typing',
         avatar: null,
         preview: 'last message',
         title: 'Dario',
-        typing: true,
         url: '/channels/chn_dario',
       }),
     );
 
     expect(screen.getByRole('status')).toHaveTextContent('activity.typing');
     expect(screen.queryByText('last message')).toBeNull();
+  });
+
+  // The row kept saying "typing" while the composer said the Agent was working.
+  it('says working, like the composer, once the reply runs', () => {
+    render(
+      createElement(ConversationRow, {
+        activity: 'working',
+        avatar: null,
+        preview: 'last message',
+        title: 'Dario',
+        url: '/channels/chn_dario',
+      }),
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent('status.working');
   });
 });

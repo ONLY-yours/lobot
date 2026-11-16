@@ -10,12 +10,17 @@ import { TypingDots } from '@/features/Channels/TypingDots';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink, { type WorkspaceLinkProps } from '@/features/Workspace/WorkspaceLink';
 
-import { formatConversationTime, isPlainClick } from './conversations';
+import { type ConversationActivity, formatConversationTime, isPlainClick } from './conversations';
 import { styles } from './style';
 
 export interface ConversationRowProps {
   active?: boolean;
   activeAt?: Date;
+  /**
+   * The Agent is replying: the preview line says so in the words the composer's activity line
+   * uses, "typing" while the reply is prepared and "working" once it runs.
+   */
+  activity?: ConversationActivity;
   avatar: ReactNode;
   /**
    * Clicking the open conversation again closes it, back to the Messages home with no row
@@ -33,8 +38,6 @@ export interface ConversationRowProps {
   /** A muted label after the title, e.g. the project a Channel belongs to. */
   tag?: string;
   title: string;
-  /** The Agent is replying: the preview line says "typing" like the conversation header. */
-  typing?: boolean;
   unread?: number;
   url: string;
 }
@@ -75,7 +78,7 @@ const ConversationRow = memo<ConversationRowProps>(
     singleLine,
     tag,
     title,
-    typing,
+    activity,
     unread,
     url,
   }) => {
@@ -114,11 +117,11 @@ const ConversationRow = memo<ConversationRowProps>(
             )}
           </Flexbox>
           {/* No preview: the title sits centered at the full row height, not over a blank line. */}
-          {!singleLine && (typing || preview) && (
+          {!singleLine && (activity || preview) && (
             <Flexbox horizontal align={'center'} gap={8}>
-              {typing ? (
+              {activity ? (
                 <span role="status" {...stylex.props(styles.preview, styles.typing)}>
-                  {activityLabel(t('activity.typing'))}
+                  {activityLabel(t(activity === 'working' ? 'status.working' : 'activity.typing'))}
                   <TypingDots />
                 </span>
               ) : (

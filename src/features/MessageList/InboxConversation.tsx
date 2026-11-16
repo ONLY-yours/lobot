@@ -15,7 +15,7 @@ import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
 
 import ConversationRow from './ConversationRow';
-import { conversationPreview } from './conversations';
+import { conversationPreview, replyActivity } from './conversations';
 import { AVATAR_SIZE } from './style';
 import { useInboxConversationLink } from './useAgentConversationLink';
 import { useDirectChannelRow } from './useDirectChannelRow';
@@ -42,20 +42,16 @@ const InboxConversation = memo<{
   const active = !!activeRouteId && (activeRouteId === routeId || activeRouteId === inboxAgentId);
   const { channelActions, replyState } = useDirectChannelRow(channel, active);
   const avatarState = replyState ?? (running ? 'working' : undefined);
-  // A blocked reply keeps the preview; its avatar already shows it waiting.
-  const typing = !!avatarState && avatarState !== 'waiting';
+  const activity = replyActivity(avatarState);
 
   return (
     <ConversationRow
       closeOnReselect
       active={active}
-      activeAt={activeAt}
-      // An archived direct Channel is the only thing this row can act on.
-      contextMenuItems={channel?.status === 'archived' ? channelActions : undefined}
+      activity={activity}
       // Same preview and time as every other Agent row; its tagline when it has nothing yet.
       preview={conversationPreview(meta.description, topic, channel) ?? t('inbox.desc')}
       title={title}
-      typing={typing}
       unread={channel?.unreadCount ?? undefined}
       url={url}
       avatar={
@@ -70,6 +66,9 @@ const InboxConversation = memo<{
       }
       onClick={onClick}
       onMouseEnter={() => inboxAgentId && prefetchAgent(inboxAgentId)}
+      activeAt={activeAt}
+      // An archived direct Channel is the only thing this row can act on.
+      contextMenuItems={channel?.status === 'archived' ? channelActions : undefined}
     />
   );
 });

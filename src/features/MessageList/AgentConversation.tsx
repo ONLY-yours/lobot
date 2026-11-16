@@ -13,7 +13,7 @@ import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
 
 import ConversationRow from './ConversationRow';
-import { type Conversation } from './conversations';
+import { type Conversation, replyActivity } from './conversations';
 import { AVATAR_SIZE } from './style';
 import { useAgentConversationLink } from './useAgentConversationLink';
 import { useDirectChannelRow } from './useDirectChannelRow';
@@ -34,9 +34,9 @@ const AgentConversation = memo<AgentConversationProps>(({ active, conversation }
   const { onClick, url } = useAgentConversationLink(id, agentUrl);
   const { channelActions, replyState } = useDirectChannelRow(conversation.channel, active);
   const avatarState = replyState ?? (chatRunning ? 'working' : undefined);
-  // Only the direct Channel's own reply says typing: a run in one of the Agent's other topics
+  // Only the direct Channel's own reply shows on the preview: a run in one of the Agent's other topics
   // only animates the avatar. A blocked reply keeps the preview; its avatar shows it waiting.
-  const typing = !!replyState && replyState !== 'waiting';
+  const activity = replyActivity(replyState);
   const title = agentDisplayName(item, t('untitledAgent'));
   const avatarSrc = typeof avatar === 'string' ? avatar : undefined;
 
@@ -76,10 +76,10 @@ const AgentConversation = memo<AgentConversationProps>(({ active, conversation }
       closeOnReselect
       active={active}
       activeAt={activeAt}
+      activity={activity}
       contextMenuItems={menuItems}
       preview={preview}
       title={title}
-      typing={typing}
       unread={conversation.unread ?? item.unreadCount}
       url={url}
       avatar={

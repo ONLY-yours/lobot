@@ -58,10 +58,10 @@ vi.mock('./useAgentConversationLink', () => ({
   useAgentConversationLink: (_: string, url: string) => ({ url }),
 }));
 vi.mock('./ConversationRow', () => ({
-  default: ({ avatar, contextMenuItems, title, typing }: any) =>
+  default: ({ activity, avatar, contextMenuItems, title }: any) =>
     createElement(
       'div',
-      { 'data-testid': 'row', 'data-typing': String(!!typing) },
+      { 'data-activity': activity ?? 'none', 'data-testid': 'row' },
       title,
       avatar as never,
       createElement(
@@ -143,7 +143,7 @@ describe('AgentConversation reply activity', () => {
 
   // The header said "typing" while the row and its avatar stayed idle: the row only read chat
   // operations, and a direct Channel replies through Channel jobs.
-  it('animates the avatar and says typing while the direct Channel replies', () => {
+  it('animates the avatar and says working while the direct Channel’s reply runs', () => {
     showReply({ status: 'running' });
     render(
       createElement(AgentConversation, { active: true, conversation: conversation(undefined, {}) }),
@@ -151,7 +151,18 @@ describe('AgentConversation reply activity', () => {
 
     expect(screen.getByTestId('agent-avatar')).toHaveAttribute('data-state', 'working');
     expect(screen.getByTestId('agent-avatar')).toHaveAttribute('data-animated', 'true');
-    expect(screen.getByTestId('row')).toHaveAttribute('data-typing', 'true');
+    expect(screen.getByTestId('row')).toHaveAttribute('data-activity', 'working');
+  });
+
+  // The row said "typing" while the composer said "working": both now name the reply's state.
+  it('says typing while the reply is still being prepared', () => {
+    showReply({ status: 'queued' });
+    render(
+      createElement(AgentConversation, { active: true, conversation: conversation(undefined, {}) }),
+    );
+
+    expect(screen.getByTestId('agent-avatar')).toHaveAttribute('data-state', 'thinking');
+    expect(screen.getByTestId('row')).toHaveAttribute('data-activity', 'typing');
   });
 
   it('shows a blocked reply as waiting', () => {
@@ -161,7 +172,7 @@ describe('AgentConversation reply activity', () => {
     );
 
     expect(screen.getByTestId('agent-avatar')).toHaveAttribute('data-state', 'waiting');
-    expect(screen.getByTestId('row')).toHaveAttribute('data-typing', 'false');
+    expect(screen.getByTestId('row')).toHaveAttribute('data-activity', 'none');
   });
 
   it('stays idle once the reply settles', () => {
@@ -172,7 +183,7 @@ describe('AgentConversation reply activity', () => {
 
     expect(screen.getByTestId('agent-avatar')).not.toHaveAttribute('data-state');
     expect(screen.getByTestId('agent-avatar')).toHaveAttribute('data-animated', 'false');
-    expect(screen.getByTestId('row')).toHaveAttribute('data-typing', 'false');
+    expect(screen.getByTestId('row')).toHaveAttribute('data-activity', 'none');
   });
 
   // A row whose conversation is not open used to stay idle; it now reads the list's jobs.
@@ -198,7 +209,7 @@ describe('AgentConversation reply activity', () => {
     );
 
     expect(screen.getByTestId('agent-avatar')).toHaveAttribute('data-state', 'working');
-    expect(screen.getByTestId('row')).toHaveAttribute('data-typing', 'true');
+    expect(screen.getByTestId('row')).toHaveAttribute('data-activity', 'working');
   });
 
   // The row said typing while the Channel was idle: the Agent was running in its other topics.
@@ -211,6 +222,6 @@ describe('AgentConversation reply activity', () => {
     chat.running = false;
 
     expect(screen.getByTestId('agent-avatar')).toHaveAttribute('data-state', 'working');
-    expect(screen.getByTestId('row')).toHaveAttribute('data-typing', 'false');
+    expect(screen.getByTestId('row')).toHaveAttribute('data-activity', 'none');
   });
 });

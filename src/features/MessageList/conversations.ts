@@ -263,3 +263,13 @@ export const directCounterpart = (
   const actorType = channel.peerUserId ? 'user' : 'agent';
   return channel.memberAvatars?.find((member) => member.actorType === actorType);
 };
+
+/** A reply in progress, as the composer's activity line names it. */
+export type ConversationActivity = 'typing' | 'working';
+
+/**
+ * A direct Channel's reply state on its row: preparing types, running works, blocked stays on
+ * the preview (its avatar already shows it waiting).
+ */
+export const replyActivity = (state?: string): ConversationActivity | undefined =>
+  state === 'working' ? 'working' : state === 'thinking' ? 'typing' : undefined;
