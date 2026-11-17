@@ -2,7 +2,7 @@ import type { ChannelPublicMember } from '@lobechat/types';
 import { Flexbox, Popover, Text } from '@lobehub/ui';
 import { cssVar } from '@lobehub/ui/stylex/cssVar.stylex';
 import * as stylex from '@stylexjs/stylex';
-import { type ReactElement } from 'react';
+import { type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
@@ -52,6 +52,38 @@ const styles = stylex.create({
   },
 });
 
+/** The person card's shape: a blurred banner of the avatar, the avatar over its edge, then text. */
+export const PersonCardFrame = ({
+  avatar,
+  children,
+  image,
+  name,
+}: {
+  /** The avatar drawn over the banner's edge, 48px. */
+  avatar: ReactNode;
+  children?: ReactNode;
+  /** The avatar image the banner blurs. */
+  image: string | null | undefined;
+  name: string;
+}) => (
+  <Flexbox {...stylex.props(styles.card)}>
+    <div {...stylex.props(styles.banner)}>
+      <span {...stylex.props(styles.bannerImage)}>
+        <Avatar avatar={image || undefined} name={name} shape={'square'} size={400} />
+      </span>
+    </div>
+    <Flexbox gap={8} {...stylex.props(styles.body)}>
+      <span {...stylex.props(styles.avatar)}>{avatar}</span>
+      <Flexbox gap={2} style={{ minWidth: 0 }}>
+        <Text ellipsis {...stylex.props(styles.name)}>
+          {name}
+        </Text>
+        {children}
+      </Flexbox>
+    </Flexbox>
+  </Flexbox>
+);
+
 /** A person's card: who they are in the Channel. Agents keep their own profile card. */
 export const PersonProfileCard = ({ member }: { member: ChannelPublicMember }) => {
   const { t, i18n } = useTranslation('channel');
@@ -67,33 +99,22 @@ export const PersonProfileCard = ({ member }: { member: ChannelPublicMember }) =
       });
 
   return (
-    <Flexbox {...stylex.props(styles.card)}>
-      <div {...stylex.props(styles.banner)}>
-        <span {...stylex.props(styles.bannerImage)}>
-          <Avatar avatar={memberAvatar(member)} name={name} shape={'square'} size={400} />
-        </span>
-      </div>
-      <Flexbox gap={8} {...stylex.props(styles.body)}>
-        <span {...stylex.props(styles.avatar)}>
-          <MemberAvatar member={member} size={48} />
-        </span>
-        <Flexbox gap={2} style={{ minWidth: 0 }}>
-          <Text ellipsis {...stylex.props(styles.name)}>
-            {name}
-          </Text>
-          {handle && (
-            <Text ellipsis fontSize={12} type={'secondary'}>
-              {handle}
-            </Text>
-          )}
-          {joined && (
-            <Text ellipsis fontSize={12} type={'secondary'}>
-              {joined}
-            </Text>
-          )}
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+    <PersonCardFrame
+      avatar={<MemberAvatar member={member} size={48} />}
+      image={memberAvatar(member)}
+      name={name}
+    >
+      {handle && (
+        <Text ellipsis fontSize={12} type={'secondary'}>
+          {handle}
+        </Text>
+      )}
+      {joined && (
+        <Text ellipsis fontSize={12} type={'secondary'}>
+          {joined}
+        </Text>
+      )}
+    </PersonCardFrame>
   );
 };
 

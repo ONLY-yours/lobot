@@ -116,6 +116,7 @@ export default {
   'profile.about': 'About',
   'profile.hide': 'Hide Agent profile',
   'profile.noDescription': 'No description yet',
+  'profile.owner': 'Shared by',
   'profile.show': 'Show Agent profile',
   'profile.title': 'Agent profile',
   'profile.view': 'View profile',

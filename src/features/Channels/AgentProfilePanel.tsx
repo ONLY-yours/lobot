@@ -12,6 +12,7 @@ import { agentSelectors } from '@/store/agent/selectors';
 import { MemberAvatar } from './MemberAvatar';
 import { memberName } from './memberName';
 import { ChannelSidePanel } from './MemberPanel';
+import { SharedAgentOwner, useSharedAgentOwner } from './SharedAgentOwner';
 import { useOpenDirectAgent } from './useOpenDirectAgent';
 
 const styles = stylex.create({
@@ -76,6 +77,7 @@ export function AgentProfilePanel({
   useHydrateAgentConfig(true, agentId);
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
   const slug = useAgentStore(agentSelectors.getAgentSlugById(agentId));
+  const owner = useSharedAgentOwner(channelId, agentId);
   const name = memberName(member, t('deletedMember'));
   const roleLine = [agentSecondaryDisplayName(meta), slug ? `@${slug}` : undefined]
     .filter(Boolean)
@@ -110,6 +112,12 @@ export function AgentProfilePanel({
           {roleLine && <span {...stylex.props(styles.role)}>{roleLine}</span>}
         </Flexbox>
         <Flexbox gap={16} {...stylex.props(styles.detail)}>
+          {owner && (
+            <Flexbox gap={6}>
+              <span {...stylex.props(styles.label)}>{t('profile.owner')}</span>
+              <SharedAgentOwner owner={owner} />
+            </Flexbox>
+          )}
           <Flexbox gap={6}>
             <span {...stylex.props(styles.label)}>{t('profile.about')}</span>
             {member.description ? (
