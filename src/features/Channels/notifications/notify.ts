@@ -33,6 +33,7 @@ interface ChannelBanner {
 /**
  * Banner wording, the way chat apps word it:
  * - a direct conversation is titled by its Agent and shows the message;
+ * - a conversation between two people is titled by the other person, like a DM;
  * - a group is titled on one line "sender (Channel · project)" and shows the message;
  * - an @mention says who mentioned the user, and where.
  */
@@ -46,6 +47,12 @@ export const buildChannelBanner = (
     message?.content ?? channel.lastMessage?.content,
     t('notification.newMessage', { ns: 'channel' }),
   );
+
+  // The stored title is not the viewer's name for the other person, so it never shows here.
+  if (channel.peerUserId) {
+    const peer = channel.memberAvatars?.find((item) => item.id === channel.peerUserId);
+    return { body: text, title: sender || peer?.name || channel.title };
+  }
 
   if (kind === 'mention')
     return {

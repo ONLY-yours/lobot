@@ -81,6 +81,31 @@ describe('buildChannelBanner', () => {
     ).toEqual({ body: 'done', title: 'Sanjo' });
   });
 
+  it('titles a conversation between two people by the other person alone', () => {
+    const peer = channel({ peerUserId: 'u2', title: 'Arvin Xu' });
+    expect(
+      buildChannelBanner({ channel: peer, kind: 'message' }, message('LiJian', 'Get')),
+    ).toEqual({ body: 'Get', title: 'LiJian' });
+    expect(buildChannelBanner({ channel: peer, kind: 'mention' }, message('LiJian'))).toEqual({
+      body: 'ship it',
+      title: 'LiJian',
+    });
+  });
+
+  it('names the other person from the list when the message page could not load', () => {
+    const peer = channel({
+      memberAvatars: [
+        { actorType: 'user', avatar: null, backgroundColor: null, id: 'u2', name: 'LiJian' },
+      ],
+      peerUserId: 'u2',
+      title: 'Arvin Xu',
+    });
+    expect(buildChannelBanner({ channel: peer, kind: 'message' }, undefined)).toEqual({
+      body: 'preview',
+      title: 'LiJian',
+    });
+  });
+
   it('says who mentioned the user, and where', () => {
     expect(buildChannelBanner({ channel: channel(), kind: 'mention' }, message('Ann'))).toEqual({
       body: 'ship it',
