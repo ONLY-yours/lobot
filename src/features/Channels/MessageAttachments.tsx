@@ -1,3 +1,4 @@
+import { buildFileCacheUrl, isDesktop } from '@lobechat/const';
 import type { ChannelDetail } from '@lobechat/types';
 import { createModal, Flexbox } from '@lobehub/ui';
 
@@ -38,6 +39,13 @@ const openFile = (file: {
     width: 'min(90vw, 1024px)',
   });
 
+/**
+ * The server signs attachment URLs for minutes while the conversation is persisted, so a reopened
+ * Channel would render expired URLs. On desktop an image loads through the file-id disk cache.
+ */
+const imageUrl = (file: { id: string; name: string; url: string }) =>
+  isDesktop ? buildFileCacheUrl(file) : file.url;
+
 /** A Channel mounts no chat portal, so files open in the shared viewer inside a modal. */
 export function MessageAttachments({
   attachments,
@@ -63,7 +71,7 @@ export function MessageAttachments({
     <Flexbox gap={8}>
       {images.length > 0 && (
         <ImageFileListViewer
-          items={images.map((file) => ({ alt: file.name, id: file.id, url: file.url }))}
+          items={images.map((file) => ({ alt: file.name, id: file.id, url: imageUrl(file) }))}
         />
       )}
       {others.length > 0 && <FileListViewer items={others} onOpenFile={openFile} />}

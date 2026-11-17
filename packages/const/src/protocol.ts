@@ -39,3 +39,31 @@ export const buildLocalFileUrl = (absolutePath: string | null | undefined): stri
 
   return `${LOCAL_FILE_PROTOCOL_SCHEME}://${LOCAL_FILE_PROTOCOL_HOST}/${encoded}`;
 };
+
+/**
+ * Desktop protocol that keeps a disk copy of remote images by file id. A file id names immutable
+ * content, so the copy stays valid after the short-lived signed URL it was downloaded from
+ * expires. Backed by `FileCacheProtocolManager` in `electron`.
+ */
+export const FILE_CACHE_PROTOCOL_SCHEME = 'lobe-file-cache';
+export const FILE_CACHE_PROTOCOL_HOST = 'file';
+
+/**
+ * Build `lobe-file-cache://file/<id>/<name>?src=<url>`. The id sits in the path because a
+ * standard scheme lowercases its host; the name gives downloads their file name; `src` is only
+ * fetched on a cache miss. Non-http(s) sources (blob:, data:) are returned unchanged.
+ */
+export const buildFileCacheUrl = ({
+  id,
+  name,
+  url,
+}: {
+  id: string;
+  name?: string;
+  url: string;
+}): string => {
+  if (!id || !/^https?:\/\//i.test(url)) return url;
+
+  const path = `${encodeURIComponent(id)}/${encodeURIComponent(name || id)}`;
+  return `${FILE_CACHE_PROTOCOL_SCHEME}://${FILE_CACHE_PROTOCOL_HOST}/${path}?src=${encodeURIComponent(url)}`;
+};

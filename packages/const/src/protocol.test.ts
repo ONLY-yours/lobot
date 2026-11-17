@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildLocalFileUrl } from './protocol';
+import { buildFileCacheUrl, buildLocalFileUrl } from './protocol';
 
 describe('buildLocalFileUrl', () => {
   it('returns null for empty / nullish input', () => {
@@ -37,5 +37,37 @@ describe('buildLocalFileUrl', () => {
     const url = new URL(buildLocalFileUrl(original)!);
     const decoded = decodeURIComponent(url.pathname);
     expect(decoded).toBe(original);
+  });
+});
+
+describe('buildFileCacheUrl', () => {
+  it('keeps the case-sensitive file id in the path and the source in `src`', () => {
+    const url = buildFileCacheUrl({
+      id: 'file_AbC12',
+      name: '截图 1.png',
+      url: 'https://s3.example.com/a.png?X-Amz-Signature=x&b=1',
+    });
+
+    const parsed = new URL(url);
+    expect(parsed.protocol).toBe('lobe-file-cache:');
+    expect(parsed.pathname.split('/').map(decodeURIComponent)).toEqual([
+      '',
+      'file_AbC12',
+      '截图 1.png',
+    ]);
+    expect(parsed.searchParams.get('src')).toBe(
+      'https://s3.example.com/a.png?X-Amz-Signature=x&b=1',
+    );
+  });
+
+  it('falls back to the id as the name', () => {
+    expect(buildFileCacheUrl({ id: 'f1', url: 'https://a.test/x' })).toBe(
+      'lobe-file-cache://file/f1/f1?src=https%3A%2F%2Fa.test%2Fx',
+    );
+  });
+
+  it('leaves non-http sources and id-less files untouched', () => {
+    expect(buildFileCacheUrl({ id: 'f1', url: 'blob:app://x/1' })).toBe('blob:app://x/1');
+    expect(buildFileCacheUrl({ id: '', url: 'https://a.test/x' })).toBe('https://a.test/x');
   });
 });

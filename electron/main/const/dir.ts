@@ -27,6 +27,8 @@ export const legacyLocalDbDir = path.join(appStorageDir, 'lobehub-local-db');
 
 // Local storage files (simulating S3)
 export const FILE_STORAGE_DIR = 'file-storage';
+// Disk copies of remote images, keyed by file id
+export const FILE_CACHE_DIR = 'file-cache';
 // Plugin installation directory
 export const INSTALL_PLUGINS_DIR = 'plugins';
 

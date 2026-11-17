@@ -15,6 +15,7 @@
     "./mcpApp": "./src/mcpApp.ts",
     "./mediaRef": "./src/mediaRef.ts",
     "./plugin": "./src/plugin.ts",
+    "./protocol": "./src/protocol.ts",
     "./rbac": "./src/rbac.ts",
     "./url": "./src/url.ts",
     "./verify": "./src/verify.ts"

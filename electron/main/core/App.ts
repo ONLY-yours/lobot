@@ -8,7 +8,7 @@ import { enableManagedProcesses, shutdownManagedProcesses } from '@lobechat/util
 import { app, ipcMain, nativeTheme, net, protocol } from 'electron';
 
 import { name } from '@/../../package.json';
-import { binDir, buildDir } from '@/const/dir';
+import { appStorageDir, binDir, buildDir, FILE_CACHE_DIR } from '@/const/dir';
 import { isDev } from '@/const/env';
 import { shellInfo } from '@/const/shell';
 import type { IControlModule } from '@/controllers';
@@ -40,6 +40,7 @@ import { BrowserManager } from './browser/BrowserManager';
 import { backendProxyProtocolManager } from './infrastructure/BackendProxyProtocolManager';
 import { BinaryManager } from './infrastructure/BinaryManager';
 import { CoreUpdateManager } from './infrastructure/coreOta/CoreUpdateManager';
+import { FileCacheProtocolManager } from './infrastructure/FileCacheProtocolManager';
 import { I18nManager } from './infrastructure/I18nManager';
 import { IoCContainer } from './infrastructure/IoCContainer';
 import { LocalFileProtocolManager } from './infrastructure/LocalFileProtocolManager';
@@ -77,6 +78,7 @@ export class App {
   protocolManager: ProtocolManager;
   rendererUrlManager: RendererUrlManager;
   coreUpdateManager: CoreUpdateManager;
+  fileCacheProtocolManager: FileCacheProtocolManager;
   localFileProtocolManager: LocalFileProtocolManager;
   binaryManager: BinaryManager;
   screenCaptureManager: ScreenCaptureManager;
@@ -143,9 +145,13 @@ export class App {
     void this.localFileProtocolManager.approveWorkspaceRoots(
       this.storeManager.get('localFileWorkspaceRoots', []),
     );
+    this.fileCacheProtocolManager = new FileCacheProtocolManager({
+      cacheDir: path.join(appStorageDir, FILE_CACHE_DIR),
+    });
     protocol.registerSchemesAsPrivileged([
       this.rendererUrlManager.protocolScheme,
       this.localFileProtocolManager.protocolScheme,
+      this.fileCacheProtocolManager.protocolScheme,
     ]);
 
     // load controllers
@@ -200,6 +206,9 @@ export class App {
     // Serves arbitrary local files (e.g. project file previews) via
     // `localfile://` to the renderer. Active in both dev and prod.
     this.localFileProtocolManager.registerHandler();
+
+    // Serves remote images from a disk copy keyed by file id via `lobe-file-cache://`.
+    this.fileCacheProtocolManager.registerHandler();
 
     // initialize protocol handlers
     this.protocolManager.initialize();
