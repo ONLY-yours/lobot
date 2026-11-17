@@ -5,8 +5,7 @@ import { agentDisplayName } from '@lobechat/types';
 import { Flexbox } from '@lobehub/ui';
 import * as stylex from '@stylexjs/stylex';
 import isEqual from 'fast-deep-equal';
-import { Archive } from 'lucide-react';
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
@@ -15,7 +14,6 @@ import { resolveInboxAgentRouteId } from '@/features/AgentRoute/useResolvedAgent
 import { matchChannel } from '@/features/Channels/paths';
 import { useChannelEvents } from '@/features/Channels/useChannelEvents';
 import { useChannelsEnabled } from '@/features/Channels/useChannelsEnabled';
-import NavItem from '@/features/NavPanel/components/NavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useActiveLocation } from '@/hooks/useActiveLocation';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
@@ -33,7 +31,6 @@ import ChannelConversation from './ChannelConversation';
 import {
   buildConversationEntries,
   buildConversationSections,
-  channelActivity,
   type Conversation,
   type ConversationEntry,
   inboxActivity,
@@ -122,10 +119,8 @@ const Body = memo(() => {
     [projects],
   );
   const { query } = useMessageSearch();
-  const [showArchived, setShowArchived] = useState(false);
   // Group Channels, a project's included as that project's group chat; a direct Channel opens
-  // from its Agent's row. An archived one leaves the list unless it is open, but search still
-  // finds it and the archived group at the end lists it.
+  // from its Agent's row. An archived one leaves the list unless it is open; search still finds it.
   const directChannels = useMemo(
     () =>
       new Map(
@@ -137,7 +132,7 @@ const Body = memo(() => {
       ),
     [allChannels, channelsEnabled],
   );
-  const { archived, channels } = useMemo(() => {
+  const channels = useMemo(() => {
     // Another person's shared Agent has no Agent row of mine, so its direct Channel lists like a
     // group; so does a conversation with another person.
     const groups = channelsEnabled
@@ -145,12 +140,7 @@ const Body = memo(() => {
       : [];
     const isHidden = (channel: (typeof groups)[number]) =>
       channel.status === 'archived' && channel.id !== activeRouteId;
-    return {
-      archived: groups
-        .filter(isHidden)
-        .sort((a, b) => channelActivity(b).getTime() - channelActivity(a).getTime()),
-      channels: query.trim() ? groups : groups.filter((channel) => !isHidden(channel)),
-    };
+    return query.trim() ? groups : groups.filter((channel) => !isHidden(channel));
   }, [activeRouteId, allChannels, channelsEnabled, query]);
 
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
@@ -259,25 +249,6 @@ const Body = memo(() => {
             {query ? t('navPanel.searchResultEmpty') : t('messageList.empty')}
           </div>
         )
-      )}
-      {!query.trim() && archived.length > 0 && (
-        <>
-          <NavItem
-            aria-expanded={showArchived}
-            icon={Archive}
-            title={t('archivedGroup', { count: archived.length, ns: 'channel' })}
-            onClick={() => setShowArchived(!showArchived)}
-          />
-          {showArchived &&
-            archived.map((channel) => (
-              <ChannelConversation
-                active={false}
-                activeAt={channelActivity(channel)}
-                channel={channel}
-                key={channel.id}
-              />
-            ))}
-        </>
       )}
       {channelsEnabled && <ChannelSync />}
     </Flexbox>

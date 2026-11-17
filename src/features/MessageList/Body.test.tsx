@@ -294,18 +294,18 @@ describe('MessageList Body Channel rows', () => {
     expect(screen.getByText('# Old')).toHaveAttribute('aria-current', 'page');
   });
 
-  // Archiving a group Channel left the IM layout with no way back to it.
-  it('lists archived Channels behind the archived group at the end', () => {
+  // Archived Channels are reached by search only; the list ends without an archived group.
+  it('ends the list without an archived group', () => {
     home.channels = [
       channel({ id: 'chn_team', title: 'Team' }),
       channel({ id: 'chn_archived', status: 'archived', title: 'Old' }),
     ];
 
     render(createElement(Body));
-    expect(screen.queryByText('# Old')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('archivedGroup'));
-    expect(screen.getByText('# Old')).toBeInTheDocument();
+    expect(screen.getByText('# Team')).toBeInTheDocument();
+    expect(screen.queryByText('# Old')).not.toBeInTheDocument();
+    expect(screen.queryByText('archivedGroup')).not.toBeInTheDocument();
   });
 
   it('finds archived Channels by search', () => {

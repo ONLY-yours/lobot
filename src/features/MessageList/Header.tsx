@@ -16,13 +16,15 @@ import { BotIcon, CirclePlusIcon, Hash } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { DESKTOP_HEADER_ICON_SIZE } from '@/const/layoutTokens';
 import { openCreateChannel } from '@/features/Channels/CreateChannel';
 import { useChannelsEnabled } from '@/features/Channels/useChannelsEnabled';
 import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
 import { useMessageSearch } from './SearchContext';
+
+// The header's icon size with a thinner stroke, so the outlined "+" reads lighter beside the search box.
+const CREATE_ICON_SIZE = { blockSize: 32, size: 20, strokeWidth: 1.5 };
 
 /**
  * A WeChat-style "+" menu row: a large line icon and roomier text than a dense action menu.
@@ -120,7 +122,7 @@ const Header = memo(() => {
         <ActionIcon
           icon={CirclePlusIcon}
           loading={isLoading}
-          size={DESKTOP_HEADER_ICON_SIZE}
+          size={CREATE_ICON_SIZE}
           // Keeps its square: the search box gives way in a narrow column, not this button.
           style={{ flex: 'none' }}
           title={t('messageList.newChat')}
