@@ -63,7 +63,6 @@ const exclude = [
   '**/public/**',
   '**/apps/desktop/**',
   '**/apps/mobile/**',
-  '**/apps/cli/**',
   '**/packages/**',
   '**/e2e/**',
   // Opt-in local verification tooling, not app/server CI unit tests.

@@ -15,7 +15,7 @@ Guidelines for using AI coding agents in this opensource LobeHub repository.
 
 `AGENTS.md` owns repository-wide architecture and workflow. Keep detailed implementation rules in skills so they have one source of truth.
 
-The `acceptance` skill is generated from the default branch of [lobehub/acceptance](https://github.com/lobehub/acceptance). Maintain its source there; update the committed `.agents/skills/acceptance/` copy using `bun apps/cli/src/index.ts acceptance update`. Repository-specific acceptance setup stays in `.agents/acceptance/`.
+The `acceptance` skill is generated from the default branch of [lobehub/acceptance](https://github.com/lobehub/acceptance). Maintain its source there; update the committed `.agents/skills/acceptance/` copy using `pnpm exec lh acceptance update`. Repository-specific acceptance setup stays in `.agents/acceptance/`.
 
 - **React and TSX**: Before editing components, component state, render boundaries, or memoization, read the `react` skill. It owns component selection, styling, state locality, and render-performance rules.
 - **Heavy domain features**: When splitting a fat Viewer/Page into reusable pieces (page vs portal vs share vs micro-app), read the `compose-atoms` skill. Split on mountable capabilities, not visual sections, and do not hide unused work behind `readOnly` / `mode` flags.
@@ -29,7 +29,7 @@ For the full repository map or help locating a code layer, read the `project-ove
 - `src/app`: Next.js HTML/auth shells. Web shell helpers belong under `src/libs` or the relevant app segment, not `src/server`.
 - `src/spa`: SPA entry points and React Router configuration. `src/routes` holds thin page segments that compose `src/features`; business UI and logic belong in features by domain.
 - `src/services` and `src/store`: client API services and Zustand state. Keep fetch/cache guidance in `data-fetching-architecture` and store conventions in `zustand`.
-- `apps/desktop`, `apps/cli`: Electron and CLI applications. `packages` holds shared code, including `database`, `agent-runtime`, `env`, and `locales`.
+- `electron`: the Electron app. The `lh` CLI is not in this repo: the desktop embeds the published `@lobehub/cli` (a root devDependency); CLI changes land in lobehub and arrive by bumping that version. `packages` holds shared code, including `database`, `agent-runtime`, `env`, and `locales`.
 - `e2e`: end-to-end tests using Cucumber and Playwright.
 
 Before changing SPA routes, read the `spa-routes` skill. Register common Web/Electron paths, metadata, lazy loaders and `preloadId` values once in `src/spa/router/desktopRouter.shared.tsx`; keep `desktopRouter.config*.tsx` limited to platform differences and `desktopRouter.sync.test.tsx` passing. Do not create `features` directories inside `src/routes`.

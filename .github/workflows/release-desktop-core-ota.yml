@@ -150,12 +150,6 @@ jobs:
           package-manager-cache: false
           node-version: ${{ env.NODE_VERSION }}
 
-      # apps/cli builds with bun.
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
       - name: Install dependencies
         run: pnpm install
 
@@ -163,7 +157,7 @@ jobs:
         run: npm run workflow:set-desktop-version ${{ needs.gate.outputs.app_version }} ${{ inputs.channel }}
 
       # 与整包 electron-builder beforePack 里组装 core-dist 的步骤一致：
-      # vite 三件套 → CLI → assembleCore。npm_config_platform 让 *.mac.ts 等平台文件按目标平台解析。
+      # vite 三件套 → assembleCore（CLI 取自 @lobehub/cli 依赖）。npm_config_platform 让 *.mac.ts 等平台文件按目标平台解析。
       - name: Build core
         env:
           npm_config_platform: ${{ matrix.platform }}
@@ -173,7 +167,6 @@ jobs:
         run: |
           set -euo pipefail
           pnpm build:main
-          npm run build:cli
           node scripts/assembleCore.mjs
 
       - name: Load previous core manifest

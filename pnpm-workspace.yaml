@@ -34,7 +34,6 @@ packages:
   - packages/**
   - .
   - electron/main
-  - apps/cli
 
 minimumReleaseAgeExclude:
   - '@auv-js/api-client@0.0.25'

@@ -812,7 +812,6 @@ export default defineConfig(
     files: [
       'packages/agent-tracing/**/*',
       'packages/style-equivalence/src/cli/**/*',
-      'apps/cli/**/*',
       'packages/model-runtime/src/utils/debugStream.ts',
     ],
     rules: { 'no-console': 'off' },

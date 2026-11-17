@@ -34,8 +34,8 @@ export function resolveCliScript(): string {
       'index.js',
     );
   }
-  // Dev mode: app.getAppPath() points to apps/desktop/, go up to apps/cli/
-  return path.join(app.getAppPath(), '..', 'cli', 'dist', 'index.js');
+  // Dev mode: app.getAppPath() is the repo root, where `@lobehub/cli` is installed
+  return path.join(app.getAppPath(), 'node_modules', '@lobehub', 'cli', 'dist', 'index.js');
 }
 
 /**

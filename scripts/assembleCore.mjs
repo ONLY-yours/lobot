@@ -1,9 +1,12 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const DESKTOP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CLI_DIR = path.resolve(DESKTOP_DIR, 'apps/cli');
+// The embedded CLI is the published `@lobehub/cli` bundle; its `dist/index.js`
+// is self-contained, so it runs from core.asar.unpacked without node_modules.
+const CLI_DIR = path.dirname(createRequire(import.meta.url).resolve('@lobehub/cli/package.json'));
 const RESOURCES_EXCLUDED = new Set(['bin', 'cli-package.json', 'dmg.png', 'locales']);
 
 export function assembleCore({
@@ -12,7 +15,7 @@ export function assembleCore({
   out = path.join(DESKTOP_DIR, 'core-dist'),
 } = {}) {
   const inputs = {
-    'apps/cli/dist/index.js': path.join(cliDir, 'dist/index.js'),
+    '@lobehub/cli/dist/index.js': path.join(cliDir, 'dist/index.js'),
     'dist/main': path.join(desktopDir, 'dist/main'),
     'dist/preload': path.join(desktopDir, 'dist/preload'),
     'dist/renderer': path.join(desktopDir, 'dist/renderer'),
@@ -40,7 +43,7 @@ export function assembleCore({
   writeFileSync(path.join(out, 'package.json'), JSON.stringify({ type: 'commonjs' }));
 
   mkdirSync(path.join(out, 'cli/dist'), { recursive: true });
-  cpSync(inputs['apps/cli/dist/index.js'], path.join(out, 'cli/dist/index.js'));
+  cpSync(inputs['@lobehub/cli/dist/index.js'], path.join(out, 'cli/dist/index.js'));
   const { name, version } = JSON.parse(readFileSync(path.join(cliDir, 'package.json'), 'utf8'));
   writeFileSync(
     path.join(out, 'cli/package.json'),

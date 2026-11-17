@@ -40,7 +40,6 @@
     "electron/main"
   ],
   "scripts": {
-    "build:cli": "cd apps/cli && cross-env MINIFY=1 bun run build",
     "build:main": "cross-env NODE_OPTIONS=--max-old-space-size=8192 npm run build:main:raw",
     "build:main:raw": "vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts",
     "build:renderer": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vite build --config vite.renderer.config.ts",
@@ -430,6 +429,7 @@
     "@lobechat/tool-runtime": "workspace:*",
     "@lobechat/types": "workspace:*",
     "@lobechat/utils": "workspace:*",
+    "@lobehub/cli": "0.0.97",
     "@lobehub/commitlint-config": "^3.0.0",
     "@lobehub/i18n-cli": "^1.27.0",
     "@lobehub/market-types": "^1.19.0",

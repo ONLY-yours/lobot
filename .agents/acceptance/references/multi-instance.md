@@ -25,7 +25,7 @@ sink an `electron-dev.sh start <id>` on a fresh worktree before it will even mou
 'FloatingPanel'`) and the app hung on the loading screen (`#root` empty,
   `__LOBE_STORES` undefined) **even though raw-CDP screenshots still showed a painted
   frame** from before the crash. Fix: real `pnpm install` in the worktree **root** (it covers
-  `electron/main` and `apps/cli`) before `start`. (`type-check` warns
+  `electron/main` and `@lobehub/cli`) before `start`. (`type-check` warns
   of the same skew: cross-root `packages/*` dual-identity errors when `node_modules` is
   symlinked across worktree roots.)
 - **First cold Vite load can `ECONNRESET` under resource contention.** Two full
@@ -53,8 +53,8 @@ app sessions are dev-build singletons. Validated verdicts:
 | ---------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | Electron single-instance lock            | `App.ts:227`                                                     | ✅ **keyed by userData** — distinct userData dirs each get their own lock; all instances run. No code change needed.         |
 | Chromium `SingletonLock`                 | per userData dir                                                 | ✅ one per userData dir automatically (observed distinct PIDs per dir).                                                      |
-| userData dir `lobehub-desktop-dev`       | `electron/main/pre-app-init.ts:21`                                             | ✅ fixed — now env-overridable via `LOBE_DESKTOP_USER_DATA_DIR`.                                                             |
-| Vite dev server `strictPort:true` 5173   | `vite.shared.ts`                                    | ✅ fixed — now env-overridable via `LOBE_DESKTOP_VITE_PORT` (Model B: one Vite per worktree).                                |
+| userData dir `lobehub-desktop-dev`       | `electron/main/pre-app-init.ts:21`                               | ✅ fixed — now env-overridable via `LOBE_DESKTOP_USER_DATA_DIR`.                                                             |
+| Vite dev server `strictPort:true` 5173   | `vite.shared.ts`                                                 | ✅ fixed — now env-overridable via `LOBE_DESKTOP_VITE_PORT` (Model B: one Vite per worktree).                                |
 | `electron-server-ipc` unix socket        | `App.ts` → `packages/electron-server-ipc/src/ipcServer.ts:23-31` | ✅ fixed — id now env-overridable via `LOBE_IPC_ID`; distinct sockets, no more hijack (was last-writer-wins).                |
 | safeStorage / Chromium cookie encryption | OS keychain, keyed by **app name**                               | 🔑 macOS: an instance with `LOBE_DESKTOP_MOCK_KEYCHAIN=1` uses the mock keychain (fixed key, no prompt per checkout binary). |
 | Global shortcuts / `lobehub://` protocol | OS-global                                                        | first/last wins; harmless for headless automation.                                                                           |
@@ -255,7 +255,7 @@ electron-dev.sh stop --all # stop every instance
 
 ### Round 1 — concurrency, login reuse, isolation (Model A)
 
-Golden profile `lobehub-desktop-dev` (logged in, user_2gmT…); 3 userData copies
+Golden profile `lobehub-desktop-dev` (logged in, user\_2gmT…); 3 userData copies
 (27 MB each), app name constant. inst1 = `electron-vite dev` (CDP 9223, Vite
 5173\), inst2/inst3 = raw electron (CDP 9224/9225) sharing Vite.
 

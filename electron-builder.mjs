@@ -252,9 +252,6 @@ const config = {
     // lazily downloads it on first use into the per-user cache dir. See
     // apps/desktop/src/main/modules/binaries/agentBrowserBinaries.ts.
 
-    console.info('📦 Building CLI for embedding...');
-    execSync('npm run build:cli', { stdio: 'inherit', cwd: __dirname });
-
     // The shell window has no React/i18next runtime. Bundle only its translated strings.
     const updateStrings = {};
     for (const locale of ['en-US', 'zh-CN']) {

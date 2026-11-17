@@ -180,12 +180,6 @@ jobs:
           package-manager-cache: false
           node-version: ${{ env.NODE_VERSION }}
 
-      # apps/cli builds with bun (ensureWorkspaceLinks + tsdown).
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
       - name: Install dependencies
         shell: bash
         run: pnpm install

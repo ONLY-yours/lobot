@@ -12,7 +12,7 @@ Its two siblings:
   report, and round are. This is a committed, generated snapshot of
   [`lobehub/acceptance`](https://github.com/lobehub/acceptance), the only maintenance
   source. Update it from the repository's current default branch with
-  `bun apps/cli/src/index.ts acceptance update --json`, then review and commit the
+  `pnpm exec lh acceptance update --json`, then review and commit the
   downloaded files. The JSON records the exact source commit; publishing a tag
   or release is not required. Do not hand-edit this installed copy.
   `.claude/skills` shares `.agents/skills`.
@@ -28,11 +28,11 @@ into the project layer.
 ## 1. Project summary
 
 Lobot is LobeHub's IM-style desktop client: an Electron shell (`electron/`) around
-the React SPA (`src/`), plus the `lh` CLI (`apps/cli`). It was split out of the
+the React SPA (`src/`), plus the embedded `lh` CLI (the published `@lobehub/cli`, a root dependency). It was split out of the
 lobehub monorepo **without the server**: there is no `apps/server`, no Next.js
 backend, no database and no migrations here. The backend is **LobeHub Cloud**
 (`app.lobehub.com`); `@/server/*` types resolve to `any`, which is why
-`bun run type-check` carries a baseline of ~190 errors.
+`bun run type-check` carries a baseline of \~190 errors.
 
 What that means for acceptance:
 
@@ -52,8 +52,8 @@ Repo layout that matters for testing:
 - `scripts/dev.mjs` → `scripts/devOrchestrator.mjs` — `pnpm dev`: Vite + Electron.
 - `scripts/devInstance.mts` — dev-instance rules (ports, profile env, login seeding),
   driven by `.agents/acceptance/scripts/electron-dev.sh` through `devInstanceCli.mts`.
-- `src/` — the SPA. `apps/cli/` — the `lh` CLI, run from source.
-- The root `pnpm install` covers `packages/**`, `electron/main` and `apps/cli`.
+- `src/` — the SPA. The `lh` CLI is not built here: it is the `@lobehub/cli` package from npm.
+- The root `pnpm install` covers `packages/**`, `electron/main` and installs `@lobehub/cli`.
 
 ## 2. Environment
 
@@ -127,8 +127,8 @@ Repo layout that matters for testing:
 
 ### CLI (driver and read-back)
 
-- Invocation from source: `cd apps/cli && bun src/index.ts <cmd>` (`$CLI`), or the
-  installed `lh`. It runs against Cloud with the user's login.
+- Invocation: `pnpm exec lh <cmd>` (`$CLI`, the pinned `@lobehub/cli`), or the
+  installed `lh`. CLI changes land in lobehub and reach Lobot by bumping that version. It runs against Cloud with the user's login.
 - Use it to drive an agent run or to read back server state for a check:
   `lh agent run -a <agentId> --json -p '<prompt>' [-t <topicId>] [--device local]`.
   Use the Electron instance only to capture the rendered evidence.
@@ -173,15 +173,15 @@ $PROBE errors         # dump captured errors
 
 Routes worth jumping to:
 
-| Route                     | Where it lands                            |
-| ------------------------- | ----------------------------------------- |
-| `/`                       | Messages: the conversation list           |
-| `/channels/<channelId>`   | A Channel conversation (direct or group)  |
-| `/agents`                 | Contacts: the agents wall                 |
-| `/agents/<id>`            | An agent's or group's contact card        |
-| `/agent/<agentId>`        | The agent's own page                      |
-| `/agent/<agentId>/profile`| The agent's profile editor                |
-| `/settings`               | Settings                                  |
+| Route                      | Where it lands                           |
+| -------------------------- | ---------------------------------------- |
+| `/`                        | Messages: the conversation list          |
+| `/channels/<channelId>`    | A Channel conversation (direct or group) |
+| `/agents`                  | Contacts: the agents wall                |
+| `/agents/<id>`             | An agent's or group's contact card       |
+| `/agent/<agentId>`         | The agent's own page                     |
+| `/agent/<agentId>/profile` | The agent's profile editor               |
+| `/settings`                | Settings                                 |
 
 The Zustand stores are at `window.__LOBE_STORES` (dev builds, or Desktop with remote
 debugging on); `workspace` is among them. The chat input is `contenteditable`
@@ -242,7 +242,7 @@ support is not implemented. Native Windows is unsupported. See the skill's
 - **No server-side verification here.** There are no server logs, operation rows
   or queue steps to read. A change whose claim lives on the server is accepted in
   `../lobehub`. Here, CLI read-back of Cloud state is the server evidence.
-- **Type-check baseline:** `bun run type-check` reports ~190 errors from the missing
+- **Type-check baseline:** `bun run type-check` reports \~190 errors from the missing
   server modules. Compare the count, not zero. It is a quality gate, not an
   acceptance check.
 - **OS-capture surfaces are macOS-only** (bot channels, `capture-app-window.sh`,

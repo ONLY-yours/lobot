@@ -116,7 +116,7 @@ regardless.
    (`electron-dev.sh`), never a hard-coded table. If a probe answers from a
    different instance than the one this run started, fix that before continuing.
 2. **Dependencies** (§2). The root `pnpm install` covers `electron/main` and
-   `apps/cli`. A stale install fails at launch with an unresolved workspace import.
+   `@lobehub/cli`. A stale install fails at launch with an unresolved workspace import.
 3. **Run long-lived scripts from the repo root.** Background commands inherit the
    cwd, and every path here is repo-root-relative.
 4. **Start the environment** (§2), including every service the feature depends on
@@ -165,11 +165,11 @@ user.
 
 ### Step 3 — Pick the surface
 
-| Change scope                                     | Surface               | Why                                                 |
-| ------------------------------------------------ | --------------------- | --------------------------------------------------- |
-| Frontend (components, store, styles, UX), main   | **Electron**          | The product shape; live state introspection         |
-| Reading back Cloud state a UI action produced    | **CLI** (read-back)   | Text-assertable, no UI flakiness                    |
-| Backend (router / service / model / migration)   | — (in `../lobehub`)   | Lobot has no server; accept it in the lobehub repo  |
+| Change scope                                   | Surface             | Why                                                |
+| ---------------------------------------------- | ------------------- | -------------------------------------------------- |
+| Frontend (components, store, styles, UX), main | **Electron**        | The product shape; live state introspection        |
+| Reading back Cloud state a UI action produced  | **CLI** (read-back) | Text-assertable, no UI flakiness                   |
+| Backend (router / service / model / migration) | — (in `../lobehub`) | Lobot has no server; accept it in the lobehub repo |
 
 There is no Web surface in this repository (`PROJECT.md` §4).
 

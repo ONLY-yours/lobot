@@ -255,7 +255,7 @@ lobehub = "./packages/alint/rules"
 # Ordinary API instructions: avoid removal announcements and locally redundant
 # descriptions while preserving migration guidance and useful input semantics.
 [[config.group]]
-files = [ "docs/usage/**/*.mdx", "docs/usage/**/*.md", "packages/builtin-skills/**/*.md", "packages/builtin-skills/src/**/content.ts", "packages/builtin-skills/src/**/references/**/*.ts", "apps/cli/src/commands/**/*.ts", "packages/openapi/src/types/**/*.ts" ]
+files = [ "docs/usage/**/*.mdx", "docs/usage/**/*.md", "packages/builtin-skills/**/*.md", "packages/builtin-skills/src/**/content.ts", "packages/builtin-skills/src/**/references/**/*.ts", "packages/openapi/src/types/**/*.ts" ]
 ignores = [ "**/*.test.ts", "**/__tests__/**", "**/generated/**" ]
 [config.group.plugins]
 lobehub = "./packages/alint/rules"
@@ -460,7 +460,7 @@ lobehub = "./packages/alint/rules"
 
 # Security: no-shell-command-injection.
 [[config.group]]
-files = [ "apps/server/src/**/*.ts", "apps/desktop/src/main/**/*.ts", "apps/cli/src/**/*.ts", "packages/agent-runtime/src/**/*.ts", "packages/local-file-shell/src/**/*.ts", "packages/heterogeneous-agents/src/**/*.ts" ]
+files = [ "apps/server/src/**/*.ts", "apps/desktop/src/main/**/*.ts", "packages/agent-runtime/src/**/*.ts", "packages/local-file-shell/src/**/*.ts", "packages/heterogeneous-agents/src/**/*.ts" ]
 ignores = [ "**/*.test.ts", "**/*.test.tsx", "**/__tests__/**", "**/__mocks__/**", "**/migrations/**" ]
 [config.group.plugins]
 lobehub = "./packages/alint/rules"
@@ -524,7 +524,7 @@ lobehub = "./packages/alint/rules"
 
 # Security: no-secret-exposure.
 [[config.group]]
-files = [ "apps/server/src/**/*.ts", "apps/desktop/src/main/**/*.ts", "apps/cli/src/**/*.ts", "src/**/*.ts", "src/**/*.tsx", "packages/env/src/**/*.ts" ]
+files = [ "apps/server/src/**/*.ts", "apps/desktop/src/main/**/*.ts", "src/**/*.ts", "src/**/*.tsx", "packages/env/src/**/*.ts" ]
 ignores = [ "**/*.test.ts", "**/*.test.tsx", "**/__tests__/**", "**/__mocks__/**", "**/migrations/**" ]
 [config.group.plugins]
 lobehub = "./packages/alint/rules"
