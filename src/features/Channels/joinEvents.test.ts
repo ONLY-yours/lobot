@@ -1,7 +1,7 @@
-import type { ChannelPublicMember, ChannelPublicMessage } from '@lobechat/types';
+import type { ChannelListItem, ChannelPublicMember, ChannelPublicMessage } from '@lobechat/types';
 import { describe, expect, it } from 'vitest';
 
-import { channelJoinEvents, channelTimeline } from './joinEvents';
+import { channelJoinEvents, channelTimeline, conversationJoinEvents } from './joinEvents';
 
 const member = (id: string, joinedAt: number, patch: Partial<ChannelPublicMember> = {}) =>
   ({
@@ -60,5 +60,27 @@ describe('channelTimeline', () => {
       'join:b',
     ]);
     expect(channelTimeline([], events, true)).toHaveLength(2);
+  });
+});
+
+describe('conversationJoinEvents', () => {
+  const members = [owner, member('a', 10, { actorType: 'user' })];
+  const channel = (patch: Partial<ChannelListItem> = {}) =>
+    ({ agentId: null, peerUserId: null, ...patch }) as ChannelListItem;
+
+  it('shows join lines in a group conversation', () => {
+    expect(conversationJoinEvents({ channel: channel(), members })).toHaveLength(1);
+  });
+
+  it('shows none in a thread', () => {
+    expect(conversationJoinEvents({ channel: channel(), members }, 'thr_1')).toEqual([]);
+  });
+
+  it('shows none in a conversation with an Agent', () => {
+    expect(conversationJoinEvents({ channel: channel({ agentId: 'agt_1' }), members })).toEqual([]);
+  });
+
+  it('shows none in a conversation between two people', () => {
+    expect(conversationJoinEvents({ channel: channel({ peerUserId: 'a' }), members })).toEqual([]);
   });
 });

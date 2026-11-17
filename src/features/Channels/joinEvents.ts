@@ -1,4 +1,4 @@
-import type { ChannelPublicMember, ChannelPublicMessage } from '@lobechat/types';
+import type { ChannelDetail, ChannelPublicMember, ChannelPublicMessage } from '@lobechat/types';
 
 /** Members added by one action land within this window and read as one line. */
 const BATCH_MS = 5000;
@@ -31,6 +31,17 @@ export const channelJoinEvents = (members: ChannelPublicMember[]): ChannelJoinEv
   }
   return events;
 };
+
+/**
+ * Join lines a conversation shows. They belong to the main conversation (a thread starts from its
+ * root message), and a one-to-one conversation, with an Agent or another person, reads like an IM
+ * chat, so it has no "invited" lines at all.
+ */
+export const conversationJoinEvents = (
+  { channel, members }: Pick<ChannelDetail, 'channel' | 'members'>,
+  threadId?: string,
+): ChannelJoinEvent[] =>
+  threadId || channel.agentId || channel.peerUserId ? [] : channelJoinEvents(members);
 
 export type TimelineItem =
   { event: ChannelJoinEvent; kind: 'event' } | { kind: 'message'; message: ChannelPublicMessage };
